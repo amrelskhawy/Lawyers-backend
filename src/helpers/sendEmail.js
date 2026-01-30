@@ -24,7 +24,7 @@ const sendEmail = async (
     port: 587,
     secure: false,
     auth: {
-      user: process.env.USER_EMAIL, //Your gmail email
+      user: process.env.EMAIL_USER, //Your gmail email
       pass: process.env.EMAIL_PASS, //Your gmail password
     },
   });
