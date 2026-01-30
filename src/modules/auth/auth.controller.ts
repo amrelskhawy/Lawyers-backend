@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import { AuthService } from "./auth.service.js";
-import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
+import { AuthRequest } from "@core/middlewares/authMiddleware.js";
 
 const authService = new AuthService();
 

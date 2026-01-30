@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc"
+    "build": "tsc && tsc-alias"
   },
   "author": "salma",
   "license": "ISC",
@@ -34,6 +34,7 @@
     "@types/node": "^25.1.0",
     "@types/nodemailer": "^7.0.9",
     "@types/nodemailer-express-handlebars": "^4.0.6",
+    "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
   }

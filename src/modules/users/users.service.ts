@@ -1,4 +1,4 @@
-import prisma from "../../core/db/prisma.js";
+import prisma from "@core/db/prisma.js";
 
 export class UsersService {
     async getUserById(id: string) {
