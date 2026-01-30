@@ -1,3 +1,5 @@
+import asyncHandler from "express-async-handler";
+import prisma from "../../core/db/prisma.js";
 
 import generateToken from "../../helpers/generateToken.js";
 import bcrypt from "bcrypt";

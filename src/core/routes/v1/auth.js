@@ -1,7 +1,17 @@
 import { Router } from "express";
-import { changePassword, forgotPassword, getUser, resetPassword, updateUser, userLoginStatus, verifyEmail, verifyUser } from "../../../models/users/userController";
-import { protect } from "../../../models/auth/middlewares/authMiddleware";
-import { loginUser, logoutUser, registerUser } from "../../../models/auth/authController";
+import { getUser, updateUser } from "../../../models/users/userController.js";
+import { protect } from "../../../models/auth/middlewares/authMiddleware.js";
+import { 
+  changePassword, 
+  forgotPassword, 
+  loginUser, 
+  logoutUser, 
+  registerUser, 
+  resetPassword, 
+  userLoginStatus, 
+  verifyEmail, 
+  verifyUser 
+} from "../../../models/auth/authController.js";
 
 
 const router = Router();

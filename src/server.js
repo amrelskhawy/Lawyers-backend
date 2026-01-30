@@ -3,14 +3,13 @@ import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
 import errorHandler from "./helpers/errorhandler.js";
-import prisma from "./db/prisma.js";
+import prisma from "./core/db/prisma.js";
 import v1Routes from "./core/routes/v1/index.js";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 
 const app = express();
-app.use("/api/v1", v1Routes);
 
 // middleware
 app.use(
@@ -22,6 +21,8 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+app.use("/api/v1", v1Routes);
 
 // error handler middleware
 app.use(errorHandler);
