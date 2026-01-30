@@ -2,15 +2,15 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import fs from "node:fs";
 import errorHandler from "./helpers/errorhandler.js";
 import prisma from "./db/prisma.js";
-
+import v1Routes from "./core/routes/v1/index.js";
 dotenv.config();
 
 const port = process.env.PORT || 3000;
 
 const app = express();
+app.use("/api/v1", v1Routes);
 
 // middleware
 app.use(
@@ -25,20 +25,6 @@ app.use(cookieParser());
 
 // error handler middleware
 app.use(errorHandler);
-
-//routes
-const routeFiles = fs.readdirSync("./src/routes").filter((file) => file.endsWith(".js"));
-
-routeFiles.forEach((file) => {
-  // use dynamic import
-  import(`./routes/${file}`)
-    .then((route) => {
-      app.use("/api/v1", route.default);
-    })
-    .catch((err) => {
-      console.log("Failed to load route file", err);
-    });
-});
 
 const server = async () => {
   try {

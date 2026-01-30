@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-import prisma from "../db/prisma.js";
+import prisma from "../../../core/db/prisma.js";
 
 export const protect = asyncHandler(async (req, res, next) => {
   try {

@@ -1,5 +1,5 @@
 import asyncHandler from "express-async-handler";
-import prisma from "../../db/prisma.js";
+import prisma from "../../core/db/prisma.js";
 
 export const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
