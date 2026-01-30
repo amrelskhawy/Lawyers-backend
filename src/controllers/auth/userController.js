@@ -1,9 +1,8 @@
 import asyncHandler from "express-async-handler";
-import User from "../../models/auth/UserModel.js";
+import prisma from "../../db/prisma.js";
 import generateToken from "../../helpers/generateToken.js";
 import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
-import Token from "../../models/auth/Token.js";
 import crypto from "node:crypto";
 import hashToken from "../../helpers/hashToken.js";
 import sendEmail from "../../helpers/sendEmail.js";
@@ -25,22 +24,28 @@ export const registerUser = asyncHandler(async (req, res) => {
   }
 
   // check if user already exists
-  const userExists = await User.findOne({ email });
+  const userExists = await prisma.user.findUnique({ where: { email } });
 
   if (userExists) {
     // bad request
     return res.status(400).json({ message: "User already exists" });
   }
 
+  // hash the password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
+
   // create new user
-  const user = await User.create({
-    name,
-    email,
-    password,
+  const user = await prisma.user.create({
+    data: {
+      name,
+      email,
+      password: hashedPassword,
+    },
   });
 
   // generate token with user id
-  const token = generateToken(user._id);
+  const token = generateToken(user.id);
 
   // send back the user and token in the response to the client
   res.cookie("token", token, {
@@ -52,11 +57,11 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   if (user) {
-    const { _id, name, email, role, photo, bio, isVerified } = user;
+    const { id, name, email, role, photo, bio, isVerified } = user;
 
     // 201 Created
     res.status(201).json({
-      _id,
+      id,
       name,
       email,
       role,
@@ -82,7 +87,7 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // check if user exists
-  const userExists = await User.findOne({ email });
+  const userExists = await prisma.user.findUnique({ where: { email } });
 
   if (!userExists) {
     return res.status(404).json({ message: "User not found, sign up!" });
@@ -97,10 +102,10 @@ export const loginUser = asyncHandler(async (req, res) => {
   }
 
   // generate token with user id
-  const token = generateToken(userExists._id);
+  const token = generateToken(userExists.id);
 
   if (userExists && isMatch) {
-    const { _id, name, email, role, photo, bio, isVerified } = userExists;
+    const { id, name, email, role, photo, bio, isVerified } = userExists;
 
     // set the token in the cookie
     res.cookie("token", token, {
@@ -113,7 +118,7 @@ export const loginUser = asyncHandler(async (req, res) => {
 
     // send back the user and token in the response to the client
     res.status(200).json({
-      _id,
+      id,
       name,
       email,
       role,
@@ -142,7 +147,20 @@ export const logoutUser = asyncHandler(async (req, res) => {
 // get user
 export const getUser = asyncHandler(async (req, res) => {
   // get user details from the token ----> exclude password
-  const user = await User.findById(req.user._id).select("-password");
+  const user = await prisma.user.findUnique({
+    where: { id: req.user.id },
+    select: {
+      id: true,
+      name: true,
+      email: true,
+      photo: true,
+      bio: true,
+      role: true,
+      isVerified: true,
+      createdAt: true,
+      updatedAt: true,
+    },
+  });
 
   if (user) {
     res.status(200).json(user);
@@ -155,20 +173,24 @@ export const getUser = asyncHandler(async (req, res) => {
 // update user
 export const updateUser = asyncHandler(async (req, res) => {
   // get user details from the token ----> protect middleware
-  const user = await User.findById(req.user._id);
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
   if (user) {
     // user properties to update
     const { name, bio, photo } = req.body;
-    // update user properties
-    user.name = req.body.name || user.name;
-    user.bio = req.body.bio || user.bio;
-    user.photo = req.body.photo || user.photo;
 
-    const updated = await user.save();
+    // update user properties
+    const updated = await prisma.user.update({
+      where: { id: req.user.id },
+      data: {
+        name: name || user.name,
+        bio: bio || user.bio,
+        photo: photo || user.photo,
+      },
+    });
 
     res.status(200).json({
-      _id: updated._id,
+      id: updated.id,
       name: updated.name,
       email: updated.email,
       role: updated.role,
@@ -202,7 +224,7 @@ export const userLoginStatus = asyncHandler(async (req, res) => {
 
 // email verification
 export const verifyEmail = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.user._id);
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
   // if user exists
   if (!user) {
@@ -214,25 +236,27 @@ export const verifyEmail = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "User is already verified" });
   }
 
-  let token = await Token.findOne({ userId: user._id });
+  let token = await prisma.token.findFirst({ where: { userId: user.id } });
 
   // if token exists --> delete the token
   if (token) {
-    await token.deleteOne();
+    await prisma.token.delete({ where: { id: token.id } });
   }
 
   // create a verification token using the user id --->
-  const verificationToken = crypto.randomBytes(64).toString("hex") + user._id;
+  const verificationToken = crypto.randomBytes(64).toString("hex") + user.id;
 
   // hast the verification token
   const hashedToken = hashToken(verificationToken);
 
-  await new Token({
-    userId: user._id,
-    verificationToken: hashedToken,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 24 * 60 * 60 * 1000, // 24 hours
-  }).save();
+  await prisma.token.create({
+    data: {
+      userId: user.id,
+      verificationToken: hashedToken,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
+    },
+  });
 
   // verification link
   const verificationLink = `${process.env.CLIENT_URL}/verify-email/${verificationToken}`;
@@ -267,10 +291,12 @@ export const verifyUser = asyncHandler(async (req, res) => {
   const hashedToken = hashToken(verificationToken);
 
   // find user with the verification token
-  const userToken = await Token.findOne({
-    verificationToken: hashedToken,
-    // check if the token has not expired
-    expiresAt: { $gt: Date.now() },
+  const userToken = await prisma.token.findFirst({
+    where: {
+      verificationToken: hashedToken,
+      // check if the token has not expired
+      expiresAt: { gt: new Date() },
+    },
   });
 
   if (!userToken) {
@@ -280,7 +306,7 @@ export const verifyUser = asyncHandler(async (req, res) => {
   }
 
   //find user with the user id in the token
-  const user = await User.findById(userToken.userId);
+  const user = await prisma.user.findUnique({ where: { id: userToken.userId } });
 
   if (user.isVerified) {
     // 400 Bad Request
@@ -288,8 +314,10 @@ export const verifyUser = asyncHandler(async (req, res) => {
   }
 
   // update user to verified
-  user.isVerified = true;
-  await user.save();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { isVerified: true },
+  });
   res.status(200).json({ message: "User verified" });
 });
 
@@ -302,7 +330,7 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   }
 
   // check if user exists
-  const user = await User.findOne({ email });
+  const user = await prisma.user.findUnique({ where: { email } });
 
   if (!user) {
     // 404 Not Found
@@ -310,25 +338,27 @@ export const forgotPassword = asyncHandler(async (req, res) => {
   }
 
   // see if reset token exists
-  let token = await Token.findOne({ userId: user._id });
+  let token = await prisma.token.findFirst({ where: { userId: user.id } });
 
   // if token exists --> delete the token
   if (token) {
-    await token.deleteOne();
+    await prisma.token.delete({ where: { id: token.id } });
   }
 
   // create a reset token using the user id ---> expires in 1 hour
-  const passwordResetToken = crypto.randomBytes(64).toString("hex") + user._id;
+  const passwordResetToken = crypto.randomBytes(64).toString("hex") + user.id;
 
   // hash the reset token
   const hashedToken = hashToken(passwordResetToken);
 
-  await new Token({
-    userId: user._id,
-    passwordResetToken: hashedToken,
-    createdAt: Date.now(),
-    expiresAt: Date.now() + 60 * 60 * 1000, // 1 hour
-  }).save();
+  await prisma.token.create({
+    data: {
+      userId: user.id,
+      passwordResetToken: hashedToken,
+      createdAt: new Date(),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+    },
+  });
 
   // reset link
   const resetLink = `${process.env.CLIENT_URL}/reset-password/${passwordResetToken}`;
@@ -364,10 +394,12 @@ export const resetPassword = asyncHandler(async (req, res) => {
   const hashedToken = hashToken(resetPasswordToken);
 
   // check if token exists and has not expired
-  const userToken = await Token.findOne({
-    passwordResetToken: hashedToken,
-    // check if the token has not expired
-    expiresAt: { $gt: Date.now() },
+  const userToken = await prisma.token.findFirst({
+    where: {
+      passwordResetToken: hashedToken,
+      // check if the token has not expired
+      expiresAt: { gt: new Date() },
+    },
   });
 
   if (!userToken) {
@@ -375,11 +407,17 @@ export const resetPassword = asyncHandler(async (req, res) => {
   }
 
   // find user with the user id in the token
-  const user = await User.findById(userToken.userId);
+  const user = await prisma.user.findUnique({ where: { id: userToken.userId } });
+
+  // hash the new password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
 
   // update user password
-  user.password = password;
-  await user.save();
+  await prisma.user.update({
+    where: { id: user.id },
+    data: { password: hashedPassword },
+  });
 
   res.status(200).json({ message: "Password reset successfully" });
 });
@@ -393,7 +431,7 @@ export const changePassword = asyncHandler(async (req, res) => {
   }
 
   //find user by id
-  const user = await User.findById(req.user._id);
+  const user = await prisma.user.findUnique({ where: { id: req.user.id } });
 
   // compare current password with the hashed password in the database
   const isMatch = await bcrypt.compare(currentPassword, user.password);
@@ -402,10 +440,16 @@ export const changePassword = asyncHandler(async (req, res) => {
     return res.status(400).json({ message: "Invalid password!" });
   }
 
+  // hash the new password
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(newPassword, salt);
+
   // reset password
   if (isMatch) {
-    user.password = newPassword;
-    await user.save();
+    await prisma.user.update({
+      where: { id: user.id },
+      data: { password: hashedPassword },
+    });
     return res.status(200).json({ message: "Password changed successfully" });
   } else {
     return res.status(400).json({ message: "Password could not be changed!" });
