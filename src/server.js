@@ -1,10 +1,10 @@
 import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
-import connect from "./db/connect.js";
 import cookieParser from "cookie-parser";
 import fs from "node:fs";
 import errorHandler from "./helpers/errorhandler.js";
+import prisma from "./db/prisma.js";
 
 dotenv.config();
 
@@ -31,7 +31,7 @@ const routeFiles = fs.readdirSync("./src/routes").filter((file) => file.endsWith
 
 routeFiles.forEach((file) => {
   // use dynamic import
-  import(`./src/routes${file}`)
+  import(`./routes/${file}`)
     .then((route) => {
       app.use("/api/v1", route.default);
     })
@@ -42,7 +42,8 @@ routeFiles.forEach((file) => {
 
 const server = async () => {
   try {
-    await connect();
+    await prisma.$connect();
+    console.log("Connected to database");
 
     app.listen(port, () => {
       console.log(`Server is running on port ${port}`);
