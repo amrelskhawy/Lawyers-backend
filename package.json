@@ -3,8 +3,9 @@
   "version": "1.0.0",
   "main": "src/server.js",
   "scripts": {
-    "start": "nodemon server.js",
-    "dev": "nodemon server.js"
+    "start": "node dist/server.js",
+    "dev": "tsx watch src/server.ts",
+    "build": "tsc"
   },
   "author": "salma",
   "license": "ISC",
@@ -23,5 +24,17 @@
     "nodemon": "^3.1.0",
     "prisma": "5.18.0"
   },
-  "type": "module"
+  "type": "module",
+  "devDependencies": {
+    "@types/bcrypt": "^6.0.0",
+    "@types/cookie-parser": "^1.4.10",
+    "@types/cors": "^2.8.19",
+    "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "@types/node": "^25.1.0",
+    "@types/nodemailer": "^7.0.9",
+    "@types/nodemailer-express-handlebars": "^4.0.6",
+    "tsx": "^4.21.0",
+    "typescript": "^5.9.3"
+  }
 }
