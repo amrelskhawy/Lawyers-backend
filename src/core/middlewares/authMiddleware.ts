@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-import prisma from "@core/db/prisma.js";
+import prisma from "../db/prisma.js";
 
 interface DecodedToken {
     id: string;

@@ -10,8 +10,8 @@ import {
     resetPassword,
     changePassword,
 } from "./auth.controller.js";
-import { getUser, updateUser } from "@modules/users/users.controller.js";
-import { protect } from "@core/middlewares/authMiddleware.js";
+import { getUser, updateUser } from "../users/users.controller.js";
+import { protect } from "../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
 

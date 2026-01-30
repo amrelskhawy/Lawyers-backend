@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { UsersService } from "./users.service.js";
-import { AuthRequest } from "@core/middlewares/authMiddleware.js";
+import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 
 const usersService = new UsersService();
 

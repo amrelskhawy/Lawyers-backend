@@ -1,10 +1,10 @@
-import prisma from "@core/db/prisma.js";
+import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
 import crypto from "node:crypto";
-import { generateToken } from "@core/utils/token.js";
-import { hashToken } from "@core/utils/hash.js";
-import { sendEmail } from "@core/utils/email.js";
-import { RegisterPayload, LoginPayload, UserResponse } from "./auth.types.js";
+import { generateToken } from "../../core/utils/token.js";
+import { hashToken } from "../../core/utils/hash.js";
+import { sendEmail } from "../../core/utils/email.js";
+import { RegisterPayload, LoginPayload } from "./auth.types.js";
 
 export class AuthService {
     async register(payload: RegisterPayload) {
