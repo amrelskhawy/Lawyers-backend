@@ -1,6 +1,6 @@
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
-import User from "../models/auth/UserModel.js";
+import prisma from "../db/prisma.js";
 
 export const protect = asyncHandler(async (req, res, next) => {
   try {
@@ -16,7 +16,20 @@ export const protect = asyncHandler(async (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // get user details from the token ----> exclude password
-    const user = await User.findById(decoded.id).select("-password");
+    const user = await prisma.user.findUnique({
+      where: { id: decoded.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photo: true,
+        bio: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     // check if user exists
     if (!user) {
@@ -35,7 +48,7 @@ export const protect = asyncHandler(async (req, res, next) => {
 
 // admin middleware
 export const adminMiddleware = asyncHandler(async (req, res, next) => {
-  if (req.user && req.user.role === "admin") {
+  if (req.user && req.user.role === "ADMIN") {
     // if user is admin, move to the next middleware/controller
     next();
     return;
@@ -46,8 +59,8 @@ export const adminMiddleware = asyncHandler(async (req, res, next) => {
 
 export const creatorMiddleware = asyncHandler(async (req, res, next) => {
   if (
-    (req.user && req.user.role === "creator") ||
-    (req.user && req.user.role === "admin")
+    (req.user && req.user.role === "CREATOR") ||
+    (req.user && req.user.role === "ADMIN")
   ) {
     // if user is creator, move to the next middleware/controller
     next();
