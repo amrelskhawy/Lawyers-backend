@@ -1,12 +1,12 @@
 import asyncHandler from "express-async-handler";
-import User from "../../models/auth/UserModel.js";
+import prisma from "../../db/prisma.js";
 
 export const deleteUser = asyncHandler(async (req, res) => {
   const { id } = req.params;
 
   // attempt to find and delete the user
   try {
-    const user = await User.findByIdAndDelete(id);
+    const user = await prisma.user.delete({ where: { id } });
     if (!user) {
       res.status(404).json({ message: "User not found" });
     }
@@ -19,7 +19,19 @@ export const deleteUser = asyncHandler(async (req, res) => {
 // get all users
 export const getAllUsers = asyncHandler(async (req, res) => {
   try {
-    const users = await User.find({});
+    const users = await prisma.user.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        photo: true,
+        bio: true,
+        role: true,
+        isVerified: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
 
     if (!users) {
       res.status(404).json({ message: "No users found" });
