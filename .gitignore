@@ -21,3 +21,6 @@ yarn-error.log
 /.vscode/
 *.sublime-*
 *.swp
+/src/generated/prisma
+
+/prisma/migrations
