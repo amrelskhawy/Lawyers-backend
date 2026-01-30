@@ -1,6 +1,6 @@
 /**
  * @swagger
- * /api/v1/admin/users/{id}:
+ * /admin/users/{id}:
  *   delete:
  *     tags: [Admin]
  *     summary: Delete a user (Admin only)
@@ -16,7 +16,7 @@
  *       200:
  *         description: User deleted successfully
  * 
- * /api/v1/admin/users:
+ * /admin/users:
  *   get:
  *     tags: [Admin]
  *     summary: Get all users (Creator/Admin only)

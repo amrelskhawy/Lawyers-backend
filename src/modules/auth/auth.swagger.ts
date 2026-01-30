@@ -40,7 +40,7 @@
  *         password:
  *           type: string
  * 
- * /api/v1/auth/register:
+ * /auth/register:
  *   post:
  *     tags: [Auth]
  *     summary: Register a new user
@@ -58,7 +58,7 @@
  *             schema:
  *               $ref: '#/components/schemas/User'
  * 
- * /api/v1/auth/login:
+ * /auth/login:
  *   post:
  *     tags: [Auth]
  *     summary: Login user
@@ -72,7 +72,7 @@
  *       200:
  *         description: Login successful
  * 
- * /api/v1/auth/logout:
+ * /auth/logout:
  *   get:
  *     tags: [Auth]
  *     summary: Logout user
@@ -80,7 +80,7 @@
  *       200:
  *         description: User logged out
  * 
- * /api/v1/auth/login-status:
+ * /auth/login-status:
  *   get:
  *     tags: [Auth]
  *     summary: Check user login status
@@ -88,7 +88,7 @@
  *       200:
  *         description: Success
  * 
- * /api/v1/auth/verify-email:
+ * /auth/verify-email:
  *   post:
  *     tags: [Auth]
  *     summary: Initiate email verification
@@ -98,7 +98,7 @@
  *       200:
  *         description: Email sent
  * 
- * /api/v1/auth/verify-user/{token}:
+ * /auth/verify-user/{token}:
  *   post:
  *     tags: [Auth]
  *     summary: Verify email using token
@@ -112,7 +112,7 @@
  *       200:
  *         description: User verified
  * 
- * /api/v1/auth/forgot-password:
+ * /auth/forgot-password:
  *   post:
  *     tags: [Auth]
  *     summary: Request password reset email
@@ -128,7 +128,7 @@
  *       200:
  *         description: Email sent
  * 
- * /api/v1/auth/reset-password/{token}:
+ * /auth/reset-password/{token}:
  *   post:
  *     tags: [Auth]
  *     summary: Reset password using token
@@ -150,7 +150,7 @@
  *       200:
  *         description: Password reset successfully
  * 
- * /api/v1/auth/change-password:
+ * /auth/change-password:
  *   patch:
  *     tags: [Auth]
  *     summary: Change password
@@ -170,7 +170,7 @@
  *       200:
  *         description: Password changed successfully
  * 
- * /api/v1/auth/user:
+ * /auth/user:
  *   get:
  *     tags: [Auth]
  *     summary: Get current user profile

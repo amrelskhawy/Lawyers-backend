@@ -10,6 +10,12 @@ const options: swaggerJsdoc.Options = {
             version,
             description: "API documentation for the Lawyers Backend application",
         },
+        servers: [
+            {
+                url: "/api/v1",
+                description: "V1 API Server",
+            },
+        ],
         components: {
             securitySchemes: {
                 cookieAuth: {
