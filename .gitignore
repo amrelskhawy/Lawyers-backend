@@ -15,6 +15,7 @@ yarn-error.log
 
 # Environment variables
 .env
+.env*.local
 
 # IDEs and editors
 /.idea/
@@ -24,50 +25,6 @@ yarn-error.log
 /src/generated/prisma
 
 /prisma/migrations
-dist/server.d.ts
-dist/server.js
-dist/server.js.map
-dist/core/db/prisma.d.ts
-dist/core/db/prisma.js
-dist/core/db/prisma.js.map
-dist/core/middlewares/authMiddleware.d.ts
-dist/core/middlewares/authMiddleware.js
-dist/core/middlewares/authMiddleware.js.map
-dist/core/middlewares/errorMiddleware.d.ts
-dist/core/middlewares/errorMiddleware.js
-dist/core/middlewares/errorMiddleware.js.map
-dist/core/routes/v1/index.d.ts
-dist/core/routes/v1/index.js
-dist/core/routes/v1/index.js.map
-dist/core/utils/email.d.ts
-dist/core/utils/email.js
-dist/core/utils/email.js.map
-dist/core/utils/hash.d.ts
-dist/core/utils/hash.js
-dist/core/utils/hash.js.map
-dist/core/utils/token.d.ts
-dist/core/utils/token.js
-dist/core/utils/token.js.map
-dist/modules/auth/auth.controller.d.ts
-dist/modules/auth/auth.controller.js
-dist/modules/auth/auth.controller.js.map
-dist/modules/auth/auth.routes.d.ts
-dist/modules/auth/auth.routes.js
-dist/modules/auth/auth.routes.js.map
-dist/modules/auth/auth.service.d.ts
-dist/modules/auth/auth.service.js
-dist/modules/auth/auth.service.js.map
-dist/modules/auth/auth.types.d.ts
-dist/modules/auth/auth.types.js
-dist/modules/auth/auth.types.js.map
-dist/modules/users/admin.routes.d.ts
-dist/modules/users/admin.routes.js
-dist/modules/users/admin.routes.js.map
-dist/modules/users/users.controller.d.ts
-dist/modules/users/users.controller.js
-dist/modules/users/users.controller.js.map
-dist/modules/users/users.service.d.ts
-dist/modules/users/users.service.js
-dist/modules/users/users.service.js.map
+dist/*
 .vercel
-.env*.local
+

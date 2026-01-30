@@ -4,7 +4,11 @@ import { adminMiddleware, creatorMiddleware, protect } from "../../core/middlewa
 
 const router = express.Router();
 
-router.delete("/users/:id", protect, adminMiddleware, deleteUser);
-router.get("/users", protect, creatorMiddleware, getAllUsers);
+// User Management (Admin & Creator)
+router.route("/users")
+    .get(protect, creatorMiddleware, getAllUsers);
+
+router.route("/users/:id")
+    .delete(protect, adminMiddleware, deleteUser);
 
 export default router;

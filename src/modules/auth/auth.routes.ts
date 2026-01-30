@@ -15,17 +15,24 @@ import { protect } from "../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
 
+// Session Management
 router.post("/register", registerUser);
 router.post("/login", loginUser);
 router.get("/logout", logoutUser);
 router.get("/login-status", userLoginStatus);
+
+// Verification
 router.post("/verify-email", protect, verifyEmail);
 router.post("/verify-user/:verificationToken", verifyUser);
+
+// Password Management
 router.post("/forgot-password", forgotPassword);
 router.post("/reset-password/:resetPasswordToken", resetPassword);
 router.patch("/change-password", protect, changePassword);
 
-router.get("/user", protect, getUser);
-router.patch("/user", protect, updateUser);
+// User Profile
+router.route("/user")
+    .get(protect, getUser)
+    .patch(protect, updateUser);
 
 export default router;

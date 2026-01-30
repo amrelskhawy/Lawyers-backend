@@ -6,6 +6,8 @@ import { errorHandler } from "./core/middlewares/errorMiddleware.js";
 import prisma from "./core/db/prisma.js";
 import v1Routes from "./core/routes/v1/index.js";
 import { Request, Response } from "express";
+import swaggerUi from "swagger-ui-express";
+import swaggerSpec from "./core/utils/swagger.js";
 
 dotenv.config();
 
@@ -23,6 +25,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
 app.use("/api/v1", v1Routes);
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use(errorHandler);
 
