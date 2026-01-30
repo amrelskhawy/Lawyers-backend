@@ -69,3 +69,5 @@ dist/modules/users/users.controller.js.map
 dist/modules/users/users.service.d.ts
 dist/modules/users/users.service.js
 dist/modules/users/users.service.js.map
+.vercel
+.env*.local

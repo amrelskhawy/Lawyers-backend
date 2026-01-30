@@ -5,7 +5,8 @@
   "scripts": {
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && tsc-alias"
+    "build": "tsc && tsc-alias",
+    "postinstall": "prisma generate"
   },
   "author": "salma",
   "license": "ISC",

@@ -14,10 +14,11 @@
     "noImplicitAny": true,
     "sourceMap": true,
     "declaration": true,
-    "baseUrl": ".",
+    "baseUrl": "./",
     "paths": {
-      "@core/*": ["src/core/*"],
-      "@modules/*": ["src/modules/*"]
+      "@app/*": ["src/*"],
+      "@modules/*": ["src/modules/*"],
+      "@core/*": ["src/core/*"]
     }
   },
   "include": ["src/**/*"],

@@ -2,9 +2,10 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import { errorHandler } from "@core/middlewares/errorMiddleware.js";
-import prisma from "@core/db/prisma.js";
-import v1Routes from "@core/routes/v1/index.js";
+import { errorHandler } from "./core/middlewares/errorMiddleware.js";
+import prisma from "./core/db/prisma.js";
+import v1Routes from "./core/routes/v1/index.js";
+import { Request, Response } from "express";
 
 dotenv.config();
 
@@ -25,18 +26,28 @@ app.use("/api/v1", v1Routes);
 
 app.use(errorHandler);
 
+app.get('/', (req: Request, res: Response) => {
+    return res.json({ message: "Hello World" })
+})
+
 const startServer = async () => {
     try {
         await prisma.$connect();
         console.log("Connected to database");
 
-        app.listen(port, () => {
-            console.log(`Server is running on port ${port}`);
-        });
+        if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
+            app.listen(port, () => {
+                console.log(`Server is running on port ${port}`);
+            });
+        }
     } catch (error: any) {
         console.log("Failed to start server!", error.message);
-        process.exit(1);
+        if (process.env.NODE_ENV !== "production") {
+            process.exit(1);
+        }
     }
 };
 
 startServer();
+
+export default app;
