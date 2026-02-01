@@ -78,3 +78,17 @@ export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Res
     }
     res.status(403).json({ message: "Please verify your email address!" });
 });
+
+// Check User Auth
+export const checkUserAuth = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+    const token = req.cookies.token;
+    if (token) {
+        res.clearCookie("token", {
+            httpOnly: true,
+            sameSite: "none",
+            secure: true,
+            path: "/",
+        });
+    }
+    next();
+});
