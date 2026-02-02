@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import prisma from "../db/prisma.js";
+import { AppError } from "../utils/AppError.js";
 
 interface DecodedToken {
     id: string;
@@ -12,17 +13,16 @@ export interface AuthRequest extends Request {
 }
 
 export const protect = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+    const token = req.cookies.token;
+
+    if (!token) {
+        throw new AppError("Not authorized, please login", 401, "AUTH_TOKEN_REQUIRED");
+    }
+
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error("JWT_SECRET not defined");
+
     try {
-        const token = req.cookies.token;
-
-        if (!token) {
-            res.status(401).json({ message: "Not authorized, please login!" });
-            return;
-        }
-
-        const secret = process.env.JWT_SECRET;
-        if (!secret) throw new Error("JWT_SECRET not defined");
-
         const decoded = jwt.verify(token, secret) as DecodedToken;
 
         const user = await prisma.user.findUnique({
@@ -41,14 +41,16 @@ export const protect = asyncHandler(async (req: AuthRequest, res: Response, next
         });
 
         if (!user) {
-            res.status(404).json({ message: "User not found!" });
-            return;
+            throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
         }
 
         req.user = user;
         next();
     } catch (error) {
-        res.status(401).json({ message: "Not authorized, token failed!" });
+        if (error instanceof AppError) throw error; // Re-throw AppErrors (like User not found)
+
+        // Handle JWT specific errors here or let them bubble to global handler with specific keys
+        throw new AppError("Invalid or expired token", 401, "AUTH_INVALID_TOKEN");
     }
 });
 
@@ -57,7 +59,7 @@ export const adminMiddleware = asyncHandler(async (req: AuthRequest, res: Respon
         next();
         return;
     }
-    res.status(403).json({ message: "Only admins can do this!" });
+    throw new AppError("Only admins can do this!", 403, "AUTH_ADMIN_ONLY");
 });
 
 export const creatorMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -68,7 +70,7 @@ export const creatorMiddleware = asyncHandler(async (req: AuthRequest, res: Resp
         next();
         return;
     }
-    res.status(403).json({ message: "Only creators can do this!" });
+    throw new AppError("Only creators can do this!", 403, "AUTH_CREATOR_ONLY");
 });
 
 export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -76,7 +78,7 @@ export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Res
         next();
         return;
     }
-    res.status(403).json({ message: "Please verify your email address!" });
+    throw new AppError("Please verify your email address!", 403, "AUTH_EMAIL_NOT_VERIFIED");
 });
 
 // Check User Auth
