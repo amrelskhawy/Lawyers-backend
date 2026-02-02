@@ -81,8 +81,7 @@ export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Res
     throw new AppError("Please verify your email address!", 403, "AUTH_EMAIL_NOT_VERIFIED");
 });
 
-// Check User Auth
-export const checkUserAuth = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
+export const clearSession = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token;
     if (token) {
         res.clearCookie("token", {
