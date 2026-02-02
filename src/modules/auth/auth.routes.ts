@@ -11,13 +11,13 @@ import {
     changePassword,
 } from "./auth.controller.js";
 import { getUser, updateUser } from "../users/users.controller.js";
-import { protect, checkUserAuth } from "../../core/middlewares/authMiddleware.js";
+import { protect, clearSession } from "../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
 
 // Session Management
-router.post("/register", checkUserAuth, registerUser);
-router.post("/login", checkUserAuth, loginUser);
+router.post("/register", registerUser);
+router.post("/login", clearSession, loginUser);
 router.get("/logout", logoutUser);
 router.get("/login-status", userLoginStatus);
 
