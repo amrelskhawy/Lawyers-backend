@@ -1,3 +1,4 @@
+```mermaid
 erDiagram
     USERS ||--o{ SERVICES : creates
     USERS ||--o{ HOLIDAYS : creates
