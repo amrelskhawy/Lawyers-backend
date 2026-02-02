@@ -5,6 +5,7 @@ import { generateToken } from "../../core/utils/token.js";
 import { hashToken } from "../../core/utils/hash.js";
 import { sendEmail } from "../../core/utils/email.js";
 import { RegisterPayload, LoginPayload } from "./auth.types.js";
+import { AppError } from "../../core/utils/AppError.js";
 
 export class AuthService {
     async register(payload: RegisterPayload) {
@@ -12,7 +13,7 @@ export class AuthService {
 
         const userExists = await prisma.user.findUnique({ where: { email } });
         if (userExists) {
-            throw new Error("User already exists");
+            throw new AppError("User already exists", 400, "AUTH_USER_ALREADY_EXISTS");
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -47,12 +48,12 @@ export class AuthService {
 
         const user = await prisma.user.findUnique({ where: { email } });
         if (!user) {
-            throw new Error("User not found, sign up!");
+            throw new AppError("User not found, please sign up!", 404, "AUTH_USER_NOT_FOUND");
         }
 
         const isMatch = await bcrypt.compare(password, user.password);
         if (!isMatch) {
-            throw new Error("Invalid credentials");
+            throw new AppError("Incorrect password", 401, "AUTH_PASSWORD_INCORRECT");
         }
 
         const token = generateToken(user.id);
@@ -73,8 +74,8 @@ export class AuthService {
 
     async verifyEmailInitiate(userId: string) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) throw new Error("User not found");
-        if (user.isVerified) throw new Error("User is already verified");
+        if (!user) throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+        if (user.isVerified) throw new AppError("User is already verified", 400, "AUTH_USER_ALREADY_VERIFIED");
 
         let tokenRecord = await prisma.token.findFirst({ where: { userId: user.id } });
         if (tokenRecord) {
@@ -118,12 +119,12 @@ export class AuthService {
         });
 
         if (!userToken) {
-            throw new Error("Invalid or expired verification token");
+            throw new AppError("Invalid or expired verification token", 400, "AUTH_TOKEN_INVALID");
         }
 
         const user = await prisma.user.findUnique({ where: { id: userToken.userId } });
-        if (!user) throw new Error("User not found");
-        if (user.isVerified) throw new Error("User is already verified");
+        if (!user) throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+        if (user.isVerified) throw new AppError("User is already verified", 400, "AUTH_USER_ALREADY_VERIFIED");
 
         await prisma.user.update({
             where: { id: user.id },
@@ -135,7 +136,7 @@ export class AuthService {
 
     async forgotPassword(email: string) {
         const user = await prisma.user.findUnique({ where: { email } });
-        if (!user) throw new Error("User not found");
+        if (!user) throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
 
         let tokenRecord = await prisma.token.findFirst({ where: { userId: user.id } });
         if (tokenRecord) {
@@ -179,7 +180,7 @@ export class AuthService {
         });
 
         if (!userToken) {
-            throw new Error("Invalid or expired reset token");
+            throw new AppError("Invalid or expired reset token", 400, "AUTH_TOKEN_INVALID");
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -195,11 +196,11 @@ export class AuthService {
 
     async changePassword(userId: string, currentPassword: string, newPassword: string) {
         const user = await prisma.user.findUnique({ where: { id: userId } });
-        if (!user) throw new Error("User not found");
+        if (!user) throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
 
         const isMatch = await bcrypt.compare(currentPassword, user.password);
         if (!isMatch) {
-            throw new Error("Invalid current password");
+            throw new AppError("Invalid current password", 401, "AUTH_PASSWORD_INCORRECT");
         }
 
         const salt = await bcrypt.genSalt(10);
