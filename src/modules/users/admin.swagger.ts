@@ -19,7 +19,7 @@
  * /admin/users:
  *   get:
  *     tags: [Admin]
- *     summary: Get all users (Creator/Admin only)
+ *     summary: Get all users (Admin only)
  *     security:
  *       - cookieAuth: []
  *     responses:

@@ -7,30 +7,32 @@ http://localhost:3000/api/v1
 
 ## Authentication Routes
 ```
-POST   /auth/register           - Register new user
+POST   /auth/create-new-user     - add new user 
 POST   /auth/login              - Login user
 POST   /auth/logout             - Logout user
 POST   /auth/refresh            - Refresh access token
-GET    /auth/me                 - Get current user info
 PUT    /auth/change-password    - Change password
 POST   /auth/forgot-password    - Request password reset
 POST   /auth/reset-password     - Reset password with token
 ```
 
 ## User Management Routes (Admin Only)
+
 ```
-GET    /users                   - List all users (with pagination)
-GET    /users/:id               - Get user by ID
-POST   /users                   - Create new user
-PUT    /users/:id               - Update user
-DELETE /users/:id               - Delete user
-PATCH  /users/:id/activate      - Activate user
-PATCH  /users/:id/deactivate    - Deactivate user
-PATCH  /users/:id/role          - Update user role
+
+GET    /moderators                   - List all moderators (with pagination)
+GET    /moderators/:id               - Get moderator by ID
+POST   /moderators                   - Create new moderator
+PUT    /moderators/:id               - Update moderator
+DELETE /moderators/:id               - Delete moderator
+PATCH  /moderators/:id/status        - status moderator
+
 ```
 
 ## Services Management Routes
+
 ```
+
 GET    /services                - List all services (public)
 GET    /services/:id            - Get service by ID
 POST   /services                - Create new service (admin)
@@ -39,9 +41,11 @@ DELETE /services/:id            - Delete service (admin)
 PATCH  /services/:id/activate   - Activate service (admin)
 PATCH  /services/:id/deactivate - Deactivate service (admin)
 GET    /services/active         - Get only active services
+
 ```
 
 ## Work Days Configuration Routes (Admin Only)
+
 ```
 GET    /work-days               - Get all work days configuration
 GET    /work-days/:day          - Get specific day configuration
@@ -49,9 +53,11 @@ PUT    /work-days/:day          - Update work day configuration
 PATCH  /work-days/:day/toggle   - Toggle day as working/holiday
 PUT    /work-days/:day/hours    - Update work hours for a day
 GET    /work-days/working       - Get only working days
+
 ```
 
 ## Holidays Management Routes (Admin Only)
+
 ```
 GET    /holidays                - List all holidays
 GET    /holidays/:id            - Get holiday by ID
@@ -60,6 +66,7 @@ PUT    /holidays/:id            - Update holiday
 DELETE /holidays/:id            - Delete holiday
 GET    /holidays/upcoming       - Get upcoming holidays
 GET    /holidays/year/:year     - Get holidays for specific year
+
 ```
 
 ## Special Hours/Rules Routes (Admin Only)
