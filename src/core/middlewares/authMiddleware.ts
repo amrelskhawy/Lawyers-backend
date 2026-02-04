@@ -13,7 +13,16 @@ export interface AuthRequest extends Request {
 }
 
 export const protect = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const token = req.cookies.token;
+    let token;
+
+    // 1) Check cookies
+    if (req.cookies.token) {
+        token = req.cookies.token;
+    }
+    // 2) Check Authorization header
+    else if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        token = req.headers.authorization.split(" ")[1];
+    }
 
     if (!token) {
         throw new AppError("Not authorized, please login", 401, "AUTH_TOKEN_REQUIRED");
