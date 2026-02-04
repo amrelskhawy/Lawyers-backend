@@ -32,7 +32,6 @@ export const protect = asyncHandler(async (req: AuthRequest, res: Response, next
                 name: true,
                 email: true,
                 photo: true,
-                bio: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,
