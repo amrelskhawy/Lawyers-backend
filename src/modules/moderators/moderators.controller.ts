@@ -26,7 +26,7 @@ export const getAllModerators = asyncHandler(async (req: Request, res: Response)
 });
 
 export const deleteModerator = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const id = req.params.id as string;
     const result = await moderatorService.deleteModerator(id);
     res.status(200).json(result);
 });
