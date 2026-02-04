@@ -34,6 +34,7 @@ const options: swaggerJsdoc.Options = {
     apis: [
         "./src/modules/**/*.ts",
         "./src/modules/**/*.swagger.ts",
+        "./src/modules/moderators/moderators.swagger.ts",
         "./dist/modules/**/*.js",
         "./dist/modules/**/*.swagger.js",
         "./src/core/routes/**/*.ts",
