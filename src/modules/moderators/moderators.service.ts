@@ -1,5 +1,4 @@
-import pkg from "@prisma/client";
-const { Role } = pkg;
+import { Role } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
 import { AppError } from "../../core/utils/AppError.js";
