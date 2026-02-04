@@ -9,7 +9,6 @@ export class UsersService {
                 name: true,
                 email: true,
                 photo: true,
-                bio: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,
@@ -34,7 +33,6 @@ export class UsersService {
             where: { id },
             data: {
                 name: data.name || user.name,
-                bio: data.bio || user.bio,
                 photo: data.photo || user.photo,
             },
         });
@@ -45,7 +43,6 @@ export class UsersService {
             email: updated.email,
             role: updated.role,
             photo: updated.photo,
-            bio: updated.bio,
             isVerified: updated.isVerified,
         };
     }
@@ -57,7 +54,6 @@ export class UsersService {
                 name: true,
                 email: true,
                 photo: true,
-                bio: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,

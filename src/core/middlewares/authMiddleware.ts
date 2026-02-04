@@ -32,7 +32,6 @@ export const protect = asyncHandler(async (req: AuthRequest, res: Response, next
                 name: true,
                 email: true,
                 photo: true,
-                bio: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,
@@ -62,15 +61,15 @@ export const adminMiddleware = asyncHandler(async (req: AuthRequest, res: Respon
     throw new AppError("Only admins can do this!", 403, "AUTH_ADMIN_ONLY");
 });
 
-export const creatorMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
+export const moderatorMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (
-        (req.user && req.user.role === "CREATOR") ||
+        (req.user && req.user.role === "MODERATOR") ||
         (req.user && req.user.role === "ADMIN")
     ) {
         next();
         return;
     }
-    throw new AppError("Only creators can do this!", 403, "AUTH_CREATOR_ONLY");
+    throw new AppError("Only moderators can do this!", 403, "AUTH_MODERATOR_ONLY");
 });
 
 export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {

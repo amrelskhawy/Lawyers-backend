@@ -13,8 +13,7 @@ model User {
   email       String   @unique
   password    String
   photo       String   @default("https://twemoji.maxcdn.com/v/latest/72x72/1f35f.png")
-  bio         String   @default("I am a new user.")
-  role        Role     @default(USER)
+  role        Role     @default(MODERATOR)
   isVerified  Boolean  @default(false)
 
   tokens      Token[]
@@ -24,9 +23,8 @@ model User {
 }
 
 enum Role {
-  USER
   ADMIN
-  CREATOR
+  MODERATOR
 }
 
 model Token {
