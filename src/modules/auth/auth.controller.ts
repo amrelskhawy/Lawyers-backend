@@ -47,7 +47,10 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(result.user);
+    res.status(200).json({
+        message: "User login successfully",
+        token: result.token,
+    });
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
