@@ -1,3 +1,5 @@
+import pkg from "@prisma/client";
+const { Role } = pkg;
 import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
 import { AppError } from "../../core/utils/AppError.js";
@@ -19,7 +21,7 @@ export class ModeratorService {
                 name,
                 email,
                 password: hashedPassword,
-                role: "MODERATOR",
+                role: Role.MODERATOR,
                 isVerified: true, // Auto-verify moderators created by admin
             },
             select: {
@@ -37,7 +39,7 @@ export class ModeratorService {
     async getAllModerators() {
         // Pagination could be added here later
         const moderators = await prisma.user.findMany({
-            where: { role: "MODERATOR" },
+            where: { role: Role.MODERATOR },
             select: {
                 id: true,
                 name: true,
@@ -58,7 +60,7 @@ export class ModeratorService {
             throw new AppError("Moderator not found", 404, "MODERATOR_NOT_FOUND");
         }
 
-        if (moderator.role !== "MODERATOR") {
+        if (moderator.role !== Role.MODERATOR) {
             throw new AppError("User is not a moderator", 400, "INVALID_ROLE_OPERATION");
         }
 
