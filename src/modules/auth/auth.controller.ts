@@ -4,6 +4,7 @@ import jwt from "jsonwebtoken";
 import { AuthService } from "./auth.service.js";
 import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const authService = new AuthService();
 
@@ -28,7 +29,11 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
         secure: true,
     });
 
-    res.status(201).json(result.user);
+    res.status(201).json(
+        new AppResponse(
+            true,
+            "User registered successfully",
+            result.user));
 });
 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
@@ -47,7 +52,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(result.user);
+    res.status(200).json(new AppResponse(true, "User logged in successfully", result.token));
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -58,12 +63,12 @@ export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
         path: "/",
     });
 
-    res.status(200).json({ success: true, message: "Logged out successfully" });
+    res.status(200).json(new AppResponse(true, "Logged out successfully"));
 });
 
 export const verifyEmail = asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = await authService.verifyEmailInitiate(req.user.id);
-    res.status(200).json(result);
+    res.status(200).json(new AppResponse(true, "Email verification initiated", result));
 });
 
 export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
@@ -73,7 +78,7 @@ export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
     }
 
     const result = await authService.verifyUser(verificationToken as string);
-    res.status(200).json(result);
+    res.status(200).json(new AppResponse(true, "User verified successfully", result));
 });
 
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
@@ -83,7 +88,7 @@ export const forgotPassword = asyncHandler(async (req: Request, res: Response) =
     }
 
     const result = await authService.forgotPassword(email);
-    res.status(200).json(result);
+    res.status(200).json(new AppResponse(true, "Password reset email sent", result));
 });
 
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
@@ -95,7 +100,7 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
     }
 
     const result = await authService.resetPassword(resetPasswordToken as string, password);
-    res.status(200).json(result);
+    res.status(200).json(new AppResponse(true, "Password reset successfully", result));
 });
 
 export const userLoginStatus = asyncHandler(async (req: Request, res: Response) => {
@@ -131,5 +136,5 @@ export const changePassword = asyncHandler(async (req: AuthRequest, res: Respons
     }
 
     const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
-    res.status(200).json(result);
+    res.status(200).json(new AppResponse(true, "Password changed successfully", result));
 });
