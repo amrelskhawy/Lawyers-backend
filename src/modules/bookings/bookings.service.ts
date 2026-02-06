@@ -135,52 +135,53 @@ export class BookingService {
                 <p><a href="${booking.calendarUrl}">Add to Calendar</a></p>
             `,
         };
-
+        await this.transporter.sendMail(mailOptions);
+    }
 
     async getAllBookings() {
-            return await prisma.booking.findMany({
-                include: { service: true },
-                orderBy: { date: "desc" },
-            });
-        }
+        return await prisma.booking.findMany({
+            include: { service: true },
+            orderBy: { date: "desc" },
+        });
+    }
 
     async confirmBooking(id: string) {
-            const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
-            if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
+        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
 
-            if (booking.status === "CONFIRMED") return booking;
+        if (booking.status === "CONFIRMED") return booking;
 
-            // If not already integrated with Google (e.g. was pending manual review), do it here.
-            // For this flow, we already did it on creation, but this allows manual confirmation if we change logic.
-            const updated = await prisma.booking.update({
-                where: { id },
-                data: { status: "CONFIRMED" }
-            });
-            return updated;
-        }
+        // If not already integrated with Google (e.g. was pending manual review), do it here.
+        // For this flow, we already did it on creation, but this allows manual confirmation if we change logic.
+        const updated = await prisma.booking.update({
+            where: { id },
+            data: { status: "CONFIRMED" }
+        });
+        return updated;
+    }
 
     async completeBooking(id: string) {
-            const booking = await prisma.booking.findUnique({ where: { id } });
-            if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        const booking = await prisma.booking.findUnique({ where: { id } });
+        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
 
-            const updated = await prisma.booking.update({
-                where: { id },
-                data: { status: "COMPLETED" }
-            });
-            return updated;
-        }
+        const updated = await prisma.booking.update({
+            where: { id },
+            data: { status: "COMPLETED" }
+        });
+        return updated;
+    }
 
     async cancelBooking(id: string) {
-            const booking = await prisma.booking.findUnique({ where: { id } });
-            if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        const booking = await prisma.booking.findUnique({ where: { id } });
+        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
 
-            // Ideally, delete from Google Calendar here too using the event ID if we stored it.
-            // For MVP, we just update DB status.
+        // Ideally, delete from Google Calendar here too using the event ID if we stored it.
+        // For MVP, we just update DB status.
 
-            const updated = await prisma.booking.update({
-                where: { id },
-                data: { status: "CANCELLED" }
-            });
-            return updated;
-        }
+        const updated = await prisma.booking.update({
+            where: { id },
+            data: { status: "CANCELLED" }
+        });
+        return updated;
     }
+}
