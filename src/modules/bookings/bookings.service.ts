@@ -49,9 +49,10 @@ export class BookingService {
         const endTime = format(addMinutes(parse(cleanStartTime, "HH:mm", bookingDate), 60), "HH:mm"); // Default 60 mins
 
         // 2. Validate Service Availability (Holiday & Working Hours)
-        const isHoliday = await this.availabilityEngine.isHoliday(bookingDate);
-        if (isHoliday) {
-            throw new AppError("Selected date is a holiday", 400, "DATE_IS_HOLIDAY");
+        // Check partial/full holiday overlap
+        const isBlocked = await this.availabilityEngine.isSlotBlocked(bookingDate, cleanStartTime, endTime);
+        if (isBlocked) {
+            throw new AppError("Selected time is during a holiday/blocked period", 400, "DATE_IS_BLOCKED");
         }
 
         const workingHours = await this.availabilityEngine.getWorkingHours(bookingDate);

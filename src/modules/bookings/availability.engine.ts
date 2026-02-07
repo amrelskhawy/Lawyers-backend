@@ -8,11 +8,23 @@ interface TimeSlot {
 }
 
 export class AvailabilityEngine {
-    public async isHoliday(date: Date): Promise<boolean> {
-        const holiday = await prisma.holiday.findUnique({
-            where: { date: startOfDay(date) },
+    public async getHolidayBlocks(date: Date) {
+        return await prisma.holiday.findMany({
+            where: { date: startOfDay(date) }
         });
-        return !!holiday;
+    }
+
+    public async isSlotBlocked(date: Date, startTime: string, endTime: string): Promise<boolean> {
+        const holidays = await this.getHolidayBlocks(date);
+        for (const h of holidays) {
+            const hStart = h.startTime || "00:00";
+            const hEnd = h.endTime || "23:59";
+            // Check overlap
+            if (startTime < hEnd && endTime > hStart) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public async getWorkingHours(date: Date): Promise<{ startTime: string; endTime: string } | null> {
@@ -47,18 +59,13 @@ export class AvailabilityEngine {
     }
 
     async getAvailableSlots(date: Date, serviceDurationMinutes: number = 60): Promise<TimeSlot[]> {
-        // 1. Check if it's a holiday
-        if (await this.isHoliday(date)) {
-            return [];
-        }
-
-        // 2. Get working hours
+        // 1. Get working hours
         const workingHours = await this.getWorkingHours(date);
         if (!workingHours) {
             return [];
         }
 
-        // 3. Generate all possible slots
+        // 2. Generate all possible slots
         const slots: TimeSlot[] = [];
         let currentSlotStart = parse(workingHours.startTime, "HH:mm", date);
         const endWorkDay = parse(workingHours.endTime, "HH:mm", date);
@@ -73,16 +80,22 @@ export class AvailabilityEngine {
             currentSlotStart = slotEnd;
         }
 
-        // 4. Filter out reserved slots
+        // 3. Filter out reserved slots (Bookings AND Holidays)
         const existingBookings = await this.getExistingBookings(date);
+        const holidayBlocks = await this.getHolidayBlocks(date);
 
         return slots.map(slot => {
             const isBooked = existingBookings.some(booking => {
-                // Simple overlap check logic: 
-                // (SlotStart < BookingEnd) && (SlotEnd > BookingStart)
                 return (slot.startTime < booking.endTime) && (slot.endTime > booking.startTime);
             });
-            return { ...slot, available: !isBooked };
+
+            const isHolidayBlocked = holidayBlocks.some(h => {
+                const hStart = h.startTime || "00:00";
+                const hEnd = h.endTime || "23:59";
+                return (slot.startTime < hEnd) && (slot.endTime > hStart);
+            });
+
+            return { ...slot, available: !isBooked && !isHolidayBlocked };
         });
     }
 }
