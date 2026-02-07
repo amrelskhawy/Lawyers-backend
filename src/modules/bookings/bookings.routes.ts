@@ -5,7 +5,8 @@ import {
     getAllBookings,
     confirmBooking,
     completeBooking,
-    cancelBooking
+    cancelBooking,
+    getBookingMetadata
 } from "./bookings.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 
@@ -13,6 +14,7 @@ const router = express.Router();
 
 router.post("/", createBooking);
 router.get("/availability", getAvailability);
+router.get("/metadata", getBookingMetadata);
 
 // Protected Routes
 router.get("/", protect, moderatorMiddleware, getAllBookings);
