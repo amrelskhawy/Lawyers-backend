@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            background-color: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .content {
+            padding: 20px;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            margin-top: 20px;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 10px 20px;
+            background-color: #007bff;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Booking Confirmation</h1>
+        </div>
+        <div class="content">
+            <p>Hello,</p>
+            <p>Your request for <strong>{{serviceName}}</strong> has been confirmed.</p>
+            <p><strong>Details:</strong></p>
+            <ul>
+                <li><strong>Date:</strong> {{date}}</li>
+                <li><strong>Time:</strong> {{startTime}} - {{endTime}}</li>
+            </ul>
+            <br />
+            <p>You can join the meeting using the link below:</p>
+            <p><a href="{{meetLink}}" class="button">Join Google Meet</a></p>
+            <p><a href="{{calendarUrl}}">Add to Calendar</a></p>
+        </div>
+        <div class="footer">
+            <p>Thank you for choosing our service.</p>
+        </div>
+    </div>
+</body>
+
+</html>
