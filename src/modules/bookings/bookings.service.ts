@@ -48,7 +48,37 @@ export class BookingService {
 
         const endTime = format(addMinutes(parse(cleanStartTime, "HH:mm", bookingDate), 60), "HH:mm"); // Default 60 mins
 
-        // 3. Create Booking in DB (PENDING)
+        // 2. Validate Service Availability (Holiday & Working Hours)
+        const isHoliday = await this.availabilityEngine.isHoliday(bookingDate);
+        if (isHoliday) {
+            throw new AppError("Selected date is a holiday", 400, "DATE_IS_HOLIDAY");
+        }
+
+        const workingHours = await this.availabilityEngine.getWorkingHours(bookingDate);
+        if (!workingHours) {
+            throw new AppError("Service is closed on this day", 400, "c");
+        }
+
+        // Validate time within working hours
+        if (cleanStartTime < workingHours.startTime || endTime > workingHours.endTime) {
+            throw new AppError("Time slot is outside working hours", 400, "TIME_OUTSIDE_WORKING_HOURS");
+        }
+
+        // 3. Validate Slot Availability (Prevent Double Booking)
+        const overlappingBooking = await prisma.booking.findFirst({
+            where: {
+                date: bookingDate,
+                status: { not: "CANCELLED" },
+                startTime: { lt: endTime },
+                endTime: { gt: cleanStartTime }
+            }
+        });
+
+        if (overlappingBooking) {
+            throw new AppError("Time slot is not available", 409, "TIME_SLOT_UNAVAILABLE");
+        }
+
+        // 3. Create Booking in DB (PENDING) - No Email/Calendar yet
         const booking = await prisma.booking.create({
             data: {
                 serviceId,
@@ -61,15 +91,24 @@ export class BookingService {
             include: { service: true }
         });
 
-        try {
-            // 4. Create Google Calendar Event
-            const event = await this.createGoogleEvent(booking, service.name);
+        return booking;
+    }
 
-            // 5. Generate Meet Link & Calendar Link
+    async confirmBooking(id: string) {
+        const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
+        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+
+        if (booking.status === "CONFIRMED") return booking;
+
+        try {
+            // 1. Create Google Calendar Event
+            const event = await this.createGoogleEvent(booking, booking.service.name);
+
+            // 2. Generate Meet Link & Calendar Link
             const meetLink = event.hangoutLink || event.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === 'video')?.uri || null;
             const calendarUrl = event.htmlLink;
 
-            // 6. Update Booking with Links
+            // 3. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
@@ -77,18 +116,17 @@ export class BookingService {
                     calendarUrl,
                     status: "CONFIRMED",
                 },
-                include: { service: true } // VITAL: Include service for email context
+                include: { service: true }
             });
 
-            // 7. Send Email
+            // 4. Send Confirmation Email
             await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
         } catch (error: any) {
-            console.error("Booking integration failed:", error);
-            // Return booking even if integration fails, but log error
-            return booking;
+            console.error("Booking confirmation failed:", error);
+            throw new AppError("Failed to confirm booking: " + error.message, 500, "BOOKING_CONFIRMATION_FAILED");
         }
     }
 
@@ -115,17 +153,18 @@ export class BookingService {
                 dateTime: endDateTime.toISOString(),
                 timeZone: 'UTC'
             },
-            // Simplified conference data request - let Google pick default
+            // Try 'eventHangout' for consumer accounts
             conferenceData: {
                 createRequest: {
                     requestId: booking.id,
+                    conferenceSolutionKey: { type: 'eventHangout' },
                 },
             },
         };
 
         const response = await this.calendar.events.insert({
             calendarId: 'primary',
-            requestBody: event, // Use requestBody instead of resource for newer googleapis types
+            requestBody: event,
             conferenceDataVersion: 1,
         });
 
@@ -155,22 +194,6 @@ export class BookingService {
         });
     }
 
-    async confirmBooking(id: string) {
-        const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
-        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
-
-        if (booking.status === "CONFIRMED") return booking;
-
-        const updated = await prisma.booking.update({
-            where: { id },
-            data: { status: "CONFIRMED" },
-            include: { service: true }
-        });
-
-        // Optionally send email here too if confirming manually
-        return updated;
-    }
-
     async completeBooking(id: string) {
         const booking = await prisma.booking.findUnique({ where: { id } });
         if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
@@ -191,5 +214,56 @@ export class BookingService {
             data: { status: "CANCELLED" },
             include: { service: true }
         });
+    }
+
+    async getBookingMetadata(startDateStr: string, endDateStr: string) {
+        const startDate = new Date(startDateStr);
+        const endDate = new Date(endDateStr);
+
+        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
+            throw new AppError("Invalid date range", 400, "INVALID_DATE_RANGE");
+        }
+
+        // 1. Get Working Days
+        const workingDays = await prisma.workingDay.findMany({
+            orderBy: {
+                day: 'asc'
+            }
+        });
+
+        // 2. Get Holidays in Range
+        const holidays = await prisma.holiday.findMany({
+            where: {
+                date: {
+                    gte: startDate,
+                    lte: endDate
+                }
+            }
+        });
+
+        // 3. Get Booked Dates (Dates that have at least one valid booking)
+        const bookings = await prisma.booking.findMany({
+            where: {
+                date: {
+                    gte: startDate,
+                    lte: endDate
+                },
+                status: {
+                    not: "CANCELLED"
+                }
+            },
+            select: {
+                date: true
+            }
+        });
+
+        // Reduce to unique dates
+        const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
+
+        return {
+            workingDays,
+            holidays: holidays.map((h: any) => ({ date: format(h.date, "yyyy-MM-dd"), name: h.name })),
+            bookedDates
+        };
     }
 }
