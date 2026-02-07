@@ -54,9 +54,13 @@ model WorkingDay {
 }
 
 model Holiday {
-  id   String   @id @default(uuid())
-  date DateTime @unique
-  name String
+  id        String   @id @default(uuid())
+  date      DateTime
+  startTime String?  // Optional: "HH:mm"
+  endTime   String?  // Optional: "HH:mm"
+  name      String
+
+  @@unique([date, startTime, endTime]) // Composite unique constraint to allow multiple blocks per day
 }
 
 enum Role {
