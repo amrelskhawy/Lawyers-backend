@@ -43,6 +43,17 @@ export const getAvailability = asyncHandler(async (req: Request, res: Response) 
     res.status(200).json(new AppResponse(true, "Available slots retrieved", slots));
 });
 
+export const getBookingMetadata = asyncHandler(async (req: Request, res: Response) => {
+    const { startDate, endDate } = req.query;
+
+    if (!startDate || !endDate) {
+        throw new AppError("Start date and end date are required", 400, "DATE_RANGE_REQUIRED");
+    }
+
+    const metadata = await bookingService.getBookingMetadata(startDate as string, endDate as string);
+    res.status(200).json(new AppResponse(true, "Booking metadata retrieved", metadata));
+});
+
 export const getAllBookings = asyncHandler(async (req: Request, res: Response) => {
     const bookings = await bookingService.getAllBookings();
     res.status(200).json(new AppResponse(true, "All bookings retrieved", bookings));
