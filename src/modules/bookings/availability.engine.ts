@@ -8,14 +8,14 @@ interface TimeSlot {
 }
 
 export class AvailabilityEngine {
-    private async isHoliday(date: Date): Promise<boolean> {
+    public async isHoliday(date: Date): Promise<boolean> {
         const holiday = await prisma.holiday.findUnique({
             where: { date: startOfDay(date) },
         });
         return !!holiday;
     }
 
-    private async getWorkingHours(date: Date): Promise<{ startTime: string; endTime: string } | null> {
+    public async getWorkingHours(date: Date): Promise<{ startTime: string; endTime: string } | null> {
         const dayOfWeek = format(date, "EEEE").toUpperCase();
         const workingDay = await prisma.workingDay.findUnique({
             where: { day: dayOfWeek },
