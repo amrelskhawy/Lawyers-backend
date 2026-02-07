@@ -15,6 +15,12 @@ export const createBooking = asyncHandler(async (req: Request, res: Response) =>
         throw new AppError("Missing required booking details", 400, "BOOKING_DETAILS_MISSING");
     }
 
+    // Validate date format
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+        throw new AppError("Invalid date format. Please use YYYY-MM-DD", 400, "INVALID_DATE_FORMAT");
+    }
+
     const booking = await bookingService.createBooking({ serviceId, date, startTime, clientEmail });
     res.status(201).json(new AppResponse(true, "Booking created successfully", booking));
 });
