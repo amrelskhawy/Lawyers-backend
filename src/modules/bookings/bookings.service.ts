@@ -2,7 +2,7 @@ import { google } from "googleapis";
 import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
 import { AvailabilityEngine } from "./availability.engine.js";
-import { addMinutes, parse, format } from "date-fns";
+import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 
 export class BookingService {
@@ -24,12 +24,20 @@ export class BookingService {
     }
 
     async createBooking(payload: any) {
-        const { serviceId, date, startTime, clientEmail } = payload;
+        const { serviceId, date, startTime, endTime: providedEndTime, clientEmail } = payload;
         const bookingDate = new Date(date);
 
         // Validate date
         if (isNaN(bookingDate.getTime())) {
             throw new AppError("Invalid date provided", 400, "INVALID_DATE");
+        }
+
+        // Check if date is in the past
+        const today = startOfDay(new Date());
+        const bookingDay = startOfDay(bookingDate);
+
+        if (isBefore(bookingDay, today)) {
+            throw new AppError("Cannot book dates in the past", 400, "DATE_IN_PAST");
         }
 
         // 1. Validate Service
@@ -46,29 +54,81 @@ export class BookingService {
             cleanStartTime = `${parts[0]}:${parts[1]}`;
         }
 
-        const endTime = format(addMinutes(parse(cleanStartTime, "HH:mm", bookingDate), 60), "HH:mm"); // Default 60 mins
-
-        // 2. Validate Service Availability (Holiday & Working Hours)
-        // Check partial/full holiday overlap
-        const isBlocked = await this.availabilityEngine.isSlotBlocked(bookingDate, cleanStartTime, endTime);
-        if (isBlocked) {
-            throw new AppError("Selected time is during a holiday/blocked period", 400, "DATE_IS_BLOCKED");
+        let cleanEndTime = providedEndTime;
+        if (!cleanEndTime) {
+            // Default 60 mins if not provided
+            cleanEndTime = format(addMinutes(parse(cleanStartTime, "HH:mm", bookingDate), 60), "HH:mm");
+        } else {
+            // Normalize provided endTime
+            if (cleanEndTime.includes('.')) cleanEndTime = cleanEndTime.split('.')[0];
+            if (cleanEndTime.split(':').length > 2) {
+                const parts = cleanEndTime.split(':');
+                cleanEndTime = `${parts[0]}:${parts[1]}`;
+            }
         }
 
+        // Ensure endTime is after startTime
+        if (cleanEndTime <= cleanStartTime) {
+            throw new AppError("End time must be after start time", 400, "INVALID_TIME_RANGE");
+        }
+
+        const endTime = cleanEndTime;
+
+        // Check if booking time is in the past (for today's bookings)
+        if (isToday(bookingDate)) {
+            const now = new Date();
+            const bookingDateTime = parse(cleanStartTime, "HH:mm", bookingDate);
+            if (isBefore(bookingDateTime, now)) {
+                throw new AppError("Cannot book times in the past", 400, "TIME_IN_PAST");
+            }
+        }
+
+        // 2. Check if day is fully blocked by holiday
+        const isFullyBlocked = await this.availabilityEngine.isDayFullyBlocked(bookingDate);
+        if (isFullyBlocked) {
+            throw new AppError(
+                "This day is fully blocked due to a holiday",
+                400,
+                "DAY_FULLY_BLOCKED"
+            );
+        }
+
+        // 3. Get working hours (will return defaults if not configured)
         const workingHours = await this.availabilityEngine.getWorkingHours(bookingDate);
-        if (!workingHours) {
-            throw new AppError("Service is closed on this day", 400, "c");
+
+        // Check if day is closed (00:00 to 00:00)
+        if (workingHours.startTime === "00:00" && workingHours.endTime === "00:00") {
+            const dayName = format(bookingDate, "EEEE");
+            throw new AppError(
+                `Service is closed on ${dayName}s`,
+                400,
+                "SERVICE_CLOSED"
+            );
         }
 
         // Validate time within working hours
         if (cleanStartTime < workingHours.startTime || endTime > workingHours.endTime) {
-            throw new AppError("Time slot is outside working hours", 400, "TIME_OUTSIDE_WORKING_HOURS");
+            throw new AppError(
+                `Time slot must be between ${workingHours.startTime} and ${workingHours.endTime}`,
+                400,
+                "TIME_OUTSIDE_WORKING_HOURS"
+            );
         }
 
-        // 3. Validate Slot Availability (Prevent Double Booking)
+        // 4. Check if slot is blocked by partial holiday
+        const isBlocked = await this.availabilityEngine.isSlotBlocked(bookingDate, cleanStartTime, endTime);
+        if (isBlocked) {
+            throw new AppError(
+                "This time slot is blocked due to a holiday or special closure",
+                400,
+                "SLOT_BLOCKED"
+            );
+        }
+
+        // 5. Validate Slot Availability (Prevent Double Booking)
         const overlappingBooking = await prisma.booking.findFirst({
             where: {
-                date: bookingDate,
+                date: bookingDay,
                 status: { not: "CANCELLED" },
                 startTime: { lt: endTime },
                 endTime: { gt: cleanStartTime }
@@ -76,15 +136,19 @@ export class BookingService {
         });
 
         if (overlappingBooking) {
-            throw new AppError("Time slot is not available", 409, "TIME_SLOT_UNAVAILABLE");
+            throw new AppError(
+                "This time slot is already booked. Please select a different time",
+                409,
+                "TIME_SLOT_UNAVAILABLE"
+            );
         }
 
-        // 3. Create Booking in DB (PENDING) - No Email/Calendar yet
+        // 6. Create Booking in DB (PENDING)
         const booking = await prisma.booking.create({
             data: {
                 serviceId,
                 clientEmail,
-                date: bookingDate,
+                date: bookingDay,
                 startTime: cleanStartTime,
                 endTime,
                 status: "PENDING",
@@ -154,7 +218,6 @@ export class BookingService {
                 dateTime: endDateTime.toISOString(),
                 timeZone: 'UTC'
             },
-            // Try 'eventHangout' for consumer accounts
             conferenceData: {
                 createRequest: {
                     requestId: booking.id,
@@ -225,7 +288,7 @@ export class BookingService {
             throw new AppError("Invalid date range", 400, "INVALID_DATE_RANGE");
         }
 
-        // 1. Get Working Days
+        // 1. Get Working Days configuration (optional - may be empty)
         const workingDays = await prisma.workingDay.findMany({
             orderBy: {
                 day: 'asc'
@@ -236,18 +299,18 @@ export class BookingService {
         const holidays = await prisma.holiday.findMany({
             where: {
                 date: {
-                    gte: startDate,
-                    lte: endDate
+                    gte: startOfDay(startDate),
+                    lte: startOfDay(endDate)
                 }
             }
         });
 
-        // 3. Get Booked Dates (Dates that have at least one valid booking)
+        // 3. Get Booked Dates
         const bookings = await prisma.booking.findMany({
             where: {
                 date: {
-                    gte: startDate,
-                    lte: endDate
+                    gte: startOfDay(startDate),
+                    lte: startOfDay(endDate)
                 },
                 status: {
                     not: "CANCELLED"
@@ -258,12 +321,22 @@ export class BookingService {
             }
         });
 
-        // Reduce to unique dates
         const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
 
         return {
-            workingDays,
-            holidays: holidays.map((h: any) => ({ date: format(h.date, "yyyy-MM-dd"), name: h.name })),
+            workingDays: workingDays.length > 0 ? workingDays : [{
+                day: "DEFAULT",
+                isOpen: true,
+                startTime: "09:00",
+                endTime: "17:00"
+            }],
+            holidays: holidays.map((h: any) => ({
+                date: format(h.date, "yyyy-MM-dd"),
+                name: h.name,
+                startTime: h.startTime,
+                endTime: h.endTime,
+                isFullDay: h.isFullDay
+            })),
             bookedDates
         };
     }
