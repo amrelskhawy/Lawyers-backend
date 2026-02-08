@@ -59,8 +59,9 @@ model Holiday {
   startTime String?  // Optional: "HH:mm"
   endTime   String?  // Optional: "HH:mm"
   name      String
+  isFullDay Boolean  @default(false)
 
-  @@unique([date, startTime, endTime]) // Composite unique constraint to allow multiple blocks per day
+  @@unique([date, startTime, endTime])
 }
 
 enum Role {
