@@ -1,7 +1,6 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { ServiceService } from "./services.service.js";
-import { AppError } from "../../core/utils/AppError.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const serviceService = new ServiceService();
@@ -19,10 +18,6 @@ export const getService = asyncHandler(async (req: Request, res: Response) => {
 
 export const createService = asyncHandler(async (req: Request, res: Response) => {
     const { name, description, price } = req.body;
-
-    if (!name) {
-        throw new AppError("Service name is required", 400, "SERVICE_NAME_REQUIRED");
-    }
 
     const service = await serviceService.createService({ name, description, price });
     res.status(201).json(new AppResponse(true, "Service created successfully", service));

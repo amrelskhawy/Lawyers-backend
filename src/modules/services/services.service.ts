@@ -1,5 +1,7 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
+import { ServiceUpdateInput } from "./services.types.js";
 
 export class ServiceService {
     async getAllServices() {
@@ -21,7 +23,7 @@ export class ServiceService {
         return service;
     }
 
-    async createService(payload: any) {
+    async createService(payload: ServiceUpdateInput) {
         const { name, description, price } = payload;
 
         const service = await prisma.service.create({
@@ -35,24 +37,19 @@ export class ServiceService {
         return service;
     }
 
-    async updateService(id: string, payload: any) {
-        const { name, description, price } = payload;
 
-        const serviceExists = await prisma.service.findUnique({ where: { id } });
-        if (!serviceExists) {
-            throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+    async updateService(id: string, payload: ServiceUpdateInput) {
+        try {
+            return await prisma.service.update({
+                where: { id },
+                data: payload, // prisma by default ignores undefined fields
+            });
+        } catch (error) {
+            if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
+                throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+            }
+            throw error;
         }
-
-        const service = await prisma.service.update({
-            where: { id },
-            data: {
-                ...(name !== undefined && { name }),
-                ...(description !== undefined && { description }),
-                ...(price !== undefined && { price }),
-            },
-        });
-
-        return service;
     }
 
     async deleteService(id: string) {
