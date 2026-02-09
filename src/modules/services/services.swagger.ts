@@ -16,8 +16,10 @@
  *           type: number
  *           format: decimal
  *           nullable: true
- *         isActive:
- *           type: boolean
+ *         price:
+ *           type: number
+ *           format: decimal
+ *           nullable: true
  *         createdAt:
  *           type: string
  *           format: date-time
@@ -93,18 +95,6 @@
  *       403:
  *         description: Forbidden (Moderator/Admin only)
  * 
- * /services/active:
- *   get:
- *     tags: [Services]
- *     summary: Get only active services (Public)
- *     responses:
- *       200:
- *         description: Active services retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
- * 
  * /services/{id}:
  *   get:
  *     tags: [Services]
@@ -173,60 +163,6 @@
  *     responses:
  *       200:
  *         description: Service deleted successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden (Moderator/Admin only)
- *       404:
- *         description: Service not found
- * 
- * /services/{id}/activate:
- *   patch:
- *     tags: [Services]
- *     summary: Activate service (Moderator/Admin only)
- *     security:
- *       - cookieAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The service ID
- *     responses:
- *       200:
- *         description: Service activated successfully
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/ApiResponse'
- *       401:
- *         description: Unauthorized
- *       403:
- *         description: Forbidden (Moderator/Admin only)
- *       404:
- *         description: Service not found
- * 
- * /services/{id}/deactivate:
- *   patch:
- *     tags: [Services]
- *     summary: Deactivate service (Moderator/Admin only)
- *     security:
- *       - cookieAuth: []
- *     parameters:
- *       - in: path
- *         name: id
- *         required: true
- *         schema:
- *           type: string
- *         description: The service ID
- *     responses:
- *       200:
- *         description: Service deactivated successfully
  *         content:
  *           application/json:
  *             schema:
