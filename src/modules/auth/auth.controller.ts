@@ -11,14 +11,6 @@ const authService = new AuthService();
 export const registerUser = asyncHandler(async (req: Request, res: Response) => {
     const { name, email, password } = req.body;
 
-    if (!name) throw new AppError("Name is required", 400, "AUTH_NAME_REQUIRED");
-    if (!email) throw new AppError("Email is required", 400, "AUTH_EMAIL_REQUIRED");
-    if (!password) throw new AppError("Password is required", 400, "AUTH_PASSWORD_REQUIRED");
-
-    if (password.length < 6) {
-        throw new AppError("Password must be at least 6 characters", 400, "AUTH_PASSWORD_TOO_SHORT");
-    }
-
     const result = await authService.register({ name, email, password });
 
     res.cookie("token", result.token, {
