@@ -11,11 +11,6 @@ export const listServices = asyncHandler(async (req: Request, res: Response) => 
     res.status(200).json(new AppResponse(true, "Services retrieved successfully", services));
 });
 
-export const getActiveServices = asyncHandler(async (req: Request, res: Response) => {
-    const services = await serviceService.getActiveServices();
-    res.status(200).json(new AppResponse(true, "Active services retrieved successfully", services));
-});
-
 export const getService = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const service = await serviceService.getServiceById(id);
@@ -45,16 +40,4 @@ export const deleteService = asyncHandler(async (req: Request, res: Response) =>
     const id = req.params.id as string;
     const result = await serviceService.deleteService(id);
     res.status(200).json(new AppResponse(true, result.message));
-});
-
-export const activateService = asyncHandler(async (req: Request, res: Response) => {
-    const id = req.params.id as string;
-    const service = await serviceService.activateService(id);
-    res.status(200).json(new AppResponse(true, "Service activated successfully", service));
-});
-
-export const deactivateService = asyncHandler(async (req: Request, res: Response) => {
-    const id = req.params.id as string;
-    const service = await serviceService.deactivateService(id);
-    res.status(200).json(new AppResponse(true, "Service deactivated successfully", service));
 });
