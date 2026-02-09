@@ -9,14 +9,6 @@ export class ServiceService {
         return services;
     }
 
-    async getActiveServices() {
-        const services = await prisma.service.findMany({
-            where: { isActive: true },
-            orderBy: { createdAt: "desc" },
-        });
-        return services;
-    }
-
     async getServiceById(id: string) {
         const service = await prisma.service.findUnique({
             where: { id },
@@ -72,35 +64,5 @@ export class ServiceService {
 
         await prisma.service.delete({ where: { id } });
         return { message: "Service deleted successfully" };
-    }
-
-    async activateService(id: string) {
-        const service = await prisma.service.findUnique({ where: { id } });
-
-        if (!service) {
-            throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
-        }
-
-        const updatedService = await prisma.service.update({
-            where: { id },
-            data: { isActive: true },
-        });
-
-        return updatedService;
-    }
-
-    async deactivateService(id: string) {
-        const service = await prisma.service.findUnique({ where: { id } });
-
-        if (!service) {
-            throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
-        }
-
-        const updatedService = await prisma.service.update({
-            where: { id },
-            data: { isActive: false },
-        });
-
-        return updatedService;
     }
 }
