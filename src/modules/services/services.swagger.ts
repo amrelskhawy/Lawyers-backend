@@ -16,10 +16,7 @@
  *           type: number
  *           format: decimal
  *           nullable: true
- *         price:
- *           type: number
- *           format: decimal
- *           nullable: true
+
  *         createdAt:
  *           type: string
  *           format: date-time
