@@ -45,8 +45,14 @@ export class AvailabilityEngine {
 
     public async isSlotBlocked(date: Date, startTime: string, endTime: string): Promise<boolean> {
         const holidays = await this.getHolidayBlocks(date);
+
+        //check if entire day is blocked by a full-day holiday
+        const hasFullDayHoliday = holidays.some(h => h.isFullDay);
+        if (hasFullDayHoliday) {
+            return true;
+        }
+
         for (const h of holidays) {
-            if (h.isFullDay) return true;
             const hStart = h.startTime || "00:00";
             const hEnd = h.endTime || "23:59";
             // Check overlap: slot and holiday overlap if slot starts before holiday ends AND slot ends after holiday starts
