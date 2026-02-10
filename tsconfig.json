@@ -16,11 +16,22 @@
     "declaration": true,
     "baseUrl": "./",
     "paths": {
-      "@app/*": ["src/*"],
-      "@modules/*": ["src/modules/*"],
-      "@core/*": ["src/core/*"]
+      "@app/*": [
+        "src/*"
+      ],
+      "@modules/*": [
+        "src/modules/*"
+      ],
+      "@core/*": [
+        "src/core/*"
+      ]
     }
   },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "dist"]
+  "include": [
+    "src/**/*"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
 }

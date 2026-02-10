@@ -17,6 +17,7 @@
  *           format: decimal
  *           nullable: true
 
+
  *         createdAt:
  *           type: string
  *           format: date-time

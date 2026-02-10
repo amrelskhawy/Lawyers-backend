@@ -6,7 +6,7 @@ import {
     deleteHoliday
 } from "./holidays.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
-import { validateRequest } from "@app/core/middlewares/validateRequest.js";
+import { validateRequest } from "../../core/middlewares/validateRequest.js";
 import { HolidaySchema } from "./holidays.types.js";
 
 const router = express.Router();
