@@ -9,19 +9,8 @@ const bookingService = new BookingService();
 const availabilityEngine = new AvailabilityEngine();
 
 export const createBooking = asyncHandler(async (req: Request, res: Response) => {
-    const { serviceId, date, startTime, endTime, clientEmail } = req.body;
-
-    if (!serviceId || !date || !startTime || !clientEmail) {
-        throw new AppError("Missing required booking details", 400, "BOOKING_DETAILS_MISSING");
-    }
-
-    // Validate date format
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-        throw new AppError("Invalid date format. Please use YYYY-MM-DD", 400, "INVALID_DATE_FORMAT");
-    }
-
-    const booking = await bookingService.createBooking({ serviceId, date, startTime, endTime, clientEmail });
+    // Validation handled by middleware
+    const booking = await bookingService.createBooking(req.body);
     res.status(201).json(new AppResponse(true, "Booking created successfully", booking));
 });
 
@@ -98,19 +87,19 @@ export const getAllBookings = asyncHandler(async (req: Request, res: Response) =
 });
 
 export const confirmBooking = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const booking = await bookingService.confirmBooking(id);
     res.status(200).json(new AppResponse(true, "Booking confirmed", booking));
 });
 
 export const completeBooking = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const booking = await bookingService.completeBooking(id);
     res.status(200).json(new AppResponse(true, "Booking completed", booking));
 });
 
 export const cancelBooking = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
+    const { id } = req.params as { id: string };
     const booking = await bookingService.cancelBooking(id);
     res.status(200).json(new AppResponse(true, "Booking cancelled", booking));
 });

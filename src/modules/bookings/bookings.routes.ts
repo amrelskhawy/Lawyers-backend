@@ -12,9 +12,12 @@ import {
 } from "./bookings.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 
+import { validateRequest } from "../../core/middlewares/validateRequest.js";
+import { BookingSchema } from "./bookings.types.js";
+
 const router = express.Router();
 
-router.post("/", createBooking);
+router.post("/", validateRequest(BookingSchema), createBooking);
 router.get("/availability", getAvailability);
 router.get("/availability/days", getMonthlyAvailabilityDays);
 router.get("/availability/slots", getDetailedDaySlots);
