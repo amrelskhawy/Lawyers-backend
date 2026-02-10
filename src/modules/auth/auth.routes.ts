@@ -12,12 +12,14 @@ import {
 } from "./auth.controller.js";
 import { getUser, updateUser } from "../users/users.controller.js";
 import { protect, clearSession } from "../../core/middlewares/authMiddleware.js";
+import { validateRequest } from "@app/core/middlewares/validateRequest.js";
+import { UserSchema, LoginSchema } from "./auth.types.js";
 
 const router = express.Router();
 
 // Session Management
-router.post("/register", registerUser);
-router.post("/login", clearSession, loginUser);
+router.post("/register", validateRequest(UserSchema), registerUser);
+router.post("/login", clearSession, validateRequest(LoginSchema), loginUser);
 router.get("/logout", logoutUser);
 router.get("/login-status", userLoginStatus);
 

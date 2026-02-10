@@ -5,6 +5,8 @@ import {
     deleteModerator,
 } from "./moderators.controller.js";
 import { protect, adminMiddleware } from "../../core/middlewares/authMiddleware.js";
+import { validateRequest } from "@app/core/middlewares/validateRequest.js";
+import { CreateModeratorSchema } from "./moderators.types.js";
 
 const router = express.Router();
 
@@ -12,7 +14,7 @@ const router = express.Router();
 router.use(protect, adminMiddleware);
 
 router.route("/")
-    .post(createModerator)
+    .post(validateRequest(CreateModeratorSchema), createModerator)
     .get(getAllModerators);
 
 router.route("/:id")

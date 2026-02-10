@@ -55,7 +55,54 @@ export const sendEmail = async (
         console.log("Message sent: %s", info.messageId);
         return info;
     } catch (error) {
-        console.log("Error sending email: ", error);
+        console.error("Error sending email: ", error);
+        throw error;
+    }
+};
+
+export const sendEmailWithTemplate = async (
+    to: string,
+    subject: string,
+    template: string,
+    context: any
+) => {
+    const transporter = nodeMailer.createTransport({
+        service: "gmail",
+        host: "smtp.gmail.com",
+        port: 587,
+        secure: false,
+        auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+        },
+    });
+
+    const handlebarsOptions: any = {
+        viewEngine: {
+            extName: ".handlebars",
+            partialsDir: path.resolve(__dirname, "../../views"),
+            defaultLayout: false,
+        },
+        viewPath: path.resolve(__dirname, "../../views"),
+        extName: ".handlebars",
+    };
+
+    transporter.use("compile", hbs(handlebarsOptions));
+
+    const mailOptions = {
+        from: process.env.EMAIL_USER,
+        to,
+        subject,
+        template,
+        context,
+    };
+
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        console.log("Message sent to %s: %s", to, info.messageId);
+        return info;
+    } catch (error) {
+        console.error("Error sending email: ", error);
         throw error;
     }
 };

@@ -32,8 +32,7 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
         success: false,
         errorKey,
         message,
-        // Only include stack trace in development
-        stack: process.env.NODE_ENV === "production" ? undefined : err.stack,
+        errors: err.errors,
     });
 
     // Optional: Log 500 errors for internal tracking

@@ -2,9 +2,11 @@ import { Role } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
 import { AppError } from "../../core/utils/AppError.js";
+import { CreateModeratorSchema } from "./moderators.types.js";
+import z from "zod";
 
 export class ModeratorService {
-    async createModerator(payload: any) {
+    async createModerator(payload: z.infer<typeof CreateModeratorSchema>) {
         const { name, email, password } = payload;
 
         const userExists = await prisma.user.findUnique({ where: { email } });
@@ -35,6 +37,8 @@ export class ModeratorService {
         return moderator;
     }
 
+
+
     async getAllModerators() {
         // Pagination could be added here later
         const moderators = await prisma.user.findMany({
@@ -44,7 +48,6 @@ export class ModeratorService {
                 name: true,
                 email: true,
                 role: true,
-                photo: true,
                 isVerified: true,
                 createdAt: true,
             },
@@ -59,8 +62,8 @@ export class ModeratorService {
             throw new AppError("Moderator not found", 404, "MODERATOR_NOT_FOUND");
         }
 
-        if (moderator.role !== Role.MODERATOR) {
-            throw new AppError("User is not a moderator", 400, "INVALID_ROLE_OPERATION");
+        if (moderator.role !== Role.ADMIN) {
+            throw new AppError("Only Admin Can delete the moderators", 400, "INVALID_ROLE_OPERATION");
         }
 
         await prisma.user.delete({ where: { id } });

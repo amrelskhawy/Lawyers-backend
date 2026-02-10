@@ -22,6 +22,48 @@ model User {
   updatedAt  DateTime @updatedAt
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+}
+
+model Booking {
+  id          String        @id @default(uuid())
+  clientEmail String
+  serviceId   String
+  service     Service       @relation(fields: [serviceId], references: [id])
+  date        DateTime
+  startTime   String
+  endTime     String
+  status      BookingStatus @default(PENDING)
+  meetLink    String?
+  calendarUrl String?
+
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model WorkingDay {
+  id        String   @id @default(uuid())
+  day       String   @unique
+  isOpen    Boolean  @default(true)
+  startTime String   @default("09:00")
+  endTime   String   @default("17:00")
+}
+
+model Holiday {
+  id        String   @id @default(uuid())
+  date      DateTime
+  startTime String?  // Optional: "HH:mm"
+  endTime   String?  // Optional: "HH:mm"
+  name      String
+  isFullDay Boolean  @default(false)
+
+  @@unique([date, startTime, endTime])
+}
+
 enum Role {
   ADMIN
   MODERATOR
@@ -37,4 +79,15 @@ model Token {
 
   createdAt  DateTime @default(now())
   expiresAt  DateTime
+}
+
+model Service {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  Booking Booking[]
 }

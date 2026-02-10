@@ -38,8 +38,6 @@ GET    /services/:id            - Get service by ID
 POST   /services                - Create new service (admin)
 PUT    /services/:id            - Update service (admin)
 DELETE /services/:id            - Delete service (admin)
-PATCH  /services/:id/activate   - Activate service (admin)
-PATCH  /services/:id/deactivate - Deactivate service (admin)
 GET    /services/active         - Get only active services
 
 ```
