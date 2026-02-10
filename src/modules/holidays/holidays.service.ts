@@ -1,9 +1,10 @@
 import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
 import { startOfDay, format } from "date-fns";
+import { HolidayPayload } from "./holidays.types.js";
 
 export class HolidaysService {
-    async createHoliday(payload: { date: string | Date; name: string; startTime?: string; endTime?: string; isFullDay?: boolean }) {
+    async createHoliday(payload: HolidayPayload) {
         const dateObj = new Date(payload.date);
         if (isNaN(dateObj.getTime())) {
             throw new AppError("Invalid date provided", 400, "INVALID_DATE");
@@ -23,8 +24,8 @@ export class HolidaysService {
             isFullDay = true;
         }
 
-        let newStart = payload.startTime;
-        let newEnd = payload.endTime;
+        let newStart: string | null | undefined = payload.startTime;
+        let newEnd: string | null | undefined = payload.endTime;
 
         if (isFullDay) {
             newStart = null;
