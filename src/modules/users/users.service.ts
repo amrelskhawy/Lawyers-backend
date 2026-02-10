@@ -8,7 +8,6 @@ export class UsersService {
                 id: true,
                 name: true,
                 email: true,
-                photo: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,
@@ -23,7 +22,7 @@ export class UsersService {
         return user;
     }
 
-    async updateUser(id: string, data: { name?: string; bio?: string; photo?: string }) {
+    async updateUser(id: string, data: { name?: string; }) {
         const user = await prisma.user.findUnique({ where: { id } });
         if (!user) {
             throw new Error("User not found");
@@ -33,7 +32,6 @@ export class UsersService {
             where: { id },
             data: {
                 name: data.name || user.name,
-                photo: data.photo || user.photo,
             },
         });
 
@@ -42,7 +40,6 @@ export class UsersService {
             name: updated.name,
             email: updated.email,
             role: updated.role,
-            photo: updated.photo,
             isVerified: updated.isVerified,
         };
     }
@@ -53,7 +50,6 @@ export class UsersService {
                 id: true,
                 name: true,
                 email: true,
-                photo: true,
                 role: true,
                 isVerified: true,
                 createdAt: true,

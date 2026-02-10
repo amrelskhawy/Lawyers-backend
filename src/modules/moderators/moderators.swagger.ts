@@ -13,10 +13,7 @@
  *           type: string
  *         role:
  *           type: string
- *           enum: [ADMIN, MODERATOR, USER]
- *         photo:
- *           type: string
- *           nullable: true
+ *           enum: [ADMIN, MODERATOR]
  *         isVerified:
  *           type: boolean
  *         createdAt:

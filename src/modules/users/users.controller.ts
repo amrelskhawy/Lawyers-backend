@@ -16,8 +16,8 @@ export const getUser = asyncHandler(async (req: AuthRequest, res: Response) => {
 
 export const updateUser = asyncHandler(async (req: AuthRequest, res: Response) => {
     try {
-        const { name, bio, photo } = req.body;
-        const updatedUser = await usersService.updateUser(req.user.id, { name, bio, photo });
+        const { name } = req.body;
+        const updatedUser = await usersService.updateUser(req.user.id, { name });
         res.status(200).json(updatedUser);
     } catch (error: any) {
         res.status(404).json({ message: error.message });
