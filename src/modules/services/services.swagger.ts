@@ -7,9 +7,14 @@
  *       properties:
  *         id:
  *           type: string
- *         name:
+ *         name_ar:
  *           type: string
- *         description:
+ *         name_en:
+ *           type: string
+ *         description_ar:
+ *           type: string
+ *           nullable: true
+ *         description_en:
  *           type: string
  *           nullable: true
  *         price:
@@ -27,11 +32,16 @@
  *     CreateServiceInput:
  *       type: object
  *       required:
- *         - name
+ *         - name_ar
+ *         - name_en
  *       properties:
- *         name:
+ *         name_ar:
  *           type: string
- *         description:
+ *         name_en:
+ *           type: string
+ *         description_ar:
+ *           type: string
+ *         description_en:
  *           type: string
  *         price:
  *           type: number
@@ -39,9 +49,13 @@
  *     UpdateServiceInput:
  *       type: object
  *       properties:
- *         name:
+ *         name_ar:
  *           type: string
- *         description:
+ *         name_en:
+ *           type: string
+ *         description_ar:
+ *           type: string
+ *         description_en:
  *           type: string
  *         price:
  *           type: number

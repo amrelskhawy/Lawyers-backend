@@ -82,9 +82,11 @@ model Token {
 
 model Service {
   id          String   @id @default(uuid())
-  name        String
-  description String?
-  price       Decimal?
+  name_ar        String
+  name_en        String
+  description_ar String?
+  description_en String?
+  price       Decimal? @db.Decimal(10, 2)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

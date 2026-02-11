@@ -1,7 +1,8 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
-import { ServiceUpdateInput } from "./services.types.js";
+import { CreateServiceSchema, UpdateServiceSchema } from "./services.types.js";
+import z from "zod";
 
 export class ServiceService {
     async getAllServices() {
@@ -23,13 +24,15 @@ export class ServiceService {
         return service;
     }
 
-    async createService(payload: ServiceUpdateInput) {
-        const { name, description, price } = payload;
+    async createService(payload: z.infer<typeof CreateServiceSchema>) {
+        const { name_ar, name_en, description_ar, description_en, price } = payload;
 
         const service = await prisma.service.create({
             data: {
-                name,
-                description,
+                name_ar,
+                name_en,
+                description_ar,
+                description_en,
                 price,
             },
         });
@@ -38,7 +41,7 @@ export class ServiceService {
     }
 
 
-    async updateService(id: string, payload: ServiceUpdateInput) {
+    async updateService(id: string, payload: z.infer<typeof UpdateServiceSchema>) {
         try {
             return await prisma.service.update({
                 where: { id },
