@@ -80,7 +80,7 @@
  *               items:
  *                 $ref: '#/components/schemas/WorkingDay'
  *
- * /:
+ * /public:
  *   get:
  *     summary: Get all  data
  *     description: Retrieve all active services, future holidays, and working days configuration.
