@@ -6,7 +6,8 @@
     "start": "node dist/server.js",
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate",
+    "db:push-seed": "prisma db push && prisma db seed"
   },
   "author": "salma",
   "license": "ISC",
@@ -45,5 +46,8 @@
     "tsc-alias": "^1.8.16",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"
+  },
+  "prisma": {
+    "seed": "tsx prisma/seed.ts"
   }
 }
