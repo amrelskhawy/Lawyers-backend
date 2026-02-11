@@ -6,6 +6,7 @@ import servicesRoutes from "../../../modules/services/services.routes.js";
 import bookingRoutes from "../../../modules/bookings/bookings.routes.js";
 import holidayRoutes from "../../../modules/holidays/holidays.routes.js";
 import publicRoutes from "../../../modules/public/public.routes.js";
+import workdaysRoutes from "../../../modules/workdays/workdays.routes.js";
 
 const router = Router();
 
@@ -15,6 +16,7 @@ router.use("/moderators", moderatorRoutes);
 router.use("/services", servicesRoutes);
 router.use("/bookings", bookingRoutes);
 router.use("/holidays", holidayRoutes);
+router.use("/workdays", workdaysRoutes);
 router.use("/public", publicRoutes);
 
 export default router;

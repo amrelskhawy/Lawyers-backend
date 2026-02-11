@@ -9,11 +9,13 @@ export const getPublicData = asyncHandler(async (req: Request, res: Response) =>
     const [services, holidays, workingDays] = await Promise.all([
         // Fetch all active services
         prisma.service.findMany({
-            orderBy: { name: "asc" },
+            orderBy: { createdAt: "desc" },
             select: {
                 id: true,
-                name: true,
-                description: true,
+                name_ar: true,
+                name_en: true,
+                description_ar: true,
+                description_en: true,
                 price: true,
             }
         }),
