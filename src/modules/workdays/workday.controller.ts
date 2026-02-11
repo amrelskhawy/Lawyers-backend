@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler"
 import { DaysService } from "./workday.service.js";
-import { AppResponse } from "@app/core/utils/AppResponse.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const workingDayService = new DaysService();
 
