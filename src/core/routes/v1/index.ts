@@ -5,6 +5,7 @@ import moderatorRoutes from "../../../modules/moderators/moderators.routes.js";
 import servicesRoutes from "../../../modules/services/services.routes.js";
 import bookingRoutes from "../../../modules/bookings/bookings.routes.js";
 import holidayRoutes from "../../../modules/holidays/holidays.routes.js";
+import publicRoutes from "../../../modules/public/public.routes.js";
 
 const router = Router();
 
@@ -14,5 +15,6 @@ router.use("/moderators", moderatorRoutes);
 router.use("/services", servicesRoutes);
 router.use("/bookings", bookingRoutes);
 router.use("/holidays", holidayRoutes);
+router.use("/public", publicRoutes);
 
 export default router;
