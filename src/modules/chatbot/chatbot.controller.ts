@@ -1,18 +1,26 @@
-import { Request, Response } from "express";
-import asyncHandler from "express-async-handler";
+import { Request, Response, NextFunction } from "express";
 import { ChatbotService } from "./chatbot.service.js";
-import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AppError } from "../../core/utils/AppError.js";
+import { ChatRequestSchema } from "./chatbot.types.js";
 
 const chatbotService = new ChatbotService();
 
-export const handleChatMessage = asyncHandler(async (req: Request, res: Response) => {
-    const { message } = req.body;
+export const initChatbot = async () => {
+    await chatbotService.init();
+};
 
-    if (!message) {
-        throw new AppError("Message is required", 400, "MESSAGE_REQUIRED");
+export const handleChat = async (req: Request, res: Response, next: NextFunction) => {
+    try {
+        const { question } = ChatRequestSchema.parse(req.body);
+        const answer = await chatbotService.ask(question);
+
+        res.status(200).json({
+            status: "success",
+            data: {
+                answer
+            }
+        });
+    } catch (error) {
+        next(error);
     }
-
-    const reply = await chatbotService.processMessage(message);
-    res.status(200).json(new AppResponse(true, "Reply generated", { reply }));
-});
+};
