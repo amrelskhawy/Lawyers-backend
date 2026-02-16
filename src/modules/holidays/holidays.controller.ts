@@ -14,7 +14,7 @@ export const createHoliday = asyncHandler(async (req: Request, res: Response) =>
     }
 
     const holiday = await holidaysService.createHoliday({ date, name, startTime, endTime, isFullDay });
-    res.status(201).json(new AppResponse(true, "Holiday created successfully", holiday));
+    res.status(201).json(new AppResponse(true, "HOLIDAY_CREATED_SUCCESS", holiday));
 });
 
 export const getHolidaysInRange = asyncHandler(async (req: Request, res: Response) => {
@@ -25,16 +25,16 @@ export const getHolidaysInRange = asyncHandler(async (req: Request, res: Respons
     }
 
     const holidays = await holidaysService.getHolidaysByRange(new Date(from as string), new Date(to as string));
-    res.status(200).json(new AppResponse(true, "Holidays retrieved for range", holidays));
+    res.status(200).json(new AppResponse(true, "HOLIDAYS_RETRIEVED_FOR_RANGE", holidays));
 });
 
 export const getHolidays = asyncHandler(async (req: Request, res: Response) => {
     const holidays = await holidaysService.getHolidays();
-    res.status(200).json(new AppResponse(true, "Holidays retrieved", holidays));
+    res.status(200).json(new AppResponse(true, "HOLIDAYS_RETRIEVED", holidays));
 });
 
 export const deleteHoliday = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params;
     await holidaysService.deleteHoliday(id as string);
-    res.status(200).json(new AppResponse(true, "Holiday deleted successfully"));
+    res.status(200).json(new AppResponse(true, "HOLIDAY_DELETED_SUCCESS"));
 });
