@@ -11,7 +11,7 @@ const availabilityEngine = new AvailabilityEngine();
 export const createBooking = asyncHandler(async (req: Request, res: Response) => {
     // Validation handled by middleware
     const booking = await bookingService.createBooking(req.body);
-    res.status(201).json(new AppResponse(true, "Booking created successfully", booking));
+    res.status(201).json(new AppResponse(true, "BOOKING_CREATED_SUCCESS", booking));
 });
 
 export const getAvailability = asyncHandler(async (req: Request, res: Response) => {
@@ -30,7 +30,7 @@ export const getAvailability = asyncHandler(async (req: Request, res: Response) 
 
     const slots = await availabilityEngine.getAvailableSlots(dateObj, duration);
 
-    res.status(200).json(new AppResponse(true, "Available slots retrieved", slots));
+    res.status(200).json(new AppResponse(true, "AVAILABLE_SLOTS_RETRIEVED", slots));
 });
 
 export const getMonthlyAvailabilityDays = asyncHandler(async (req: Request, res: Response) => {
@@ -48,7 +48,7 @@ export const getMonthlyAvailabilityDays = asyncHandler(async (req: Request, res:
     }
 
     const availability = await availabilityEngine.getMonthlyAvailability(y, m);
-    res.status(200).json(new AppResponse(true, "Monthly availability retrieved", availability));
+    res.status(200).json(new AppResponse(true, "MONTHLY_AVAILABILITY_RETRIEVED", availability));
 });
 
 export const getDetailedDaySlots = asyncHandler(async (req: Request, res: Response) => {
@@ -67,7 +67,7 @@ export const getDetailedDaySlots = asyncHandler(async (req: Request, res: Respon
 
     const slots = await availabilityEngine.getDetailedDailySlots(dateObj, duration);
 
-    res.status(200).json(new AppResponse(true, "Detailed day slots retrieved", slots));
+    res.status(200).json(new AppResponse(true, "DETAILED_DAY_SLOTS_RETRIEVED", slots));
 });
 
 export const getBookingMetadata = asyncHandler(async (req: Request, res: Response) => {
@@ -78,28 +78,28 @@ export const getBookingMetadata = asyncHandler(async (req: Request, res: Respons
     }
 
     const metadata = await bookingService.getBookingMetadata(startDate as string, endDate as string);
-    res.status(200).json(new AppResponse(true, "Booking metadata retrieved", metadata));
+    res.status(200).json(new AppResponse(true, "BOOKING_METADATA_RETRIEVED", metadata));
 });
 
 export const getAllBookings = asyncHandler(async (req: Request, res: Response) => {
     const bookings = await bookingService.getAllBookings();
-    res.status(200).json(new AppResponse(true, "All bookings retrieved", bookings));
+    res.status(200).json(new AppResponse(true, "ALL_BOOKINGS_RETRIEVED", bookings));
 });
 
 export const confirmBooking = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const booking = await bookingService.confirmBooking(id);
-    res.status(200).json(new AppResponse(true, "Booking confirmed", booking));
+    res.status(200).json(new AppResponse(true, "BOOKING_CONFIRMED", booking));
 });
 
 export const completeBooking = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const booking = await bookingService.completeBooking(id);
-    res.status(200).json(new AppResponse(true, "Booking completed", booking));
+    res.status(200).json(new AppResponse(true, "BOOKING_COMPLETED", booking));
 });
 
 export const cancelBooking = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };
     const booking = await bookingService.cancelBooking(id);
-    res.status(200).json(new AppResponse(true, "Booking cancelled", booking));
+    res.status(200).json(new AppResponse(true, "BOOKING_CANCELLED", booking));
 });
