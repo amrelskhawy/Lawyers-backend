@@ -9,6 +9,8 @@ import { Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./core/utils/swagger.js";
 
+import { initChatbot } from "./modules/chatbot/chatbot.controller.js";
+
 dotenv.config();
 
 const port = process.env.PORT || 3000;
@@ -24,7 +26,10 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+import chatbotRoutes from "./modules/chatbot/chatbot.routes.js";
+
 app.use("/api/v1", v1Routes);
+app.use("/api/v1/chat", chatbotRoutes);
 app.get("/api-docs-json", (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
@@ -41,6 +46,9 @@ const startServer = async () => {
     try {
         await prisma.$connect();
         console.log("Connected to database");
+
+        // Initialize Chatbot (load context)
+        await initChatbot();
 
         if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
             app.listen(port, () => {
