@@ -8,6 +8,8 @@ export const BookingSchema = z.object({
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().optional(),
   clientEmail: z.string().email("Invalid email address"),
+  name: z.string().min(1, "Name is required"),
+  phone_number: z.string().min(1, "Phone number is required"),
 });
 
 export type BookingPayload = z.infer<typeof BookingSchema>;
