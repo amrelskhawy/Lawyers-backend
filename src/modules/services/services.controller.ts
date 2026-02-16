@@ -31,5 +31,5 @@ export const updateService = asyncHandler(async (req: Request, res: Response) =>
 export const deleteService = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const result = await serviceService.deleteService(id);
-    res.status(200).json(new AppResponse(true, result.message));
+    res.status(200).json(new AppResponse(true, "SERVICE_DELETED_SUCCESS"));
 });
