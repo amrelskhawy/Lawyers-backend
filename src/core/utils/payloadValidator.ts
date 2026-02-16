@@ -1,8 +1,8 @@
 import { ZodObject, ZodError } from 'zod';
-import { AppError } from './AppError.js';
+import { AppResponse } from './AppResponse.js';
 
 /**
- * Validates data against a schema and throws a formatted AppError on failure.
+ * Validates data against a schema and throws a formatted AppResponse on failure.
  */
 export const validateData = <T>(schema: ZodObject<any>, data: unknown): T => {
   try {
@@ -14,7 +14,8 @@ export const validateData = <T>(schema: ZodObject<any>, data: unknown): T => {
         message: issue.message,
       }));
 
-      throw new AppError("Validation Error", 400, "VALIDATION_ERROR", errors);
+      throw new AppResponse(false, "VALIDATION_ERROR", errors, 400);
     }
+    throw error;
   }
 };

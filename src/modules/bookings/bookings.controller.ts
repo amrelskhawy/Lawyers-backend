@@ -3,7 +3,7 @@ import asyncHandler from "express-async-handler";
 import { BookingService } from "./bookings.service.js";
 import { AvailabilityEngine } from "./availability.engine.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { AppError } from "../../core/utils/AppError.js";
+
 
 const bookingService = new BookingService();
 const availabilityEngine = new AvailabilityEngine();
@@ -18,12 +18,12 @@ export const getAvailability = asyncHandler(async (req: Request, res: Response) 
     const { date, serviceDuration } = req.query;
 
     if (!date) {
-        throw new AppError("Date is required", 400, "AVAILABILITY_DATE_REQUIRED");
+        throw new AppResponse(false, "AVAILABILITY_DATE_REQUIRED", null, 400);
     }
 
     const dateObj = new Date(date as string);
     if (isNaN(dateObj.getTime())) {
-        throw new AppError("Invalid date format", 400, "AVAILABILITY_DATE_INVALID");
+        throw new AppResponse(false, "AVAILABILITY_DATE_INVALID", null, 400);
     }
 
     const duration = serviceDuration ? parseInt(serviceDuration as string) : 60;
@@ -37,14 +37,14 @@ export const getMonthlyAvailabilityDays = asyncHandler(async (req: Request, res:
     const { month, year } = req.query;
 
     if (!month || !year) {
-        throw new AppError("Month and year are required", 400, "MONTH_YEAR_REQUIRED");
+        throw new AppResponse(false, "MONTH_YEAR_REQUIRED", null, 400);
     }
 
     const m = parseInt(month as string);
     const y = parseInt(year as string);
 
     if (isNaN(m) || isNaN(y) || m < 1 || m > 12) {
-        throw new AppError("Invalid month or year", 400, "INVALID_DATE_PARAMS");
+        throw new AppResponse(false, "INVALID_DATE_PARAMS", null, 400);
     }
 
     const availability = await availabilityEngine.getMonthlyAvailability(y, m);
@@ -55,12 +55,12 @@ export const getDetailedDaySlots = asyncHandler(async (req: Request, res: Respon
     const { date, serviceDuration } = req.query;
 
     if (!date) {
-        throw new AppError("Date is required", 400, "AVAILABILITY_DATE_REQUIRED");
+        throw new AppResponse(false, "AVAILABILITY_DATE_REQUIRED", null, 400);
     }
 
     const dateObj = new Date(date as string);
     if (isNaN(dateObj.getTime())) {
-        throw new AppError("Invalid date format", 400, "AVAILABILITY_DATE_INVALID");
+        throw new AppResponse(false, "AVAILABILITY_DATE_INVALID", null, 400);
     }
 
     const duration = serviceDuration ? parseInt(serviceDuration as string) : 60;
@@ -74,7 +74,7 @@ export const getBookingMetadata = asyncHandler(async (req: Request, res: Respons
     const { startDate, endDate } = req.query;
 
     if (!startDate || !endDate) {
-        throw new AppError("Start date and end date are required", 400, "DATE_RANGE_REQUIRED");
+        throw new AppResponse(false, "DATE_RANGE_REQUIRED", null, 400);
     }
 
     const metadata = await bookingService.getBookingMetadata(startDate as string, endDate as string);

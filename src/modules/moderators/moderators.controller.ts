@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { ModeratorService } from "./moderators.service.js";
-import { AppError } from "../../core/utils/AppError.js";
+
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const moderatorService = new ModeratorService();
@@ -10,7 +10,7 @@ export const createModerator = asyncHandler(async (req: Request, res: Response) 
     const { name, email, password } = req.body;
 
     if (password.length < 6) {
-        throw new AppError("Password must be at least 6 characters", 400, "AUTH_PASSWORD_TOO_SHORT");
+        throw new AppResponse(false, "AUTH_PASSWORD_TOO_SHORT", null, 400);
     }
 
     const moderator = await moderatorService.createModerator({ name, email, password });

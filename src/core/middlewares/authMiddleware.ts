@@ -2,7 +2,7 @@ import { Request, Response, NextFunction } from "express";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import prisma from "../db/prisma.js";
-import { AppError } from "../utils/AppError.js";
+import { AppResponse } from "../utils/AppResponse.js";
 
 interface DecodedToken {
     id: string;
@@ -16,7 +16,7 @@ export const protect = asyncHandler(async (req: AuthRequest, res: Response, next
     const token = req.cookies.token;
 
     if (!token) {
-        throw new AppError("Not authorized, please login", 401, "AUTH_TOKEN_REQUIRED");
+        throw new AppResponse(false, "AUTH_TOKEN_REQUIRED", null, 401);
     }
 
     const secret = process.env.JWT_SECRET;
@@ -39,16 +39,16 @@ export const protect = asyncHandler(async (req: AuthRequest, res: Response, next
         });
 
         if (!user) {
-            throw new AppError("User not found", 404, "AUTH_USER_NOT_FOUND");
+            throw new AppResponse(false, "AUTH_USER_NOT_FOUND", null, 404);
         }
 
         req.user = user;
         next();
     } catch (error) {
-        if (error instanceof AppError) throw error; // Re-throw AppErrors (like User not found)
+        if (error instanceof AppResponse) throw error; // Re-throw AppResponses (like User not found)
 
         // Handle JWT specific errors here or let them bubble to global handler with specific keys
-        throw new AppError("Invalid or expired token", 401, "AUTH_INVALID_TOKEN");
+        throw new AppResponse(false, "AUTH_INVALID_TOKEN", null, 401);
     }
 });
 
@@ -57,7 +57,7 @@ export const adminMiddleware = asyncHandler(async (req: AuthRequest, res: Respon
         next();
         return;
     }
-    throw new AppError("Only admins can do this!", 403, "AUTH_ADMIN_ONLY");
+    throw new AppResponse(false, "AUTH_ADMIN_ONLY", null, 403);
 });
 
 export const moderatorMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -68,7 +68,7 @@ export const moderatorMiddleware = asyncHandler(async (req: AuthRequest, res: Re
         next();
         return;
     }
-    throw new AppError("Only moderators can do this!", 403, "AUTH_MODERATOR_ONLY");
+    throw new AppResponse(false, "AUTH_MODERATOR_ONLY", null, 403);
 });
 
 export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -76,7 +76,7 @@ export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Res
         next();
         return;
     }
-    throw new AppError("Please verify your email address!", 403, "AUTH_EMAIL_NOT_VERIFIED");
+    throw new AppResponse(false, "AUTH_EMAIL_NOT_VERIFIED", null, 403);
 });
 
 export const clearSession = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
