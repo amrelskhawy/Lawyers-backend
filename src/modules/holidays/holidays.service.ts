@@ -1,5 +1,5 @@
 import prisma from "../../core/db/prisma.js";
-import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 import { startOfDay, format } from "date-fns";
 import { HolidayPayload } from "./holidays.types.js";
 
@@ -7,7 +7,7 @@ export class HolidaysService {
     async createHoliday(payload: HolidayPayload) {
         const dateObj = new Date(payload.date);
         if (isNaN(dateObj.getTime())) {
-            throw new AppError("Invalid date provided", 400, "INVALID_DATE");
+            throw new AppResponse(false, "INVALID_DATE", null, 400);
         }
 
         const normalizedDate = startOfDay(dateObj);
@@ -15,7 +15,7 @@ export class HolidaysService {
         // Prevent past holidays
         const today = startOfDay(new Date());
         if (normalizedDate < today) {
-            throw new AppError("Cannot create holidays in the past", 400, "DATE_IN_PAST");
+            throw new AppResponse(false, "DATE_IN_PAST", null, 400);
         }
 
         // Determine isFullDay
@@ -35,7 +35,7 @@ export class HolidaysService {
             newEnd = newEnd || "23:59";
 
             if (newStart >= newEnd) {
-                throw new AppError("Start time must be before end time", 400, "INVALID_TIME_RANGE");
+                throw new AppResponse(false, "INVALID_TIME_RANGE", null, 400);
             }
         }
 
@@ -46,7 +46,7 @@ export class HolidaysService {
         // Check for overlaps
         for (const holiday of existingHolidays) {
             if (holiday.isFullDay || isFullDay) {
-                throw new AppError(`Day is already fully blocked by holiday: ${holiday.name}`, 409, "HOLIDAY_FULL_DAY_EXISTS");
+                throw new AppResponse(false, "HOLIDAY_FULL_DAY_EXISTS", null, 409);
             }
 
             const hStart = holiday.startTime || "00:00";
@@ -56,7 +56,7 @@ export class HolidaysService {
             const nEnd = newEnd || "23:59";
 
             if (nStart < hEnd && nEnd > hStart) {
-                throw new AppError(`Time slot overlaps with existing holiday: ${holiday.name}`, 409, "HOLIDAY_OVERLAP");
+                throw new AppResponse(false, "HOLIDAY_OVERLAP", null, 409);
             }
         }
 
@@ -107,7 +107,7 @@ export class HolidaysService {
     async deleteHoliday(id: string) {
         const existingHoliday = await prisma.holiday.findUnique({ where: { id } });
         if (!existingHoliday) {
-            throw new AppError("Holiday not found", 404, "HOLIDAY_NOT_FOUND");
+            throw new AppResponse(false, "HOLIDAY_NOT_FOUND", null, 404);
         }
 
         return await prisma.holiday.delete({

@@ -1,6 +1,6 @@
 import { google } from "googleapis";
 import prisma from "../../core/db/prisma.js";
-import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
 import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
@@ -29,7 +29,7 @@ export class BookingService {
 
         // Validate date
         if (isNaN(bookingDate.getTime())) {
-            throw new AppError("Invalid date provided", 400, "INVALID_DATE");
+            throw new AppResponse(false, "INVALID_DATE", null, 400);
         }
 
         // Check if date is in the past
@@ -37,12 +37,12 @@ export class BookingService {
         const bookingDay = startOfDay(bookingDate);
 
         if (isBefore(bookingDay, today)) {
-            throw new AppError("Cannot book dates in the past", 400, "DATE_IN_PAST");
+            throw new AppResponse(false, "DATE_IN_PAST", null, 400);
         }
 
         // 1. Validate Service
         const service = await prisma.service.findUnique({ where: { id: serviceId } });
-        if (!service) throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+        if (!service) throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
 
         // Parse startTime - handle both "HH:mm" and "HH:mm:ss.SSS" formats
         let cleanStartTime = startTime;
@@ -69,7 +69,7 @@ export class BookingService {
 
         // Ensure endTime is after startTime
         if (cleanEndTime <= cleanStartTime) {
-            throw new AppError("End time must be after start time", 400, "INVALID_TIME_RANGE");
+            throw new AppResponse(false, "INVALID_TIME_RANGE", null, 400);
         }
 
         const endTime = cleanEndTime;
@@ -79,18 +79,14 @@ export class BookingService {
             const now = new Date();
             const bookingDateTime = parse(cleanStartTime, "HH:mm", bookingDate);
             if (isBefore(bookingDateTime, now)) {
-                throw new AppError("Cannot book times in the past", 400, "TIME_IN_PAST");
+                throw new AppResponse(false, "TIME_IN_PAST", null, 400);
             }
         }
 
         // 2. Check if day is fully blocked by holiday
         const isFullyBlocked = await this.availabilityEngine.isDayFullyBlocked(bookingDate);
         if (isFullyBlocked) {
-            throw new AppError(
-                "This day is fully blocked due to a holiday",
-                400,
-                "DAY_FULLY_BLOCKED"
-            );
+            throw new AppResponse(false, "DAY_FULLY_BLOCKED", null, 400);
         }
 
         // 3. Get working hours (will return defaults if not configured)
@@ -99,30 +95,18 @@ export class BookingService {
         // Check if day is closed (00:00 to 00:00)
         if (workingHours.startTime === "00:00" && workingHours.endTime === "00:00") {
             const dayName = format(bookingDate, "EEEE");
-            throw new AppError(
-                `Service is closed on ${dayName}s`,
-                400,
-                "SERVICE_CLOSED"
-            );
+            throw new AppResponse(false, "SERVICE_CLOSED", null, 400);
         }
 
         // Validate time within working hours
         if (cleanStartTime < workingHours.startTime || endTime > workingHours.endTime) {
-            throw new AppError(
-                `Time slot must be between ${workingHours.startTime} and ${workingHours.endTime}`,
-                400,
-                "TIME_OUTSIDE_WORKING_HOURS"
-            );
+            throw new AppResponse(false, "TIME_OUTSIDE_WORKING_HOURS", null, 400);
         }
 
         // 4. Check if slot is blocked by partial holiday
         const isBlocked = await this.availabilityEngine.isSlotBlocked(bookingDate, cleanStartTime, endTime);
         if (isBlocked) {
-            throw new AppError(
-                "This time slot is blocked due to a holiday or special closure",
-                400,
-                "SLOT_BLOCKED"
-            );
+            throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
         // 5. Validate Slot Availability (Prevent Double Booking)
@@ -136,11 +120,7 @@ export class BookingService {
         });
 
         if (overlappingBooking) {
-            throw new AppError(
-                "This time slot is already booked. Please select a different time",
-                409,
-                "TIME_SLOT_UNAVAILABLE"
-            );
+            throw new AppResponse(false, "TIME_SLOT_UNAVAILABLE", null, 409);
         }
 
         // 6. Create Booking in DB (PENDING)
@@ -161,7 +141,7 @@ export class BookingService {
 
     async confirmBooking(id: string) {
         const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
-        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
 
         if (booking.status === "CONFIRMED") return booking;
 
@@ -191,7 +171,7 @@ export class BookingService {
 
         } catch (error: any) {
             console.error("Booking confirmation failed:", error);
-            throw new AppError("Failed to confirm booking: " + error.message, 500, "BOOKING_CONFIRMATION_FAILED");
+            throw new AppResponse(false, "BOOKING_CONFIRMATION_FAILED", null, 500);
         }
     }
 
@@ -260,7 +240,7 @@ export class BookingService {
 
     async completeBooking(id: string) {
         const booking = await prisma.booking.findUnique({ where: { id } });
-        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
 
         return await prisma.booking.update({
             where: { id },
@@ -271,7 +251,7 @@ export class BookingService {
 
     async cancelBooking(id: string) {
         const booking = await prisma.booking.findUnique({ where: { id } });
-        if (!booking) throw new AppError("Booking not found", 404, "BOOKING_NOT_FOUND");
+        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
 
         return await prisma.booking.update({
             where: { id },
@@ -285,7 +265,7 @@ export class BookingService {
         const endDate = new Date(endDateStr);
 
         if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            throw new AppError("Invalid date range", 400, "INVALID_DATE_RANGE");
+            throw new AppResponse(false, "INVALID_DATE_RANGE", null, 400);
         }
 
         // 1. Get Working Days configuration (optional - may be empty)
