@@ -25,7 +25,7 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
         new AppResponse(
             true,
             "USER_REGISTERED_SUCCESS",
-            result.user));
+            result));
 });
 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
@@ -36,7 +36,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 
     const result = await authService.login({ email, password });
 
-    res.cookie("token", result.token, {
+    res.cookie("token", {
         path: "/",
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -44,7 +44,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS", result.token));
+    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS"));
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
