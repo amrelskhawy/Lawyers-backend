@@ -38,6 +38,8 @@
  *         - date
  *         - startTime
  *         - clientEmail
+ *         - name
+ *         - phone_number
  *       properties:
  *         serviceId:
  *           type: string
@@ -51,6 +53,10 @@
  *         clientEmail:
  *           type: string
  *           format: email
+ *         name:
+ *           type: string
+ *         phone_number:
+ *           type: string
  *     AvailabilityInput:
  *       type: object
  *       required:
