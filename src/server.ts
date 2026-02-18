@@ -8,8 +8,7 @@ import v1Routes from "./core/routes/v1/index.js";
 import { Request, Response } from "express";
 import swaggerUi from "swagger-ui-express";
 import swaggerSpec from "./core/utils/swagger.js";
-
-import { initChatbot } from "./modules/chatbot/chatbot.controller.js";
+import { chatbotService } from "./modules/chatbot/chatbot.service.js";
 
 dotenv.config();
 
@@ -26,21 +25,19 @@ app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
-import chatbotRoutes from "./modules/chatbot/chatbot.routes.js";
-
-app.use("/api/v1", v1Routes);
-app.use("/api/v1/chat", chatbotRoutes);
 app.get("/api-docs-json", (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
 });
 app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
-app.use(errorHandler);
-
 app.get('/', (req: Request, res: Response) => {
     return res.json({ message: "Hello World" })
 })
+
+app.use("/api/v1", v1Routes);
+
+app.use(errorHandler);
 
 const startServer = async () => {
     try {
@@ -48,7 +45,7 @@ const startServer = async () => {
         console.log("Connected to database");
 
         // Initialize Chatbot (load context)
-        await initChatbot();
+        await chatbotService.initialize();
 
         if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
             app.listen(port, () => {
