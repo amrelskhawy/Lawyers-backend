@@ -2,7 +2,7 @@ import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
 import { startOfDay, format } from "date-fns";
 import { HolidayPayload } from "./holidays.types.js";
-import { eventBus, EVENTS } from "../../core/utils/events.js";
+import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
 export class HolidaysService {
     async createHoliday(payload: HolidayPayload) {
@@ -71,7 +71,7 @@ export class HolidaysService {
             },
         });
 
-        eventBus.emit(EVENTS.DATA_CHANGED);
+        appEvents.emitDataChange(SystemEvents.HOLIDAY_CREATED, { holidayId: holiday.id });
 
         return {
             ...holiday,
@@ -117,7 +117,7 @@ export class HolidaysService {
             where: { id },
         });
 
-        eventBus.emit(EVENTS.DATA_CHANGED);
+        appEvents.emitDataChange(SystemEvents.HOLIDAY_DELETED, { holidayId: holiday.id });
 
         return result;
     }

@@ -3,7 +3,7 @@ import prisma from "../../core/db/prisma.js";
 import { AppError } from "../../core/utils/AppError.js";
 import { CreateServiceSchema, UpdateServiceSchema } from "./services.types.js";
 import z from "zod";
-import { eventBus, EVENTS } from "../../core/utils/events.js";
+import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
 export class ServiceService {
     async getAllServices() {
@@ -38,7 +38,7 @@ export class ServiceService {
             },
         });
 
-        eventBus.emit(EVENTS.DATA_CHANGED);
+        appEvents.emitDataChange(SystemEvents.SERVICE_CREATED, { serviceId: service.id });
 
         return service;
     }
@@ -51,7 +51,7 @@ export class ServiceService {
                 data: payload, // prisma by default ignores undefined fields
             });
 
-            eventBus.emit(EVENTS.DATA_CHANGED);
+            appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
 
             return updatedService;
         } catch (error) {
@@ -71,7 +71,7 @@ export class ServiceService {
 
         await prisma.service.delete({ where: { id } });
 
-        eventBus.emit(EVENTS.DATA_CHANGED);
+        appEvents.emitDataChange(SystemEvents.SERVICE_DELETED, { serviceId: service.id });
 
         return { message: "Service deleted successfully" };
     }
