@@ -1,48 +1,34 @@
-import express from "express";
-import { handleChat } from "./chatbot.controller.js";
-
-const router = express.Router();
-
 /**
- * @swagger
- * tags:
- *   name: Chatbot
- *   description: AI Chatbot Service
+ * Chatbot Routes
+ * Defines API endpoints for chatbot functionality
  */
 
+import { Router } from "express";
+import { chatbotController } from "./chatbot.controller.js";
+
+const router = Router();
+
 /**
- * @swagger
- * /chat:
- *   post:
- *     summary: Ask a question to the chatbot
- *     tags: [Chatbot]
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - question
- *             properties:
- *               question:
- *                 type: string
- *     responses:
- *       200:
- *         description: Successful response
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 status:
- *                   type: string
- *                 data:
- *                   type: object
- *                   properties:
- *                     answer:
- *                       type: string
+ * @route   POST /api/v1/chat
+ * @desc    Ask a question to the chatbot
+ * @access  Public (add authentication middleware if needed)
  */
-router.post("/", handleChat as any);
+router.post("/", chatbotController.askQuestion.bind(chatbotController));
+
+/**
+ * @route   GET /api/v1/chat/context
+ * @desc    Get current context information
+ * @access  Public
+ */
+router.get("/context", chatbotController.getContextInfo.bind(chatbotController));
+
+/**
+ * @route   POST /api/v1/chat/refresh
+ * @desc    Manually refresh the chatbot context
+ * @access  Admin (TODO: Add authentication middleware)
+ */
+router.post("/refresh", chatbotController.refreshContext.bind(chatbotController));
+
+router.get("/health", chatbotController.healthCheck.bind(chatbotController));
 
 export default router;
