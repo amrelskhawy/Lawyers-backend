@@ -34,7 +34,7 @@ export class ChatbotService {
         // Initialize Gemini configuration
         this.config = {
             apiKey: process.env.GEMINI_API_KEY || "",
-            model: "gemini-pro",
+            model: "gemini-2.5-flash",
             temperature: 0.7,
             maxOutputTokens: 2048,
         };
@@ -58,10 +58,9 @@ export class ChatbotService {
         this.subscribeToEvents();
     }
 
-    /**
-     * Initialize chatbot: Load data and set up Gemini model
-     * Call this on server startup
-     */
+
+    //Initialize chatbot: Load data and set up Gemini model
+    //Call this on server startup
     async initialize(): Promise<void> {
         try {
             console.log("Initializing Chatbot Service...");
@@ -77,9 +76,8 @@ export class ChatbotService {
         }
     }
 
-    /**
-     * Subscribe to system events for automatic context updates
-     */
+
+    //Subscribe to system events for automatic context updates
     private subscribeToEvents(): void {
         appEvents.on(SystemEvents.DATA_CHANGED, async (event) => {
             console.log(`Data change detected: ${event.eventType}`);
@@ -118,9 +116,8 @@ export class ChatbotService {
         }
     }
 
-    /**
-     * Fetch and sanitize services data (NO customer data)
-     */
+
+    //Fetch and sanitize services data (NO customer data)
     private async fetchServices(): Promise<ServiceContext[]> {
         const services = await prisma.service.findMany({
             orderBy: { name_en: "asc" },
@@ -136,9 +133,7 @@ export class ChatbotService {
         }));
     }
 
-    /**
-     * Fetch working days configuration
-     */
+    //Fetch working days configuration
     private async fetchWorkingDays(): Promise<WorkingDayContext[]> {
         const workingDays = await prisma.workingDay.findMany({
             orderBy: { day: "asc" },
@@ -152,9 +147,7 @@ export class ChatbotService {
         }));
     }
 
-    /**
-     * Fetch holidays (public data only - no customer bookings)
-     */
+    //Fetch holidays (public data only - no customer bookings)
     private async fetchHolidays(): Promise<HolidayContext[]> {
         const holidays = await prisma.holiday.findMany({
             where: {
@@ -174,7 +167,6 @@ export class ChatbotService {
             endTime: holiday.endTime,
         }));
     }
-
 
     private generateSystemInstruction(): string {
         const servicesText = this.context.services.length > 0
@@ -208,42 +200,40 @@ export class ChatbotService {
 
         return `You are an AI assistant for a booking system. Your role is to help users understand our services, availability, and booking policies.
 
-**IMPORTANT RULES:**
-1. You can ONLY answer questions about services, working hours, holidays, and general booking information
-2. You CANNOT access or discuss specific customer bookings, personal information, or private data
-3. If asked about specific bookings, politely explain that customers should contact support directly
-4. Be helpful, professional, and concise
-5. If you don't know something, admit it rather than making up information
+        **IMPORTANT RULES:**
+        1. You can ONLY answer questions about services, working hours, holidays, and general booking information
+        2. You CANNOT access or discuss specific customer bookings, personal information, or private data
+        3. If asked about specific bookings, politely explain that customers should contact support directly
+        4. Be helpful, professional, and concise
+        5. If you don't know something, admit it rather than making up information
 
-**AVAILABLE SERVICES:**
-${servicesText}
+        **AVAILABLE SERVICES:**
+        ${servicesText}
 
-**WORKING HOURS:**
-${workingDaysText}
+        **WORKING HOURS:**
+        ${workingDaysText}
 
-**UPCOMING HOLIDAYS/CLOSURES:**
-${holidaysText}
+        **UPCOMING HOLIDAYS/CLOSURES:**
+        ${holidaysText}
 
-**BOOKING POLICIES:**
-- Bookings can be made during working hours only
-- Bookings cannot be made on holidays or during closure periods
-- Each booking requires a valid email address
-- Bookings can be in PENDING, CONFIRMED, COMPLETED, or CANCELLED status
+        **BOOKING POLICIES:**
+        - Bookings can be made during working hours only
+        - Bookings cannot be made on holidays or during closure periods
+        - Each booking requires a valid email address
+        - Bookings can be in PENDING, CONFIRMED, COMPLETED, or CANCELLED status
 
-**Context Version:** ${this.contextVersion}
-**Last Updated:** ${this.context.lastUpdated}
+        **Context Version:** ${this.contextVersion}
+        **Last Updated:** ${this.context.lastUpdated}
 
-When answering questions:
-- Focus on helping users understand what services are available
-- Explain working hours clearly
-- Inform about any upcoming closures
-- Guide users on how to make bookings
-- Do NOT attempt to create bookings or access customer data`;
+        When answering questions:
+        - Focus on helping users understand what services are available
+        - Explain working hours clearly
+        - Inform about any upcoming closures
+        - Guide users on how to make bookings
+        - Do NOT attempt to create bookings or access customer data`;
     }
 
-    /**
-     * Initialize or reinitialize the Gemini model with current system instruction
-     */
+    //Initialize or reinitialize the Gemini model with current system instruction
     private initializeModel(): void {
         this.model = this.genAI.getGenerativeModel({
             model: this.config.model,
@@ -255,10 +245,7 @@ When answering questions:
         });
     }
 
-    /**
-     * Ask a question to the chatbot
-     * Supports optional conversation history for context
-     */
+    //Support optional conversation history for context
     async ask(request: ChatRequest): Promise<ChatResponse> {
         try {
             if (!request.question || request.question.trim().length === 0) {
@@ -324,9 +311,8 @@ When answering questions:
         }
     }
 
-    /**
-     * Basic security check to prevent prompt injection
-     */
+
+    //Basic security check to prevent prompt injection
     private containsSuspiciousContent(text: string): boolean {
         const suspiciousPatterns = [
             /ignore\s+(previous|all|above)\s+instructions/i,
@@ -340,9 +326,7 @@ When answering questions:
         return suspiciousPatterns.some((pattern) => pattern.test(text));
     }
 
-    /**
-     * Get current context information (for debugging/monitoring)
-     */
+    //Get current context information (for debugging/monitoring)
     getContextInfo() {
         return {
             version: this.contextVersion,
@@ -355,14 +339,11 @@ When answering questions:
         };
     }
 
-    /**
-     * Force context refresh (useful for manual updates)
-     */
+    //Force context refresh (useful for manual updates)
     async refreshContext(): Promise<void> {
         console.log("Manual context refresh triggered");
         await this.updateContext();
     }
 }
 
-// Export singleton instance
 export const chatbotService = new ChatbotService();
