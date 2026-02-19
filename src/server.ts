@@ -6,7 +6,7 @@ import { errorHandler } from "./core/middlewares/errorMiddleware.js";
 import prisma from "./core/db/prisma.js";
 import v1Routes from "./core/routes/v1/index.js";
 import { Request, Response } from "express";
-import swaggerUi from "swagger-ui-express";
+import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
 
@@ -29,7 +29,15 @@ app.get("/api-docs-json", (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
 });
-app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
+
+// Setup Scalar API Reference
+app.use(
+    "/api-docs",
+    apiReference({
+        content: swaggerSpec,
+        theme: "purple",
+    })
+);
 
 app.get('/', (req: Request, res: Response) => {
     return res.json({ message: "Hello World" })
