@@ -117,7 +117,7 @@ export class HolidaysService {
             where: { id },
         });
 
-        appEvents.emitDataChange(SystemEvents.HOLIDAY_DELETED, { holidayId: holiday.id });
+        appEvents.emitDataChange(SystemEvents.HOLIDAY_DELETED, { holidayId: existingHoliday.id });
 
         return result;
     }

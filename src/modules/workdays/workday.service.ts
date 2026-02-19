@@ -42,7 +42,7 @@ export class DaysService {
                 WHERE w."day" = v."day";
             `);
 
-        appEvents.emitDataChange(SystemEvents.WORKDAY_UPDATED, { day: workingDay.day });
+        appEvents.emitDataChange(SystemEvents.WORKDAY_UPDATED, payload.map((d) => d.day));
 
         return this.getWorkingDays();
     }

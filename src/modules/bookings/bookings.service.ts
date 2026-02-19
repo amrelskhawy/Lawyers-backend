@@ -149,7 +149,7 @@ export class BookingService {
 
         try {
             // 1. Create Google Calendar Event
-            const event = await this.createGoogleEvent(booking, booking.service.name);
+            const event = await this.createGoogleEvent(booking, booking.service.name_en);
 
             // 2. Generate Meet Link & Calendar Link
             const meetLink = event.hangoutLink || event.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === 'video')?.uri || null;

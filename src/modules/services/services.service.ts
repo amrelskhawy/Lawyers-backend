@@ -51,7 +51,7 @@ export class ServiceService {
                 data: payload, // prisma by default ignores undefined fields
             });
 
-            appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
+            appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: updatedService.id });
 
             return updatedService;
         } catch (error) {
