@@ -25,8 +25,13 @@ export class ServiceService {
         return service;
     }
 
-    async createService(payload: z.infer<typeof CreateServiceSchema>) {
-        const { name_ar, name_en, description_ar, description_en, price } = payload;
+    async createService(payload: any) {
+        // Handle generic name/description for convenience, while respecting explicit _ar/_en fields
+        const name_ar = payload.name_ar || payload.name || "";
+        const name_en = payload.name_en || payload.name || "";
+        const description_ar = payload.description_ar || payload.description;
+        const description_en = payload.description_en || payload.description;
+        const price = payload.price;
 
         const service = await prisma.service.create({
             data: {
@@ -34,7 +39,7 @@ export class ServiceService {
                 name_en,
                 description_ar,
                 description_en,
-                price,
+                price: price !== undefined ? new Prisma.Decimal(price) : null,
             },
         });
 
