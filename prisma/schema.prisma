@@ -84,8 +84,8 @@ model Token {
 
 model Service {
   id          String   @id @default(uuid())
-  name_ar        String
-  name_en        String
+  name_ar        String   @default("")
+  name_en        String   @default("")
   description_ar String?
   description_en String?
   price       Decimal? @db.Decimal(10, 2)

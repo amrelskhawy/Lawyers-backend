@@ -1,7 +1,7 @@
 import z from "zod";
 import prisma from "../../core/db/prisma.js";
 import { WorkdaysSchema } from "./workday.types.js";
-
+import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
 export class DaysService {
     async createWorkingDays() {
@@ -41,6 +41,8 @@ export class DaysService {
                 FROM (VALUES ${values}) AS v("day", "isOpen", "startTime", "endTime")
                 WHERE w."day" = v."day";
             `);
+
+        appEvents.emitDataChange(SystemEvents.WORKDAY_UPDATED, { day: workingDay.day });
 
         return this.getWorkingDays();
     }

@@ -2,6 +2,7 @@ import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { startOfDay, format } from "date-fns";
 import { HolidayPayload } from "./holidays.types.js";
+import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
 export class HolidaysService {
     async createHoliday(payload: HolidayPayload) {
@@ -70,6 +71,8 @@ export class HolidaysService {
             },
         });
 
+        appEvents.emitDataChange(SystemEvents.HOLIDAY_CREATED, { holidayId: holiday.id });
+
         return {
             ...holiday,
             date: format(holiday.date, "yyyy-MM-dd")
@@ -110,8 +113,12 @@ export class HolidaysService {
             throw new AppResponse(false, "HOLIDAY_NOT_FOUND", null, 404);
         }
 
-        return await prisma.holiday.delete({
+        const result = await prisma.holiday.delete({
             where: { id },
         });
+
+        appEvents.emitDataChange(SystemEvents.HOLIDAY_DELETED, { holidayId: holiday.id });
+
+        return result;
     }
 }
