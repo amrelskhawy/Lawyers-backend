@@ -10,7 +10,7 @@
 
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import prisma from "../../core/db/prisma.js";
-import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
 import {
     ChatRequest,
@@ -72,7 +72,7 @@ export class ChatbotService {
             console.log(`Loaded: ${this.context.services.length} services, ${this.context.workingDays.length} working days, ${this.context.holidays.length} holidays`);
         } catch (error: any) {
             console.error("Failed to initialize chatbot:", error.message);
-            throw new AppError("Chatbot initialization failed", 500, "CHATBOT_INIT_FAILED");
+            throw new AppResponse(false, "CHATBOT_INIT_FAILED", "Chatbot initialization failed", 500);
         }
     }
 
@@ -112,7 +112,7 @@ export class ChatbotService {
             console.log(`Context updated to version ${this.contextVersion}`);
         } catch (error: any) {
             console.error("Failed to update context:", error.message);
-            throw new AppError("Context update failed", 500, "CONTEXT_UPDATE_FAILED");
+            throw new AppResponse(false, "CONTEXT_UPDATE_FAILED", "Context update failed", 500);
         }
     }
 
@@ -249,15 +249,16 @@ export class ChatbotService {
     async ask(request: ChatRequest): Promise<ChatResponse> {
         try {
             if (!request.question || request.question.trim().length === 0) {
-                throw new AppError("Question cannot be empty", 400, "EMPTY_QUESTION");
+                throw new AppResponse(false, "EMPTY_QUESTION", "Question cannot be empty", 400);
             }
 
             // Security check: Prevent injection attempts
             if (this.containsSuspiciousContent(request.question)) {
-                throw new AppError(
+                throw new AppResponse(
+                    false,
+                    "SUSPICIOUS_CONTENT",
                     "Invalid question format",
-                    400,
-                    "SUSPICIOUS_CONTENT"
+                    400
                 );
             }
 
@@ -292,21 +293,22 @@ export class ChatbotService {
 
             // Handle specific Gemini API errors
             if (error.message?.includes("API key")) {
-                throw new AppError("AI service configuration error", 500, "API_KEY_ERROR");
+                throw new AppResponse(false, "API_KEY_ERROR", "AI service configuration error", 500);
             }
 
             if (error.message?.includes("quota")) {
-                throw new AppError("AI service temporarily unavailable", 503, "QUOTA_EXCEEDED");
+                throw new AppResponse(false, "QUOTA_EXCEEDED", "AI service temporarily unavailable", 503);
             }
 
-            if (error instanceof AppError) {
+            if (error instanceof AppResponse) {
                 throw error;
             }
 
-            throw new AppError(
+            throw new AppResponse(
+                false,
+                "CHATBOT_ERROR",
                 "Failed to process your question",
-                500,
-                "CHATBOT_ERROR"
+                500
             );
         }
     }
