@@ -12,15 +12,28 @@ export class BookingService {
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
 
-        // Initialize Google Calendar
-        const auth = new google.auth.GoogleAuth({
-            credentials: {
-                client_email: process.env.GOOGLE_CLIENT_EMAIL,
-                private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            },
-            scopes: ['https://www.googleapis.com/auth/calendar'],
-        });
-        this.calendar = google.calendar({ version: 'v3', auth });
+        // Initialize Google Calendar with defensive checks
+        const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
+        const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+
+        if (clientEmail && privateKey) {
+            try {
+                const auth = new google.auth.GoogleAuth({
+                    credentials: {
+                        client_email: clientEmail,
+                        private_key: privateKey.replace(/\\n/g, '\n'),
+                    },
+                    scopes: ['https://www.googleapis.com/auth/calendar'],
+                });
+                this.calendar = google.calendar({ version: 'v3', auth });
+            } catch (error) {
+                console.error("Failed to initialize Google Calendar:", error);
+                this.calendar = null;
+            }
+        } else {
+            console.warn("Google Calendar credentials missing. Calendar integration will be disabled.");
+            this.calendar = null;
+        }
     }
 
     async createBooking(payload: any) {
@@ -109,33 +122,35 @@ export class BookingService {
             throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
-        // 5. Validate Slot Availability (Prevent Double Booking)
-        const overlappingBooking = await prisma.booking.findFirst({
-            where: {
-                date: bookingDay,
-                status: { not: "CANCELLED" },
-                startTime: { lt: endTime },
-                endTime: { gt: cleanStartTime }
+        // 5. & 6. Create booking within a transaction to prevent race conditions
+        const booking = await prisma.$transaction(async (tx) => {
+            // Re-check availability within the transaction
+            const overlappingBooking = await tx.booking.findFirst({
+                where: {
+                    date: bookingDay,
+                    status: { not: "CANCELLED" },
+                    startTime: { lt: endTime },
+                    endTime: { gt: cleanStartTime }
+                }
+            });
+
+            if (overlappingBooking) {
+                throw new AppResponse(false, "TIME_SLOT_UNAVAILABLE", null, 409);
             }
-        });
 
-        if (overlappingBooking) {
-            throw new AppResponse(false, "TIME_SLOT_UNAVAILABLE", null, 409);
-        }
-
-        // 6. Create Booking in DB (PENDING)
-        const booking = await prisma.booking.create({
-            data: {
-                serviceId,
-                clientEmail,
-                name: payload.name,
-                phone_number: payload.phone_number,
-                date: bookingDay,
-                startTime: cleanStartTime,
-                endTime,
-                status: "PENDING",
-            },
-            include: { service: true }
+            return await tx.booking.create({
+                data: {
+                    serviceId,
+                    clientEmail,
+                    name: payload.name,
+                    phone_number: payload.phone_number,
+                    date: bookingDay,
+                    startTime: cleanStartTime,
+                    endTime,
+                    status: "PENDING",
+                },
+                include: { service: true }
+            });
         });
 
         return booking;
@@ -146,6 +161,11 @@ export class BookingService {
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
 
         if (booking.status === "CONFIRMED") return booking;
+
+        if (!this.calendar) {
+            console.error("Google Calendar integration is not initialized.");
+            throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
+        }
 
         try {
             // 1. Create Google Calendar Event
