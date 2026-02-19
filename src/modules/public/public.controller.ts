@@ -70,7 +70,7 @@ export const getPublicData = asyncHandler(async (req: Request, res: Response) =>
 
     res.status(200).json(new AppResponse(
         true,
-        "Public data retrieved successfully",
+        "PUBLIC_DATA_RETRIEVED_SUCCESS",
         {
             services,
             holidays: formattedHolidays,

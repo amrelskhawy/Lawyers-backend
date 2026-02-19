@@ -3,7 +3,7 @@ import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
 import { AuthService } from "./auth.service.js";
 import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
-import { AppError } from "../../core/utils/AppError.js";
+
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const authService = new AuthService();
@@ -24,19 +24,19 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
     res.status(201).json(
         new AppResponse(
             true,
-            "User registered successfully",
-            result.user));
+            "USER_REGISTERED_SUCCESS",
+            result));
 });
 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    if (!email) throw new AppError("Email is required", 400, "AUTH_EMAIL_REQUIRED");
-    if (!password) throw new AppError("Password is required", 400, "AUTH_PASSWORD_REQUIRED");
+    if (!email) throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null, 400);
+    if (!password) throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
 
     const result = await authService.login({ email, password });
 
-    res.cookie("token", result.token, {
+    res.cookie("token", {
         path: "/",
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
@@ -44,7 +44,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(new AppResponse(true, "User logged in successfully", result.token));
+    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS"));
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -55,32 +55,32 @@ export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
         path: "/",
     });
 
-    res.status(200).json(new AppResponse(true, "Logged out successfully"));
+    res.status(200).json(new AppResponse(true, "LOGGED_OUT_SUCCESS"));
 });
 
 export const verifyEmail = asyncHandler(async (req: AuthRequest, res: Response) => {
     const result = await authService.verifyEmailInitiate(req.user.id);
-    res.status(200).json(new AppResponse(true, "Email verification initiated", result));
+    res.status(200).json(new AppResponse(true, "EMAIL_VERIFICATION_INITIATED", result));
 });
 
 export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
     const { verificationToken } = req.params;
     if (!verificationToken) {
-        throw new AppError("Invalid verification token", 400, "AUTH_TOKEN_INVALID");
+        throw new AppResponse(false, "AUTH_TOKEN_INVALID", null, 400);
     }
 
     const result = await authService.verifyUser(verificationToken as string);
-    res.status(200).json(new AppResponse(true, "User verified successfully", result));
+    res.status(200).json(new AppResponse(true, "USER_VERIFIED_SUCCESS", result));
 });
 
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
     if (!email) {
-        throw new AppError("Email is required", 400, "AUTH_EMAIL_REQUIRED");
+        throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null, 400);
     }
 
     const result = await authService.forgotPassword(email);
-    res.status(200).json(new AppResponse(true, "Password reset email sent", result));
+    res.status(200).json(new AppResponse(true, "PASSWORD_RESET_EMAIL_SENT", result));
 });
 
 export const resetPassword = asyncHandler(async (req: Request, res: Response) => {
@@ -88,11 +88,11 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
     const { password } = req.body;
 
     if (!password) {
-        throw new AppError("Password is required", 400, "AUTH_PASSWORD_REQUIRED");
+        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
     }
 
     const result = await authService.resetPassword(resetPasswordToken as string, password);
-    res.status(200).json(new AppResponse(true, "Password reset successfully", result));
+    res.status(200).json(new AppResponse(true, "PASSWORD_RESET_SUCCESS", result));
 });
 
 export const userLoginStatus = asyncHandler(async (req: Request, res: Response) => {
@@ -121,12 +121,12 @@ export const changePassword = asyncHandler(async (req: AuthRequest, res: Respons
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword) {
-        throw new AppError("Current password is required", 400, "AUTH_PASSWORD_REQUIRED");
+        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
     }
     if (!newPassword) {
-        throw new AppError("New password is required", 400, "AUTH_NEW_PASSWORD_REQUIRED");
+        throw new AppResponse(false, "AUTH_NEW_PASSWORD_REQUIRED", null, 400);
     }
 
     const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
-    res.status(200).json(new AppResponse(true, "Password changed successfully", result));
+    res.status(200).json(new AppResponse(true, "PASSWORD_CHANGED_SUCCESS", result));
 });

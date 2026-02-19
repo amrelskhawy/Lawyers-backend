@@ -1,0 +1,138 @@
+{
+    "auth": {
+        "success": {
+            "USER_REGISTERED_SUCCESS": "User registered successfully",
+            "USER_LOGGED_IN_SUCCESS": "User logged in successfully",
+            "LOGGED_OUT_SUCCESS": "Logged out successfully",
+            "EMAIL_VERIFICATION_INITIATED": "Email verification initiated",
+            "USER_VERIFIED_SUCCESS": "User verified successfully",
+            "PASSWORD_RESET_EMAIL_SENT": "Password reset email sent",
+            "PASSWORD_RESET_SUCCESS": "Password reset successfully",
+            "PASSWORD_CHANGED_SUCCESS": "Password changed successfully"
+        },
+        "error": {
+            "EMAIL_REQUIRED": "Email is required",
+            "PASSWORD_REQUIRED": "Password is required",
+            "INVALID_VERIFICATION_TOKEN": "Invalid verification token",
+            "CURRENT_PASSWORD_REQUIRED": "Current password is required",
+            "NEW_PASSWORD_REQUIRED": "New password is required",
+            "PASSWORD_TOO_SHORT": "Password must be at least 6 characters",
+            "AUTH_USER_ALREADY_EXISTS": "User already exists",
+            "AUTH_USER_NOT_FOUND": "User not found",
+            "AUTH_PASSWORD_INCORRECT": "Incorrect password",
+            "AUTH_USER_ALREADY_VERIFIED": "User is already verified",
+            "AUTH_TOKEN_INVALID": "Invalid or expired token",
+            "AUTH_EMAIL_REQUIRED": "Email is required",
+            "AUTH_PASSWORD_REQUIRED": "Password is required",
+            "AUTH_NEW_PASSWORD_REQUIRED": "New password is required",
+            "AUTH_PASSWORD_TOO_SHORT": "Password must be at least 6 characters"
+        }
+    },
+    "services": {
+        "success": {
+            "SERVICES_RETRIEVED_SUCCESS": "SERVICES_RETRIEVED_SUCCESS",
+            "SERVICE_RETRIEVED_SUCCESS": "SERVICE_RETRIEVED_SUCCESS",
+            "SERVICE_CREATED_SUCCESS": "SERVICE_CREATED_SUCCESS",
+            "SERVICE_UPDATED_SUCCESS": "SERVICE_UPDATED_SUCCESS",
+            "SERVICE_DELETED_SUCCESS": "Service deleted successfully"
+        },
+        "error": {
+            "SERVICE_NOT_FOUND": "Service not found"
+        }
+    },
+    "bookings": {
+        "success": {
+            "BOOKING_CREATED_SUCCESS": "Booking created successfully",
+            "AVAILABLE_SLOTS_RETRIEVED": "Available slots retrieved",
+            "MONTHLY_AVAILABILITY_RETRIEVED": "Monthly availability retrieved",
+            "DETAILED_DAY_SLOTS_RETRIEVED": "Detailed day slots retrieved",
+            "BOOKING_METADATA_RETRIEVED": "Booking metadata retrieved",
+            "ALL_BOOKINGS_RETRIEVED": "All bookings retrieved",
+            "BOOKING_CONFIRMED": "Booking confirmed",
+            "BOOKING_COMPLETED": "Booking completed",
+            "BOOKING_CANCELLED": "Booking cancelled"
+        },
+        "error": {
+            "DATE_REQUIRED": "Date is required",
+            "INVALID_DATE_FORMAT": "Invalid date format",
+            "MONTH_YEAR_REQUIRED": "Month and year are required",
+            "INVALID_MONTH_OR_YEAR": "Invalid month or year",
+            "Start_date_and_end_date_are_required": "Start date and end date are required",
+            "INVALID_DATE": "Invalid date provided",
+            "DATE_IN_PAST": "Cannot book dates in the past",
+            "SERVICE_NOT_FOUND": "Service not found",
+            "INVALID_TIME_RANGE": "End time must be after start time",
+            "TIME_IN_PAST": "Cannot book times in the past",
+            "DAY_FULLY_BLOCKED": "This day is fully blocked due to a holiday",
+            "SERVICE_CLOSED": "Service is closed on {0}s",
+            "TIME_OUTSIDE_WORKING_HOURS": "Time slot must be between {0} and {1}",
+            "SLOT_BLOCKED": "This time slot is blocked due to a holiday or special closure",
+            "TIME_SLOT_UNAVAILABLE": "This time slot is already booked. Please select a different time",
+            "BOOKING_NOT_FOUND": "Booking not found",
+            "BOOKING_CONFIRMATION_FAILED": "Failed to confirm booking: {0}",
+            "INVALID_DATE_RANGE": "Invalid date range",
+            "AVAILABILITY_DATE_REQUIRED": "Date is required",
+            "AVAILABILITY_DATE_INVALID": "Invalid date format",
+            "INVALID_DATE_PARAMS": "Invalid month or year",
+            "DATE_RANGE_REQUIRED": "Start date and end date are required"
+        }
+    },
+    "holidays": {
+        "success": {
+            "HOLIDAY_CREATED_SUCCESS": "Holiday created successfully",
+            "HOLIDAYS_RETRIEVED_FOR_RANGE": "Holidays retrieved for range",
+            "HOLIDAYS_RETRIEVED": "Holidays retrieved",
+            "HOLIDAY_DELETED_SUCCESS": "Holiday deleted successfully"
+        },
+        "error": {
+            "DATE_AND_NAME_REQUIRED": "Date and name are required",
+            "FROM_AND_TO_DATES_REQUIRED": "From and to dates are required",
+            "INVALID_DATE": "Invalid date provided",
+            "DATE_IN_PAST": "Cannot create holidays in the past",
+            "INVALID_TIME_RANGE": "Start time must be before end time",
+            "HOLIDAY_FULL_DAY_EXISTS": "Day is already fully blocked by holiday",
+            "HOLIDAY_OVERLAP": "Time slot overlaps with existing holiday",
+            "HOLIDAY_NOT_FOUND": "Holiday not found",
+            "HOLIDAY_DETAILS_MISSING": "Date and name are required",
+            "DATE_RANGE_REQUIRED": "From and to dates are required"
+        }
+    },
+    "moderators": {
+        "success": {
+            "MODERATOR_CREATED_SUCCESS": "Moderator created successfully",
+            "MODERATORS_RETRIEVED_SUCCESS": "Moderators retrieved successfully",
+            "MODERATOR_DELETED_SUCCESS": "Moderator deleted successfully"
+        },
+        "error": {
+            "AUTH_USER_ALREADY_EXISTS": "User already exists",
+            "MODERATOR_NOT_FOUND": "Moderator not found",
+            "INVALID_ROLE_OPERATION": "Only Admin Can delete the moderators",
+            "AUTH_PASSWORD_TOO_SHORT": "Password must be at least 6 characters"
+        }
+    },
+    "users": {
+        "success": {
+            "USER_RETRIEVED_SUCCESS": "User retrieved successfully",
+            "USER_UPDATED_SUCCESS": "User updated successfully",
+            "USERS_RETRIEVED_SUCCESS": "Users retrieved successfully",
+            "USER_DELETED_SUCCESS": "User deleted successfully"
+        }
+    },
+    "workdays": {
+        "success": {
+            "WORKING_DAYS_CREATED_SUCCESS": "Working days created successfully",
+            "WORKING_DAYS_FETCHED_SUCCESS": "Working days fetched successfully",
+            "WORKING_DAY_UPDATED_SUCCESS": "Working day updated successfully"
+        }
+    },
+    "public": {
+        "success": {
+            "PUBLIC_DATA_RETRIEVED_SUCCESS": "Public data retrieved successfully"
+        }
+    },
+    "chatbot": {
+        "success": {
+            "RESPONSE_GENERATED_SUCCESS": "Response generated successfully"
+        }
+    }
+}

@@ -1,6 +1,6 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
-import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 import { CreateServiceSchema, UpdateServiceSchema } from "./services.types.js";
 import z from "zod";
 
@@ -18,7 +18,7 @@ export class ServiceService {
         });
 
         if (!service) {
-            throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+            throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
         }
 
         return service;
@@ -49,7 +49,7 @@ export class ServiceService {
             });
         } catch (error) {
             if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2025') {
-                throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+                throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
             }
             throw error;
         }
@@ -59,7 +59,7 @@ export class ServiceService {
         const service = await prisma.service.findUnique({ where: { id } });
 
         if (!service) {
-            throw new AppError("Service not found", 404, "SERVICE_NOT_FOUND");
+            throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
         }
 
         await prisma.service.delete({ where: { id } });

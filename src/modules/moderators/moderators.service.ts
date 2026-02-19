@@ -1,7 +1,7 @@
 import { Role } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
-import { AppError } from "../../core/utils/AppError.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 import { CreateModeratorSchema } from "./moderators.types.js";
 import z from "zod";
 
@@ -11,7 +11,7 @@ export class ModeratorService {
 
         const userExists = await prisma.user.findUnique({ where: { email } });
         if (userExists) {
-            throw new AppError("User already exists", 400, "AUTH_USER_ALREADY_EXISTS");
+            throw new AppResponse(false, "AUTH_USER_ALREADY_EXISTS", null, 400);
         }
 
         const salt = await bcrypt.genSalt(10);
@@ -59,11 +59,11 @@ export class ModeratorService {
         const moderator = await prisma.user.findUnique({ where: { id } });
 
         if (!moderator) {
-            throw new AppError("Moderator not found", 404, "MODERATOR_NOT_FOUND");
+            throw new AppResponse(false, "MODERATOR_NOT_FOUND", null, 404);
         }
 
         if (moderator.role !== Role.ADMIN) {
-            throw new AppError("Only Admin Can delete the moderators", 400, "INVALID_ROLE_OPERATION");
+            throw new AppResponse(false, "INVALID_ROLE_OPERATION", null, 400);
         }
 
         await prisma.user.delete({ where: { id } });
