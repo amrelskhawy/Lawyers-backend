@@ -29,19 +29,21 @@ enum BookingStatus {
 }
 
 model Booking {
-  id          String        @id @default(uuid())
-  clientEmail String
-  serviceId   String
-  service     Service       @relation(fields: [serviceId], references: [id])
-  date        DateTime
-  startTime   String
-  endTime     String
-  status      BookingStatus @default(PENDING)
-  meetLink    String?
-  calendarUrl String?
+  id           String        @id @default(uuid())
+  name         String
+  phone_number String
+  clientEmail  String
+  serviceId    String
+  service      Service       @relation(fields: [serviceId], references: [id])
+  date         DateTime
+  startTime    String
+  endTime      String
+  status       BookingStatus @default(PENDING)
+  meetLink     String?
+  calendarUrl  String?
 
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
 }
 
 model WorkingDay {

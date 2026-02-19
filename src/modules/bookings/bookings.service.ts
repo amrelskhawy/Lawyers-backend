@@ -128,6 +128,8 @@ export class BookingService {
             data: {
                 serviceId,
                 clientEmail,
+                name: payload.name,
+                phone_number: payload.phone_number,
                 date: bookingDay,
                 startTime: cleanStartTime,
                 endTime,
