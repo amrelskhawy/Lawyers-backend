@@ -11,7 +11,7 @@ export class AppResponse<T = any> {
         public success: boolean,
         public message: string,
         public data: T | null = null,
-        statusCode: number
+        statusCode: number = 200
     ) {
         this.statusCode = statusCode;
     }
