@@ -10,8 +10,8 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
     let message = err.message || "Something went wrong";
     let data = err.data || null;
 
-    // If it's an AppResponse instance
-    if (err instanceof AppResponse) {
+    // If it's an AppResponse instance (check by structure to be safe with different instances)
+    if (err instanceof AppResponse || (err.success !== undefined && err.message && err.statusCode)) {
         statusCode = err.statusCode || 500;
         message = err.message;
         data = err.data;
