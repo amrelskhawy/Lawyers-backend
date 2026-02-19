@@ -13,7 +13,20 @@ export interface AuthRequest extends Request {
 }
 
 export const protect = asyncHandler(async (req: AuthRequest, res: Response, next: NextFunction) => {
-    const token = req.cookies.token;
+    let token;
+
+    // 1. Check Authorization Header (Bearer Token)
+    if (req.headers.authorization && req.headers.authorization.startsWith("Bearer")) {
+        token = req.headers.authorization.split(" ")[1];
+    }
+    // 2. Check Cookies
+    else if (req.cookies.token) {
+        token = req.cookies.token;
+    }
+    // 3. Check Custom Header (commonly used in API testing)
+    else if (req.headers.token) {
+        token = req.headers.token as string;
+    }
 
     if (!token) {
         throw new AppResponse(false, "AUTH_TOKEN_REQUIRED", null, 401);
