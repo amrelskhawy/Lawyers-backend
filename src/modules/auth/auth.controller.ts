@@ -31,8 +31,8 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
 export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     const { email, password } = req.body;
 
-    if (!email) throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null, 400);
-    if (!password) throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
+    if (!email) throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null);
+    if (!password) throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null);
 
     const result = await authService.login({ email, password });
 
@@ -44,7 +44,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS"));
+    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS", result.token));
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
@@ -66,7 +66,7 @@ export const verifyEmail = asyncHandler(async (req: AuthRequest, res: Response) 
 export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
     const { verificationToken } = req.params;
     if (!verificationToken) {
-        throw new AppResponse(false, "AUTH_TOKEN_INVALID", null, 400);
+        throw new AppResponse(false, "AUTH_TOKEN_INVALID", null);
     }
 
     const result = await authService.verifyUser(verificationToken as string);
@@ -76,7 +76,7 @@ export const verifyUser = asyncHandler(async (req: Request, res: Response) => {
 export const forgotPassword = asyncHandler(async (req: Request, res: Response) => {
     const { email } = req.body;
     if (!email) {
-        throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null, 400);
+        throw new AppResponse(false, "AUTH_EMAIL_REQUIRED", null);
     }
 
     const result = await authService.forgotPassword(email);
@@ -88,7 +88,7 @@ export const resetPassword = asyncHandler(async (req: Request, res: Response) =>
     const { password } = req.body;
 
     if (!password) {
-        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
+        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null);
     }
 
     const result = await authService.resetPassword(resetPasswordToken as string, password);
@@ -121,10 +121,10 @@ export const changePassword = asyncHandler(async (req: AuthRequest, res: Respons
     const { currentPassword, newPassword } = req.body;
 
     if (!currentPassword) {
-        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null, 400);
+        throw new AppResponse(false, "AUTH_PASSWORD_REQUIRED", null);
     }
     if (!newPassword) {
-        throw new AppResponse(false, "AUTH_NEW_PASSWORD_REQUIRED", null, 400);
+        throw new AppResponse(false, "AUTH_NEW_PASSWORD_REQUIRED", null);
     }
 
     const result = await authService.changePassword(req.user.id, currentPassword, newPassword);
