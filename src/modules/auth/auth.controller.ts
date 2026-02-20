@@ -36,7 +36,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
 
     const result = await authService.login({ email, password });
 
-    res.cookie("token", {
+    res.cookie("token", result.token, {
         path: "/",
         httpOnly: true,
         maxAge: 30 * 24 * 60 * 60 * 1000,
