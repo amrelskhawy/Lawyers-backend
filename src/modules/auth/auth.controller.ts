@@ -44,7 +44,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
         secure: true,
     });
 
-    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS", result.token));
+    res.status(200).json(new AppResponse(true, "USER_LOGGED_IN_SUCCESS", result));
 });
 
 export const logoutUser = asyncHandler(async (req: Request, res: Response) => {
