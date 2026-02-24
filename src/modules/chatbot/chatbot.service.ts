@@ -230,7 +230,15 @@ export class ChatbotService {
         - Explain working hours clearly
         - Inform about any upcoming closures
         - Guide users on how to make bookings
-        - Do NOT attempt to create bookings or access customer data`;
+        - Do NOT attempt to create bookings or access customer data
+
+        **RESPONSE FORMAT:**
+        - Always format your responses using Markdown
+        - Use **bold** for important terms or service names
+        - Use bullet points or numbered lists to organize information
+        - Use ## or ### headings for longer, multi-section responses
+        - Use \`inline code\` for specific times, dates, or values
+        - Keep responses concise and well-structured`;
     }
 
     //Initialize or reinitialize the Gemini model with current system instruction
