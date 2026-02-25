@@ -8,11 +8,11 @@ import { sendEmailWithTemplate } from "../../core/utils/email.js";
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
     private calendar: any;
+    private meet: any;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
 
-        // Initialize Google Calendar with defensive checks
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
         const privateKey = process.env.GOOGLE_PRIVATE_KEY;
 
@@ -23,16 +23,22 @@ export class BookingService {
                         client_email: clientEmail,
                         private_key: privateKey.replace(/\\n/g, '\n'),
                     },
-                    scopes: ['https://www.googleapis.com/auth/calendar'],
+                    scopes: [
+                        'https://www.googleapis.com/auth/calendar',
+                        'https://www.googleapis.com/auth/meetings.space.created',
+                    ],
                 });
                 this.calendar = google.calendar({ version: 'v3', auth });
+                this.meet = google.meet({ version: 'v2', auth });
             } catch (error) {
-                console.error("Failed to initialize Google Calendar:", error);
+                console.error("Failed to initialize Google APIs:", error);
                 this.calendar = null;
+                this.meet = null;
             }
         } else {
-            console.warn("Google Calendar credentials missing. Calendar integration will be disabled.");
+            console.warn("Google credentials missing. Calendar/Meet integration disabled.");
             this.calendar = null;
+            this.meet = null;
         }
     }
 
@@ -153,7 +159,23 @@ export class BookingService {
             });
         });
 
-        return booking;
+        // Generate Meet link immediately so it's available on the PENDING booking
+        let meetLink: string | null = null;
+        let calendarUrl: string | null = null;
+        try {
+            meetLink = await this.createMeetLink();
+        } catch (e: any) {
+            console.warn("Could not pre-generate Meet link:", e?.message);
+        }
+
+        // Persist links on the booking
+        const finalBooking = await prisma.booking.update({
+            where: { id: booking.id },
+            data: { meetLink, calendarUrl },
+            include: { service: true },
+        });
+
+        return finalBooking;
     }
 
     async confirmBooking(id: string) {
@@ -168,14 +190,13 @@ export class BookingService {
         }
 
         try {
-            // 1. Create Google Calendar Event
-            const event = await this.createGoogleEvent(booking, booking.service.name_en);
+            // 1. Create Meet link via Meet REST API (best-effort)
+            const meetLink = await this.createMeetLink();
 
-            // 2. Generate Meet Link & Calendar Link
-            const meetLink = event.hangoutLink || event.conferenceData?.entryPoints?.find((e: any) => e.entryPointType === 'video')?.uri || null;
-            const calendarUrl = event.htmlLink;
+            // 2. Create Google Calendar Event with the Meet link attached
+            const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
 
-            // 3. Update Booking with Links & Status
+            // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
@@ -186,18 +207,38 @@ export class BookingService {
                 include: { service: true }
             });
 
-            // 4. Send Confirmation Email
+            // 3. Send Confirmation Email
             await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
         } catch (error: any) {
-            console.error("Booking confirmation failed:", error);
+            // Surface the real root-cause message for easier debugging
+            const msg = error?.cause?.message ?? error?.response?.data?.error?.message ?? error?.message ?? "Unknown error";
+            console.error("Booking confirmation failed:", msg);
             throw new AppResponse(false, "BOOKING_CONFIRMATION_FAILED", null, 500);
         }
     }
 
-    private async createGoogleEvent(booking: any, serviceName: string) {
+    // Create a Meet space using the Meet REST API (works with service accounts)
+    private async createMeetLink(): Promise<string | null> {
+        if (!this.meet) return null;
+        try {
+            const space = await this.meet.spaces.create({ requestBody: {} });
+            const uri = space.data?.meetingUri ?? null;
+            if (uri) console.log(`Google Meet link created: ${uri}`);
+            return uri;
+        } catch (err: any) {
+            console.warn('Could not create Meet space:', err?.message ?? err);
+            return null;
+        }
+    }
+
+    private async createGoogleEvent(
+        booking: any,
+        serviceName: string,
+        meetLink: string | null = null
+    ): Promise<{ calendarUrl: string | null }> {
         const startDateTime = parse(
             `${format(booking.date, "yyyy-MM-dd")} ${booking.startTime}`,
             "yyyy-MM-dd HH:mm",
@@ -209,32 +250,32 @@ export class BookingService {
             new Date()
         );
 
-        const event = {
+        const eventBody: any = {
             summary: `Booking: ${serviceName}`,
             description: `Client: ${booking.clientEmail}`,
-            start: {
-                dateTime: startDateTime.toISOString(),
-                timeZone: 'UTC'
-            },
-            end: {
-                dateTime: endDateTime.toISOString(),
-                timeZone: 'UTC'
-            },
-            conferenceData: {
-                createRequest: {
-                    requestId: booking.id,
-                    conferenceSolutionKey: { type: 'eventHangout' },
-                },
-            },
+            start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
+            end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
         };
+
+        // Attach the Meet link as a virtual conference entry if provided
+        if (meetLink) {
+            eventBody.conferenceData = {
+                conferenceSolution: { key: { type: 'hangoutsMeet' }, name: 'Google Meet' },
+                entryPoints: [{
+                    entryPointType: 'video',
+                    uri: meetLink,
+                    label: meetLink.replace('https://', ''),
+                }],
+            };
+        }
 
         const response = await this.calendar.events.insert({
             calendarId: 'primary',
-            requestBody: event,
-            conferenceDataVersion: 1,
+            conferenceDataVersion: meetLink ? 1 : 0,
+            requestBody: eventBody,
         });
 
-        return response.data;
+        return { calendarUrl: response.data.htmlLink ?? null };
     }
 
     private async sendConfirmationEmail(booking: any) {
