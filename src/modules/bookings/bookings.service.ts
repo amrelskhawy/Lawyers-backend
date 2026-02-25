@@ -4,6 +4,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
 import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
+import { StripeService } from "../payment/stripe/stripe.service.js";
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
@@ -154,6 +155,7 @@ export class BookingService {
                     startTime: cleanStartTime,
                     endTime,
                     status: "PENDING",
+                    totalAmount: service.price || 0,
                 },
                 include: { service: true }
             });
@@ -315,6 +317,11 @@ export class BookingService {
     async cancelBooking(id: string) {
         const booking = await prisma.booking.findUnique({ where: { id } });
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
+
+        if (booking.paymentIntentId) {
+            const stripeService = new StripeService();
+            return await stripeService.cancelAndRefund(id);
+        }
 
         return await prisma.booking.update({
             where: { id },
