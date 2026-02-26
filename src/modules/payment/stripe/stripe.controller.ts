@@ -14,18 +14,6 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string, {
 
 const WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET as string;
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /stripe/create-payment-intent
-//
-// Flow:
-//   1. User submits a booking → booking is created with status PENDING
-//   2. Client calls this endpoint with the bookingId
-//   3. We create a PaymentIntent with capture_method: "manual"
-//      → Stripe authorises (freezes) the amount on the customer's card
-//      → Money is NOT moved yet; it just cannot be spent by the customer
-//   4. We return the clientSecret so the frontend can confirm the card details
-//      with Stripe.js / React Stripe Elements
-// ─────────────────────────────────────────────────────────────────────────────
 export const createPaymentIntent = asyncHandler(async (req: Request, res: Response) => {
     const { bookingId } = req.body;
     if (!bookingId) {
@@ -39,13 +27,6 @@ export const createPaymentIntent = asyncHandler(async (req: Request, res: Respon
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /stripe/confirm-payment/:bookingId   [Admin only]
-//
-// Flow:
-//   Admin confirms the booking → we capture the previously frozen funds.
-//   Money moves from the customer's card into our Stripe account balance.
-// ─────────────────────────────────────────────────────────────────────────────
 export const capturePayment = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { bookingId } = req.params;
     const result = await stripeService.captureAndConfirm(bookingId);
@@ -56,19 +37,7 @@ export const capturePayment = asyncHandler(async (req: AuthRequest, res: Respons
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /stripe/cancel-payment/:bookingId   [Admin only]
-//
-// Flow:
-//   Admin cancels the booking → we cancel the PaymentIntent.
-//   Because no capture ever happened, Stripe simply releases the authorisation
-//   hold on the customer's card.
-//
-//   Result:
-//     ✅ Customer's frozen money is released (hold lifted)
-//     ✅ No charge was made → no refund required
-//     ✅ Booking status set to CANCELLED
-// ─────────────────────────────────────────────────────────────────────────────
+
 export const cancelPayment = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { bookingId } = req.params;
     const result = await stripeService.cancelAndRefund(bookingId);
@@ -79,13 +48,6 @@ export const cancelPayment = asyncHandler(async (req: AuthRequest, res: Response
     });
 });
 
-// ─────────────────────────────────────────────────────────────────────────────
-// POST /stripe/webhook
-//
-// Stripe sends signed events here as a safety net / audit trail.
-// IMPORTANT: This route must use express.raw() middleware (not express.json())
-//            so the raw body is available for signature verification.
-// ─────────────────────────────────────────────────────────────────────────────
 export const stripeWebhook = asyncHandler(async (req: Request, res: Response) => {
     const signature = req.headers["stripe-signature"] as string;
     const result = await stripeService.handleWebhook(req.body, signature);
