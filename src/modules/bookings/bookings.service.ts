@@ -8,11 +8,13 @@ import { StripeService } from "../payment/stripe/stripe.service.js";
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
+    private stripeService: StripeService;
     private calendar: any;
     private meet: any;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
+        this.stripeService = new StripeService();
 
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
         const privateKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -129,9 +131,9 @@ export class BookingService {
             throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
-        // 5. & 6. Create booking within a transaction to prevent race conditions
+        const customer = await this.stripeService.createCustomer(clientEmail, payload.name);
+
         const booking = await prisma.$transaction(async (tx) => {
-            // Re-check availability within the transaction
             const overlappingBooking = await tx.booking.findFirst({
                 where: {
                     date: bookingDay,
@@ -161,6 +163,16 @@ export class BookingService {
             });
         });
 
+        const payment_link = await this.stripeService.createPaymentLink(
+            customer.id,
+            service.price as any,
+            booking.id
+        );
+
+        if (!payment_link) {
+            throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
+        }
+
         // Generate Meet link immediately so it's available on the PENDING booking
         let meetLink: string | null = null;
         let calendarUrl: string | null = null;
@@ -177,7 +189,10 @@ export class BookingService {
             include: { service: true },
         });
 
-        return finalBooking;
+        return {
+            payment_link,
+            ...finalBooking,
+        };
     }
 
     async confirmBooking(id: string) {
@@ -186,31 +201,33 @@ export class BookingService {
 
         if (booking.status === "CONFIRMED") return booking;
 
-        if (!this.calendar) {
-            console.error("Google Calendar integration is not initialized.");
-            throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
-        }
+        //await this.stripeService.captureAndConfirm(booking.paymentIntentId);
+        // if (!this.calendar) {
+        //     console.error("Google Calendar integration is not initialized.");
+        //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
+        // }
 
         try {
             // 1. Create Meet link via Meet REST API (best-effort)
-            const meetLink = await this.createMeetLink();
+            //const meetLink = await this.createMeetLink();
 
             // 2. Create Google Calendar Event with the Meet link attached
-            const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
+            //const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
 
             // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
-                    meetLink,
-                    calendarUrl,
+                    //meetLink,
+                    //calendarUrl,
                     status: "CONFIRMED",
+                    paymentStatus: "PAID",
                 },
                 include: { service: true }
             });
 
             // 3. Send Confirmation Email
-            await this.sendConfirmationEmail(updatedBooking);
+            //await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
@@ -286,7 +303,7 @@ export class BookingService {
             "Booking Confirmation",
             "bookingConfirmation",
             {
-                serviceName: booking.service.name,
+                serviceName: booking.service.name_en,
                 date: format(new Date(booking.date), "yyyy-MM-dd"),
                 startTime: booking.startTime,
                 endTime: booking.endTime,
