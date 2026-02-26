@@ -9,6 +9,8 @@ import { Request, Response } from "express";
 import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
+import stripeRoutes from "./modules/payment/stripe/stripe.routes.js";
+
 
 dotenv.config();
 
@@ -21,7 +23,11 @@ app.use(
         credentials: true,
     })
 );
-app.use(express.json());
+
+app.use((req, res, next) => {
+    if (req.originalUrl === "/stripe/webhook") return next();
+    express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
@@ -44,6 +50,7 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 app.use("/api/v1", v1Routes);
+app.use("/stripe", stripeRoutes);
 
 app.use(errorHandler);
 
