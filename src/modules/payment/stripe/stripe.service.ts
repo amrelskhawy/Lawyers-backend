@@ -23,11 +23,19 @@ export class StripeService {
 
     constructor() { }
 
-    /**
-     * Step 1 — Client books → Create a Stripe PaymentIntent in manual capture mode.
-     * The card is authorized (money frozen) but NOT captured yet.
-     * Returns a clientSecret for the frontend to confirm the payment.
-     */
+    async createCustomer(email: string, name: string) {
+        const customer = await stripe.customers.create({
+            email,
+            name,
+        });
+        return customer;
+    }
+
+    async getCustomer(customer_id: string) {
+        const customer = await stripe.customers.retrieve(customer_id);
+        return customer;
+    }
+
     async createPaymentIntent(bookingId: string) {
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
@@ -42,12 +50,12 @@ export class StripeService {
             throw new AppResponse(false, "ALREADY_PAID", null, 400);
         }
 
-        const amountInHalalas = Math.round(Number(booking.service.price) * 100); // SAR → halalas
+        const amountInHalalas = Math.round(Number(booking.service.price) * 100);
 
         const paymentIntent = await stripe.paymentIntents.create({
             amount: amountInHalalas,
             currency: "sar",
-            capture_method: "manual", // ← authorize only, capture later on admin confirm
+            capture_method: "manual",   // ← freeze, don't charge yet
             metadata: {
                 bookingId: booking.id,
                 clientEmail: booking.clientEmail,
@@ -56,7 +64,6 @@ export class StripeService {
             description: `Booking #${booking.id} — ${booking.service.name_en}`,
         });
 
-        // Persist paymentIntentId on the booking
         await prisma.booking.update({
             where: { id: bookingId },
             data: {
@@ -73,87 +80,58 @@ export class StripeService {
         };
     }
 
-    /**
-     * Step 2 — Create a Stripe Checkout Session (alternative to PaymentIntent Elements).
-     * Redirects to Stripe-hosted checkout page. Uses manual capture.
-     */
-    async createCheckoutSession(bookingId: string) {
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: { service: true },
-        });
+    // async createPaymentIntent(customer_id: string, amount: number) {
 
-        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
-        if (booking.status !== "PENDING") {
-            throw new AppResponse(false, "BOOKING_NOT_PENDING", null, 400);
-        }
+    //     console.log({
+    //         customer_id,
+    //         amount
+    //     });
 
-        const amountInHalalas = Math.round(Number(booking.service.price) * 100);
+    //     // 2. Create and confirm the charge immediately
+    //     // Create the intent but DON'T confirm it here
+    //     const paymentIntent = await stripe.paymentIntents.create({
+    //         amount: Math.round(amount * 100),
+    //         currency: 'sar',
+    //         customer: customer_id,
+    //         // This ensures the card is NOT saved for later, 
+    //         // enforcing a fresh entry next time.
+    //         setup_future_usage: undefined,
+    //         automatic_payment_methods: { enabled: true },
+    //     });
 
-        // First create a PaymentIntent with manual capture
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount: amountInHalalas,
-            currency: "sar",
-            capture_method: "manual",
-            metadata: {
-                bookingId: booking.id,
-                clientEmail: booking.clientEmail,
-            },
-        });
+    //     return paymentIntent;
+    // }
 
-        // Create a Checkout Session linked to the PaymentIntent
+    async createPaymentLink(customer_id: string, amount: number, bookingId: string) {
         const session = await stripe.checkout.sessions.create({
-            mode: "payment",
-            payment_method_types: ["card"],
+            customer: customer_id,
             line_items: [
                 {
                     price_data: {
-                        currency: "sar",
+                        currency: 'sar',
                         product_data: {
-                            name: booking.service.name_en,
-                            description: `Booking on ${format(new Date(booking.date), "yyyy-MM-dd")} at ${booking.startTime}`,
+                            name: 'Service Payment', // Name shown on the Stripe page
                         },
-                        unit_amount: amountInHalalas,
+                        unit_amount: Math.round(amount * 100),
                     },
                     quantity: 1,
                 },
             ],
+            mode: 'payment',
             payment_intent_data: {
-                capture_method: "manual",
+                capture_method: 'manual',
                 metadata: {
-                    bookingId: booking.id,
-                    clientEmail: booking.clientEmail,
+                    bookingId,
                 },
             },
-            customer_email: booking.clientEmail,
-            success_url: `${FRONTEND_URL}/booking/${booking.id}?status=success`,
-            cancel_url: `${FRONTEND_URL}/booking/${booking.id}?status=cancelled`,
-            metadata: {
-                bookingId: booking.id,
-            },
+            success_url: 'https://your-app.com/success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: 'https://your-app.com/cart',
         });
 
-        // Persist session + intent ids
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: {
-                paymentIntentId: session.payment_intent as string,
-                stripeSessionId: session.id,
-                paymentStatus: "PENDING",
-            },
-        });
-
-        return {
-            checkoutUrl: session.url,
-            sessionId: session.id,
-        };
+        return { url: session.url };
     }
 
-    /**
-     * Step 3 — Stripe webhook handler.
-     * Listens for payment_intent.amount_capturable_updated → marks booking as AUTHORIZED.
-     * This means the card was successfully authorized (money frozen).
-     */
+
     async handleWebhook(rawBody: Buffer, signature: string) {
         const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!;
 
@@ -210,10 +188,13 @@ export class StripeService {
 
         await prisma.booking.update({
             where: { id: bookingId },
-            data: { paymentStatus: "AUTHORIZED" },
+            data: {
+                paymentStatus: "AUTHORIZED",
+                paymentIntentId: pi.id,
+            },
         });
 
-        console.log(`Booking ${bookingId} — payment AUTHORIZED (funds frozen)`);
+        console.log(`Booking ${bookingId} — payment AUTHORIZED (funds frozen), PI saved: ${pi.id}`);
     }
 
     /** Payment captured — mark booking paymentStatus = PAID */
@@ -288,33 +269,32 @@ export class StripeService {
 
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
         if (!booking.paymentIntentId) {
-            throw new AppResponse(false, "NO_PAYMENT_INTENT", null, 400);
+            throw new AppResponse(false, "STRIPE_NO_PAYMENT_INTENT", null, 400);
         }
         if (booking.paymentStatus !== "AUTHORIZED") {
             throw new AppResponse(false, "PAYMENT_NOT_AUTHORIZED", null, 400);
         }
 
-        // Capture the payment (unfreeze money to our account)
+        // Capture the frozen funds
         await stripe.paymentIntents.capture(booking.paymentIntentId);
 
-        // Update paymentStatus immediately (webhook will also fire)
+        // Update immediately (webhook will also fire as backup)
         await prisma.booking.update({
             where: { id: bookingId },
             data: { paymentStatus: "PAID" },
         });
 
-        // Delegate to existing BookingService.confirmBooking for Meet + email
+        // Delegate Meet + Calendar + Email to BookingService
         const bookingService = await this.getBookingService();
-        const confirmedBooking = await bookingService.confirmBooking(bookingId);
-
-        return confirmedBooking;
+        return await bookingService.confirmBooking(bookingId);
     }
 
-    /**
-     * Cancel booking:
-     * - If AUTHORIZED (not yet captured) → cancel PaymentIntent (releases hold)
-     * - If PAID (already captured) → issue full refund
-     */
+    // async captureAndConfirm(payment_intent_id: string) {
+    //     const res = await stripe.paymentIntents.capture(payment_intent_id);
+    //     return res;
+    // }
+
+
     async cancelAndRefund(bookingId: string) {
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
