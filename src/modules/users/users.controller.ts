@@ -27,7 +27,8 @@ export const updateUser = asyncHandler(async (req: AuthRequest, res: Response) =
 
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
     try {
-        const users = await usersService.getAllUsers();
+        const { role } = req.query as { role: string };
+        const users = await usersService.getAllUsers(role?.toUpperCase() as 'ADMIN' | 'MODERATOR');
         res.status(200).json(new AppResponse(true, "USERS_RETRIEVED_SUCCESS", users));
     } catch (error: any) {
         res.status(500).json({ message: "Cannot get users" });
