@@ -89,6 +89,7 @@ model Service {
   description_ar String?
   description_en String?
   price       Decimal? @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
