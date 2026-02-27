@@ -9,7 +9,7 @@ import { Request, Response } from "express";
 import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
-import stripeRoutes from "./modules/payment/stripe/stripe.routes.js";
+import stripeRoutes from "./modules/payment/providers/stripe/stripe.routes.js";
 
 
 dotenv.config();
