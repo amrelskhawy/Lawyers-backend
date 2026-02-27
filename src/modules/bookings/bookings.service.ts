@@ -4,17 +4,24 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
 import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
-import { StripeService } from "../payment/stripe/stripe.service.js";
+import { StripeService } from "../payment/providers/stripe/stripe.service.js";
+
+import { PaymentService } from "../payment/payment.service.js";       // ← updated import
+import { PaymentFactory } from "../payment/payment.factory.js";       // ← updated import
+import { PaymentProvider } from "../payment/payment.interface.js";    // ← updated import
+
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
-    private stripeService: StripeService;
+    //private stripeService: StripeService;
+    private paymentService: PaymentService;
     private calendar: any;
     private meet: any;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
-        this.stripeService = new StripeService();
+        //this.stripeService = new StripeService();
+        this.paymentService = new PaymentService();
 
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
         const privateKey = process.env.GOOGLE_PRIVATE_KEY;
@@ -131,7 +138,7 @@ export class BookingService {
             throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
-        const customer = await this.stripeService.createCustomer(clientEmail, payload.name);
+        //const customer = await this.stripeService.createCustomer(clientEmail, payload.name);
 
         const booking = await prisma.$transaction(async (tx) => {
             const overlappingBooking = await tx.booking.findFirst({
@@ -163,13 +170,19 @@ export class BookingService {
             });
         });
 
-        const payment_link = await this.stripeService.createPaymentLink(
-            customer.id,
-            service.price as any,
-            booking.id
-        );
+        // const payment_link = await this.stripeService.createPaymentLink(
+        //     customer.id,
+        //     service.price as any,
+        //     booking.id
+        // );
 
-        if (!payment_link) {
+        // if (!payment_link) {
+        //     throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
+        // }
+
+        const paymentResult = await this.paymentService.createPayment(booking.id, provider);
+
+        if (!paymentResult?.url) {
             throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
         }
 
@@ -190,7 +203,8 @@ export class BookingService {
         });
 
         return {
-            payment_link,
+            payment_link: paymentResult.url,
+            provider: paymentResult.provider,
             ...finalBooking,
         };
     }
@@ -337,7 +351,8 @@ export class BookingService {
 
         if (booking.paymentIntentId) {
             const stripeService = new StripeService();
-            return await stripeService.cancelAndRefund(id);
+            //return await stripeService.cancelAndRefund(id);
+            return await this.paymentService.cancel(id, provider);
         }
 
         return await prisma.booking.update({
