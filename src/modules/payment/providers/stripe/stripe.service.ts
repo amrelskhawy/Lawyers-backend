@@ -1,7 +1,7 @@
 import Stripe from "stripe";
-import prisma from "../../../core/db/prisma.js";
-import { AppResponse } from "../../../core/utils/AppResponse.js";
-import { BookingService } from "../../bookings/bookings.service.js";
+import prisma from "../../../../core/db/prisma.js";
+import { AppResponse } from "../../../../core/utils/AppResponse.js";
+import { BookingService } from "../../../bookings/bookings.service.js";
 import { format } from "date-fns";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -15,7 +15,7 @@ export class StripeService {
 
     private async getBookingService() {
         if (!this._bookingService) {
-            const { BookingService } = await import("../../bookings/bookings.service.js");
+            const { BookingService } = await import("../../../bookings/bookings.service.js");
             this._bookingService = new BookingService();
         }
         return this._bookingService;

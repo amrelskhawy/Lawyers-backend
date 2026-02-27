@@ -4,8 +4,8 @@ import {
     capturePayment,
     cancelPayment,
     stripeWebhook,
-} from "./stripe.controller";
-import { protect, moderatorMiddleware } from "../../../core/middlewares/authMiddleware.js";
+} from "./stripe.controller.js";
+import { protect, moderatorMiddleware } from "../../../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
 
