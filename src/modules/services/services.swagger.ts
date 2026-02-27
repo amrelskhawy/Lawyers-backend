@@ -174,7 +174,34 @@
  *         description: The service ID
  *     responses:
  *       200:
- *         description: Service deleted successfully
+ *         description: Service deleted or disabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Moderator/Admin only)
+ *       404:
+ *         description: Service not found
+ * 
+ * /services/{id}/toggle-status:
+ *   patch:
+ *     tags: [Services]
+ *     summary: Toggle service status (Moderator/Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The service ID
+ *     responses:
+ *       200:
+ *         description: Service status toggled successfully
  *         content:
  *           application/json:
  *             schema:

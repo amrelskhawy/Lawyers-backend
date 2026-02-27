@@ -5,6 +5,7 @@ import {
     createService,
     updateService,
     deleteService,
+    toggleStatus,
 } from "./services.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 import { validateRequest } from "../../core/middlewares/validateRequest.js";
@@ -17,5 +18,6 @@ router.get("/", listServices); // get services only when user is logged in ( for
 router.post("/", protect, moderatorMiddleware, validateRequest(CreateServiceSchema), createService);
 router.put("/:id", protect, moderatorMiddleware, validateRequest(UpdateServiceSchema), updateService);
 router.delete("/:id", protect, moderatorMiddleware, deleteService);
+router.patch("/:id/toggle-status", protect, moderatorMiddleware, toggleStatus);
 
 export default router;
