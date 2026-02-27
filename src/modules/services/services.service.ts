@@ -67,11 +67,47 @@ export class ServiceService {
         }
     }
 
-    async deleteService(id: string) {
+    async toggleServiceStatus(id: string) {
         const service = await prisma.service.findUnique({ where: { id } });
 
         if (!service) {
             throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
+        }
+
+        const updatedService = await prisma.service.update({
+            where: { id },
+            data: { isActive: !service.isActive },
+        });
+
+        appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: updatedService.id });
+
+        return updatedService;
+    }
+
+    async deleteService(id: string) {
+        const service = await prisma.service.findUnique({
+            where: { id },
+            include: { Booking: { take: 1 } }
+        });
+
+        if (!service) {
+            throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
+        }
+
+        if (service.Booking.length > 0) {
+            // Check if it's already disabled
+            if (!service.isActive) {
+                return { message: "Service is already disabled and cannot be deleted because it has associated bookings" };
+            }
+
+            await prisma.service.update({
+                where: { id },
+                data: { isActive: false },
+            });
+
+            appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
+
+            return { message: "Service has bookings, so it has been disabled instead of deleted" };
         }
 
         await prisma.service.delete({ where: { id } });
