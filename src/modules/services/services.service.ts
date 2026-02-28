@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { CreateServiceSchema, UpdateServiceSchema } from "./services.types.js";
+import { CreateServicePayload, UpdateServicePayload } from "./services.validator.js";
 import z from "zod";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
@@ -25,21 +25,14 @@ export class ServiceService {
         return service;
     }
 
-    async createService(payload: any) {
-        // Handle generic name/description for convenience, while respecting explicit _ar/_en fields
-        const name_ar = payload.name_ar || payload.name || "";
-        const name_en = payload.name_en || payload.name || "";
-        const description_ar = payload.description_ar || payload.description;
-        const description_en = payload.description_en || payload.description;
-        const price = payload.price;
-
+    async createService(payload: CreateServicePayload) {
         const service = await prisma.service.create({
             data: {
-                name_ar,
-                name_en,
-                description_ar,
-                description_en,
-                price: price !== undefined ? new Prisma.Decimal(price) : null,
+                name_ar: payload.name_ar,
+                name_en: payload.name_en,
+                description_ar: payload.description_ar,
+                description_en: payload.description_en,
+                price: payload.price !== undefined ? new Prisma.Decimal(payload.price) : null,
             },
         });
 
@@ -48,11 +41,14 @@ export class ServiceService {
         return service;
     }
 
-    async updateService(id: string, payload: z.infer<typeof UpdateServiceSchema>) {
+    async updateService(id: string, payload: UpdateServicePayload) {
         try {
             const updatedService = await prisma.service.update({
                 where: { id },
-                data: payload, // prisma by default ignores undefined fields
+                data: {
+                    ...payload,
+                    price: payload.price !== undefined ? new Prisma.Decimal(payload.price) : undefined,
+                },
             });
 
             appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: updatedService.id });
@@ -96,7 +92,7 @@ export class ServiceService {
         if (service.Booking.length > 0) {
             // Check if it's already disabled
             if (!service.isActive) {
-                return { message: "Service is already disabled and cannot be deleted because it has associated bookings" };
+                return { message: "Service is already disabled and cannot be deleted because it has associated bookings", id: service.id, status: "ALREADY_DISABLED" };
             }
 
             await prisma.service.update({
@@ -106,7 +102,7 @@ export class ServiceService {
 
             appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
 
-            return { message: "Service has bookings, so it has been disabled instead of deleted" };
+            return { message: "Service has bookings, so it has been disabled instead of deleted", id: service.id, status: "DISABLED_ONLY" };
         }
 
         await prisma.service.delete({ where: { id } });
