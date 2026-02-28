@@ -48,7 +48,6 @@ export class ServiceService {
         return service;
     }
 
-
     async updateService(id: string, payload: z.infer<typeof UpdateServiceSchema>) {
         try {
             const updatedService = await prisma.service.update({
@@ -115,5 +114,22 @@ export class ServiceService {
         appEvents.emitDataChange(SystemEvents.SERVICE_DELETED, { serviceId: service.id });
 
         return { message: "Service deleted successfully" };
+    }
+
+    async deleteMultipleServices(ids: string[]) {
+        const results = await Promise
+            .allSettled(ids.map((id) => this.deleteService(id)));
+
+        const summary = ids.map((id, i) => {
+            if (results[i].status === "fulfilled") {
+                return { id, result: (results[i] as PromiseFulfilledResult<any>).value };
+            }
+            return { id, error: (results[i] as PromiseRejectedResult).reason };
+        });
+
+        const succeeded = summary.filter((s) => !s.error);
+        const failed = summary.filter((s) => s.error);
+
+        return { processedCount: succeeded.length, failedCount: failed.length, details: summary };
     }
 }

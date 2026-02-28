@@ -39,3 +39,9 @@ export const deleteService = asyncHandler(async (req: Request, res: Response) =>
     const result = await serviceService.deleteService(id);
     res.status(200).json(new AppResponse(true, result.message));
 });
+
+export const deleteMultipleServices = asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    const result = await serviceService.deleteMultipleServices(ids);
+    res.status(200).json(new AppResponse(true, "SERVICES_DELETED_SUCCESS", result));
+});
