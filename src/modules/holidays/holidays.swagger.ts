@@ -37,6 +37,15 @@
  *         endTime:
  *           type: string
  *           example: "16:00"
+ *     BulkDeleteInput:
+ *       type: object
+ *       required:
+ *         - ids
+ *       properties:
+ *         ids:
+ *           type: array
+ *           items:
+ *             type: string
  *     ApiResponse:
  *       type: object
  *       properties:
@@ -112,4 +121,28 @@
  *         description: Forbidden (Moderator/Admin only)
  *       404:
  *         description: Holiday not found
+ * 
+ * /holidays/bulk-delete:
+ *   delete:
+ *     tags: [Holidays]
+ *     summary: Bulk delete holidays (Moderator/Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BulkDeleteInput'
+ *     responses:
+ *       200:
+ *         description: Holidays deleted successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Moderator/Admin only)
  */
