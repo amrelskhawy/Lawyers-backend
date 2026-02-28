@@ -38,3 +38,9 @@ export const deleteHoliday = asyncHandler(async (req: Request, res: Response) =>
     await holidaysService.deleteHoliday(id as string);
     res.status(200).json(new AppResponse(true, "HOLIDAY_DELETED_SUCCESS"));
 });
+
+export const deleteMultipleHolidays = asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    const result = await holidaysService.deleteMultipleHolidays(ids);
+    res.status(200).json(new AppResponse(true, "HOLIDAYS_DELETED_SUCCESS", result));
+});

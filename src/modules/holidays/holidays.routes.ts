@@ -3,11 +3,13 @@ import {
     createHoliday,
     getHolidays,
     getHolidaysInRange,
-    deleteHoliday
+    deleteHoliday,
+    deleteMultipleHolidays
 } from "./holidays.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 import { validateRequest } from "../../core/middlewares/validateRequest.js";
 import { HolidaySchema } from "./holidays.types.js";
+import { BulkDeleteSchema } from "../../core/types/common.types.js";
 
 const router = express.Router();
 
@@ -18,6 +20,7 @@ router.get("/range", getHolidaysInRange);
 
 // Admin/Moderator routes
 router.post("/", protect, moderatorMiddleware, validateRequest(HolidaySchema), createHoliday);
+router.delete("/bulk-delete", protect, moderatorMiddleware, validateRequest(BulkDeleteSchema as any), deleteMultipleHolidays);
 router.delete("/:id", protect, moderatorMiddleware, deleteHoliday);
 
 export default router;
