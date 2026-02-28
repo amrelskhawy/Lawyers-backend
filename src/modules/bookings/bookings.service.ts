@@ -57,6 +57,10 @@ export class BookingService {
         const service = await prisma.service.findUnique({ where: { id: serviceId } });
         if (!service) throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
 
+        if (!service.isActive) {
+            throw new AppResponse(false, "SERVICE_DISABLED", "This service is currently unavailable for bookings", 400);
+        }
+
         // Parse startTime - handle both "HH:mm" and "HH:mm:ss.SSS" formats
         let cleanStartTime = startTime;
         if (startTime.includes('.')) {
