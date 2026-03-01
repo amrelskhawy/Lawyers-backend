@@ -1,6 +1,5 @@
 import prisma from "../../../core/db/prisma.js";
 import { AppResponse } from "../../../core/utils/AppResponse.js";
-import { PaymentStatus } from "../interfaces/payment.interface.js";
 
 /**
  * PaymentValidator — Single Responsibility
@@ -20,10 +19,12 @@ export class PaymentValidator {
             include: { service: true },
         });
 
+
         if (!booking) {
             throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
         }
 
+        // TODO: enahnce it 
         if (booking.status === "CONFIRMED") {
             throw new AppResponse(false, "BOOKING_ALREADY_CONFIRMED", null, 400);
         }

@@ -49,7 +49,6 @@ app.get('/', (req: Request, res: Response) => {
 })
 
 app.use("/api/v1", v1Routes);
-app.use("/payment", paymentRoutes);
 
 app.use(errorHandler);
 
