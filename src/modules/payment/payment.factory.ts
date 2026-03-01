@@ -1,8 +1,8 @@
-import { IPaymentProvider, PaymentProvider } from "./payment.interface.js";
+import { IPaymentProvider, PaymentProvider } from "./interfaces/payment.interface.js";
 import { StripeProvider } from "./providers/stripe/stripe.provider.js";
 import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
 import { TabbyProvider } from "./providers/tabby/tabby.provider.js";
-import { AppResponse } from "../../../core/utils/AppResponse.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 
 /**
  * PaymentFactory — Factory Pattern

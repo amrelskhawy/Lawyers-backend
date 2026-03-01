@@ -1,6 +1,6 @@
 import { PaymentFactory } from "./payment.factory.js";
-import { PaymentValidator } from "./payment.validator.js";
-import { PaymentProvider } from "./payment.interface.js";
+import { PaymentValidator } from "./validators/payment.validator.js";
+import { PaymentProvider, BookingPayload } from "./interfaces/payment.interface.js";
 
 /**
  * PaymentService — Orchestration Only
@@ -21,15 +21,12 @@ export class PaymentService {
      * Initiate payment for a booking.
      * Returns a checkout URL or clientSecret depending on the provider.
      */
-    async createPayment(bookingId: string, provider: PaymentProvider) {
-        // 1. Validate — throws if invalid
-        await PaymentValidator.validateBookingForPayment(bookingId);
-
-        // 2. Get the correct provider via factory
+    async createPayment(customer_id: string, amount: number, bookingPayload: BookingPayload, provider: PaymentProvider) {
+        // 1. Get the correct provider via factory
         const paymentProvider = PaymentFactory.getProvider(provider);
 
-        // 3. Delegate to provider
-        return await paymentProvider.createPayment(bookingId);
+        // 2. Delegate to provider
+        return await paymentProvider.createPayment(customer_id, amount, bookingPayload);
     }
 
     /**
