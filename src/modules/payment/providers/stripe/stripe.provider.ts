@@ -36,13 +36,6 @@ export class StripeProvider implements IPaymentProvider {
         return customer.length > 0 ? customer[0] : null;
     }
 
-    async checkCustomerEmail(customer_email: string) {
-        const customers = (await stripe.customers.list()).data;
-        const customer = customers.filter(cu => cu.email === customer_email)
-
-        return customer.length > 0 ? customer[0] : null;
-    }
-
     async createPayment(
         customer_id: string,
         amount: number,
