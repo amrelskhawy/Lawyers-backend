@@ -135,7 +135,8 @@ export class BookingService {
         }
 
         const stripeProvider = PaymentFactory.getProvider("STRIPE") as StripeProvider;
-        const customer = await stripeProvider.createCustomer(clientEmail, payload.name);
+
+        const customer = await stripeProvider.checkCustomerEmail(clientEmail) || await stripeProvider.createCustomer(clientEmail, payload.name);
 
         const paymentResult = await this.paymentService.createPayment(
             customer.id,
@@ -152,6 +153,7 @@ export class BookingService {
             },
             "STRIPE"
         );
+
 
         if (!paymentResult || !paymentResult.url) {
             throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);

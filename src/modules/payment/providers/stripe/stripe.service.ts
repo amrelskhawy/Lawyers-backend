@@ -2,26 +2,27 @@ import Stripe from "stripe";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { BookingService } from "../../../bookings/bookings.service.js";
-import { format } from "date-fns";
+import dotenv from "dotenv"
+
+dotenv.config()
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2024-11-20.acacia",
 });
 
-const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
+const SITE_URL = process.env.SITE_URL || "http://localhost:3000";
 
 export class StripeService {
-    private _bookingService: any;
 
-    private async getBookingService() {
-        if (!this._bookingService) {
-            const { BookingService } = await import("../../../bookings/bookings.service.js");
-            this._bookingService = new BookingService();
-        }
-        return this._bookingService;
+    private _bookingService: BookingService;
+
+    constructor() {
+        this._bookingService = new BookingService();
     }
 
-    constructor() { }
+    private async getBookingService() {
+        return this._bookingService;
+    }
 
     async createCustomer(email: string, name: string) {
         const customer = await stripe.customers.create({
@@ -80,28 +81,6 @@ export class StripeService {
         };
     }
 
-    // async createPaymentIntent(customer_id: string, amount: number) {
-
-    //     console.log({
-    //         customer_id,
-    //         amount
-    //     });
-
-    //     // 2. Create and confirm the charge immediately
-    //     // Create the intent but DON'T confirm it here
-    //     const paymentIntent = await stripe.paymentIntents.create({
-    //         amount: Math.round(amount * 100),
-    //         currency: 'sar',
-    //         customer: customer_id,
-    //         // This ensures the card is NOT saved for later, 
-    //         // enforcing a fresh entry next time.
-    //         setup_future_usage: undefined,
-    //         automatic_payment_methods: { enabled: true },
-    //     });
-
-    //     return paymentIntent;
-    // }
-
     async createPaymentLink(customer_id: string, amount: number, bookingId: string) {
         const session = await stripe.checkout.sessions.create({
             customer: customer_id,
@@ -124,8 +103,8 @@ export class StripeService {
                     bookingId,
                 },
             },
-            success_url: 'https://your-app.com/success?session_id={CHECKOUT_SESSION_ID}',
-            cancel_url: 'https://your-app.com/cart',
+            success_url: SITE_URL + 'success?session_id={CHECKOUT_SESSION_ID}',
+            cancel_url: SITE_URL,
         });
 
         return { url: session.url };
