@@ -1,6 +1,5 @@
 import express from "express";
 import {
-    initiatePayment,
     capturePayment,
     cancelPayment,
     handleWebhook,
@@ -8,9 +7,6 @@ import {
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
-
-
-router.post("/initiate", initiatePayment);
 
 router.post(
     "/webhook/:provider",
