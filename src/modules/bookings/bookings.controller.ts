@@ -86,11 +86,11 @@ export const getAllBookings = asyncHandler(async (req: Request, res: Response) =
     res.status(200).json(new AppResponse(true, "ALL_BOOKINGS_RETRIEVED", bookings));
 });
 
-export const confirmBooking = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params as { id: string };
-    const booking = await bookingService.confirmBooking(id);
-    res.status(200).json(new AppResponse(true, "BOOKING_CONFIRMED", booking));
-});
+// export const confirmBooking = asyncHandler(async (req: Request, res: Response) => {
+//     const { id } = req.params as { id: string };
+//     const booking = await bookingService.confirmBooking(id);
+//     res.status(200).json(new AppResponse(true, "BOOKING_CONFIRMED", booking));
+// });
 
 export const completeBooking = asyncHandler(async (req: Request, res: Response) => {
     const { id } = req.params as { id: string };

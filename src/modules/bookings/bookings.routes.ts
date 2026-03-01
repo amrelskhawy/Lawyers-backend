@@ -25,7 +25,9 @@ router.get("/metadata", getBookingMetadata);
 
 // Protected Routes
 router.get("/", protect, moderatorMiddleware, getAllBookings);
-router.patch("/:id/confirm", protect, moderatorMiddleware, confirmBooking);
+
+//this endpoint should be delete but if we will ignore the payment module later it work correctly!
+//router.patch("/:id/confirm", protect, moderatorMiddleware, confirmBooking);
 router.patch("/:id/complete", protect, moderatorMiddleware, completeBooking);
 router.patch("/:id/cancel", protect, moderatorMiddleware, cancelBooking);
 

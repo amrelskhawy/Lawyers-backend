@@ -7,7 +7,7 @@ import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { PaymentService } from "../payment/payment.service.js";
 import { PaymentFactory } from "../payment/payment.factory.js";
 import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
-
+import { BookingValidator } from "./bookings.validator.js";
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
@@ -49,99 +49,18 @@ export class BookingService {
     }
 
     async createBooking(payload: any) {
-        const { serviceId, date, startTime, endTime: providedEndTime, clientEmail } = payload;
-        const bookingDate = new Date(date);
+        const { clientEmail } = payload;
 
-        // Validate date
-        if (isNaN(bookingDate.getTime())) {
-            throw new AppResponse(false, "INVALID_DATE", null, 400);
-        }
-
-        // Check if date is in the past
-        const today = startOfDay(new Date());
-        const bookingDay = startOfDay(bookingDate);
-
-        if (isBefore(bookingDay, today)) {
-            throw new AppResponse(false, "DATE_IN_PAST", null, 400);
-        }
-
-        // 1. Validate Service
-        const service = await prisma.service.findUnique({ where: { id: serviceId } });
-        if (!service) throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
-
-        // Parse startTime - handle both "HH:mm" and "HH:mm:ss.SSS" formats
-        let cleanStartTime = startTime;
-        if (startTime.includes('.')) {
-            cleanStartTime = startTime.split('.')[0];
-        }
-        if (cleanStartTime.split(':').length > 2) {
-            const parts = cleanStartTime.split(':');
-            cleanStartTime = `${parts[0]}:${parts[1]} `;
-        }
-
-        let cleanEndTime = providedEndTime;
-        if (!cleanEndTime) {
-            // Default 60 mins if not provided
-            cleanEndTime = format(addMinutes(parse(cleanStartTime, "HH:mm", bookingDate), 60), "HH:mm");
-        } else {
-            // Normalize provided endTime
-            if (cleanEndTime.includes('.')) cleanEndTime = cleanEndTime.split('.')[0];
-            if (cleanEndTime.split(':').length > 2) {
-                const parts = cleanEndTime.split(':');
-                cleanEndTime = `${parts[0]}:${parts[1]} `;
-            }
-        }
-
-        // Ensure endTime is after startTime
-        if (cleanEndTime <= cleanStartTime) {
-            throw new AppResponse(false, "INVALID_TIME_RANGE", null, 400);
-        }
-
-        const endTime = cleanEndTime;
-
-        // Check if booking time is in the past (for today's bookings)
-        if (isToday(bookingDate)) {
-            const now = new Date();
-            const bookingDateTime = parse(cleanStartTime, "HH:mm", bookingDate);
-            if (isBefore(bookingDateTime, now)) {
-                throw new AppResponse(false, "TIME_IN_PAST", null, 400);
-            }
-        }
-
-        // 2. Check if day is fully blocked by holiday
-        const isFullyBlocked = await this.availabilityEngine.isDayFullyBlocked(bookingDate);
-        if (isFullyBlocked) {
-            throw new AppResponse(false, "DAY_FULLY_BLOCKED", null, 400);
-        }
-
-        // 3. Get working hours (will return defaults if not configured)
-        const workingHours = await this.availabilityEngine.getWorkingHours(bookingDate);
-
-        // Check if day is closed (00:00 to 00:00)
-        if (workingHours.startTime === "00:00" && workingHours.endTime === "00:00") {
-            const dayName = format(bookingDate, "EEEE");
-            throw new AppResponse(false, "SERVICE_CLOSED", null, 400);
-        }
-
-        // Validate time within working hours
-        if (cleanStartTime < workingHours.startTime || endTime > workingHours.endTime) {
-            throw new AppResponse(false, "TIME_OUTSIDE_WORKING_HOURS", null, 400);
-        }
-
-        // 4. Check if slot is blocked by partial holiday
-        const isBlocked = await this.availabilityEngine.isSlotBlocked(bookingDate, cleanStartTime, endTime);
-        if (isBlocked) {
-            throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
-        }
+        const { bookingDay, cleanStartTime, endTime, service } =
+            await BookingValidator.validateCreateBooking(payload);
 
         const stripeProvider = PaymentFactory.getProvider("STRIPE") as StripeProvider;
-        const customer = await stripeProvider.createCustomer(clientEmail, payload.name);
-
+        const customer = await stripeProvider.checkCustomerEmail(clientEmail) || await stripeProvider.createCustomer(clientEmail, payload.name);
         const paymentResult = await this.paymentService.createPayment(
             customer.id,
             service.price as any,
             {
-                serviceId,
+                serviceId: payload.serviceId,
                 clientEmail,
                 name: payload.name,
                 phone: payload.phone_number,
@@ -162,9 +81,7 @@ export class BookingService {
     }
 
     async confirmBooking(id: string) {
-        const booking = await prisma.booking.findUnique({ where: { id }, include: { service: true } });
-        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
-
+        const booking = await BookingValidator.validateBookingExists(id);
         if (booking.status === "CONFIRMED") return booking;
 
         // if (!this.calendar) {
@@ -286,8 +203,7 @@ export class BookingService {
     }
 
     async completeBooking(id: string) {
-        const booking = await prisma.booking.findUnique({ where: { id } });
-        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
+        await BookingValidator.validateBookingExists(id);
 
         return await prisma.booking.update({
             where: { id },
@@ -297,8 +213,7 @@ export class BookingService {
     }
 
     async cancelBooking(id: string) {
-        const booking = await prisma.booking.findUnique({ where: { id } });
-        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
+        const booking = await BookingValidator.validateBookingExists(id);
 
         if (booking.paymentIntentId) {
             return await this.paymentService.cancel(id, "STRIPE");
@@ -312,12 +227,10 @@ export class BookingService {
     }
 
     async getBookingMetadata(startDateStr: string, endDateStr: string) {
-        const startDate = new Date(startDateStr);
-        const endDate = new Date(endDateStr);
-
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            throw new AppResponse(false, "INVALID_DATE_RANGE", null, 400);
-        }
+        const { startDate, endDate } = BookingValidator.validateDateRange(
+            startDateStr,
+            endDateStr
+        );
 
         // 1. Get Working Days configuration (optional - may be empty)
         const workingDays = await prisma.workingDay.findMany({
