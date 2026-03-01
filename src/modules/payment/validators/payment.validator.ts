@@ -1,6 +1,6 @@
 import prisma from "../../../core/db/prisma.js";
 import { AppResponse } from "../../../core/utils/AppResponse.js";
-import { PaymentStatus } from "./payment.interface.js";
+import { PaymentStatus } from "../interfaces/payment.interface.js";
 
 /**
  * PaymentValidator — Single Responsibility
@@ -10,38 +10,6 @@ import { PaymentStatus } from "./payment.interface.js";
  * having validation logic scattered across methods.
  */
 export class PaymentValidator {
-
-    /**
-     * Validates that a booking exists and is in PENDING state before creating a payment.
-     */
-    static async validateBookingForPayment(bookingId: string) {
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: { service: true },
-        });
-
-        if (!booking) {
-            throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
-        }
-
-        if (booking.status !== "PENDING") {
-            throw new AppResponse(false, "BOOKING_NOT_IN_PENDING_STATE", null, 400);
-        }
-
-        if (booking.paymentStatus === "PAID" || booking.paymentStatus === "AUTHORIZED") {
-            throw new AppResponse(false, "BOOKING_ALREADY_PAID", null, 400);
-        }
-
-        if (!booking.service) {
-            throw new AppResponse(false, "BOOKING_SERVICE_NOT_FOUND", null, 404);
-        }
-
-        if (!booking.service.price || Number(booking.service.price) <= 0) {
-            throw new AppResponse(false, "INVALID_SERVICE_PRICE", null, 400);
-        }
-
-        return booking;
-    }
 
     /**
      * Validates that a booking is ready to be captured (admin confirm).
