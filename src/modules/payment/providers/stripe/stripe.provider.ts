@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
+import { startOfDay } from "date-fns";
 import {
     IPaymentProvider,
     CreatePaymentResult,
@@ -8,8 +9,8 @@ import {
     CancelResult,
     WebhookResult,
     PaymentProvider,
+    BookingPayload
 } from "../../interfaces/payment.interface.js";
-import { PaymentValidator } from "../../validators/payment.validator.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2024-11-20.acacia",
@@ -20,65 +21,45 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 export class StripeProvider implements IPaymentProvider {
     readonly name: PaymentProvider = "STRIPE";
 
-
-    async createPayment(bookingId: string): Promise<CreatePaymentResult> {
-        // Validator already ran in PaymentService — booking is guaranteed valid here
-        const booking = await prisma.booking.findUnique({
-            where: { id: bookingId },
-            include: { service: true },
-        });
-
-        const amountInHalalas = Math.round(Number(booking!.service.price) * 100);
-
-        // Create Stripe Customer for this booking
+    async createCustomer(email: string, name: string) {
         const customer = await stripe.customers.create({
-            email: booking!.clientEmail,
-            name: booking!.name,
+            email,
+            name,
         });
+        return customer;
+    }
 
-        // Create Checkout Session with manual capture (freeze funds)
+    async getCustomer(customer_id: string) {
+        const customer = await stripe.customers.retrieve(customer_id);
+        return customer;
+    }
+
+    async createPayment(customer_id: string, amount: number, bookingPayload: BookingPayload): Promise<CreatePaymentResult> {
         const session = await stripe.checkout.sessions.create({
-            customer: customer.id,
-            line_items: [
-                {
-                    price_data: {
-                        currency: "sar",
-                        product_data: {
-                            name: booking!.service.name_en,
-                            description: `Booking on ${booking!.date} at ${booking!.startTime}`,
-                        },
-                        unit_amount: amountInHalalas,
-                    },
-                    quantity: 1,
+            customer: customer_id,
+            line_items: [{
+                price_data: {
+                    currency: 'sar',
+                    product_data: { name: 'Service Payment' },
+                    unit_amount: Math.round(Number(bookingPayload.totalAmount) * 100),
                 },
-            ],
-            mode: "payment",
+                quantity: 1,
+            }],
+            mode: 'payment',
+            expires_at: Math.floor(Date.now() / 1000) + (30 * 60), // ← session expires in 30 mins
             payment_intent_data: {
-                capture_method: "manual",   // ← freeze funds, capture on admin confirm
-                metadata: {
-                    bookingId: booking!.id,
-                    clientEmail: booking!.clientEmail,
-                },
+                capture_method: 'manual',
+                metadata: bookingPayload as Record<string, string>,   // ← full payload stored in Stripe
             },
-            customer_email: booking!.clientEmail,
-            success_url: `${FRONTEND_URL}/booking/${booking!.id}?status=success`,
-            cancel_url: `${FRONTEND_URL}/booking/${booking!.id}?status=cancelled`,
-            metadata: { bookingId: booking!.id },
-        });
-
-        // Persist session id on booking — paymentIntentId saved later via webhook
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: {
-                stripeSessionId: session.id,
-                paymentStatus: "PENDING",
-            },
+            metadata: bookingPayload as Record<string, string>,       // ← also on session for checkout.session.* events
+            success_url: `${FRONTEND_URL}/booking/success?session_id={CHECKOUT_SESSION_ID}`,
+            cancel_url: `${FRONTEND_URL}/booking/cancelled`,
         });
 
         return {
             url: session.url!,
             sessionId: session.id,
-            amount: amountInHalalas,
+            amount: Math.round(Number(bookingPayload.totalAmount) * 100),
             currency: "sar",
             provider: this.name,
         };
@@ -177,6 +158,12 @@ export class StripeProvider implements IPaymentProvider {
             case "charge.refunded":
                 await this.onRefunded(event.data.object as Stripe.Charge);
                 break;
+            case "checkout.session.completed":
+                await this.onCheckoutCompleted(event.data.object as Stripe.CheckoutSession);
+                break;
+            case "checkout.session.expired":
+                await this.onCheckoutExpired(event.data.object as Stripe.CheckoutSession);
+                break;
             default:
                 console.log(`[Stripe Webhook] Unhandled: ${event.type}`);
         }
@@ -229,5 +216,78 @@ export class StripeProvider implements IPaymentProvider {
             data: { paymentStatus: "REFUNDED", status: "CANCELLED" },
         });
         console.log(`[Stripe] Booking ${booking.id} REFUNDED`);
+    }
+
+    private async onCheckoutCompleted(session: Stripe.CheckoutSession) {
+        // ── Idempotency guard — skip if already processed (Stripe retry scenario) ──
+        const existing = await prisma.booking.findFirst({
+            where: { stripeSessionId: session.id }
+        });
+        if (existing) {
+            console.log(`[Stripe] Session ${session.id} already processed — skipping`);
+            return;
+        }
+
+        const m = session.metadata as any;
+        if (!m?.serviceId) {
+            console.error("[Stripe] checkout.session.completed missing metadata", session.id);
+            return;
+        }
+
+        const bookingDay = startOfDay(new Date(m.date));
+
+        // ── Race condition guard — re-check slot availability ────────────────────
+        const conflict = await prisma.booking.findFirst({
+            where: {
+                date: bookingDay,
+                status: { not: "CANCELLED" },
+                startTime: { lt: m.endTime },
+                endTime: { gt: m.startTime },
+            }
+        });
+
+        if (conflict) {
+            // Slot taken by someone else — cancel the payment intent immediately
+            console.warn(`[Stripe] Slot conflict for session ${session.id} — cancelling PI`);
+            await stripe.paymentIntents.cancel(session.payment_intent as string);
+            // TODO: send email to m.clientEmail telling them the slot was taken + refund coming
+            return;
+        }
+
+        // ── Create the real booking ───────────────────────────────────────────────
+        try {
+            await prisma.booking.create({
+                data: {
+                    serviceId: m.serviceId,
+                    clientEmail: m.clientEmail,
+                    name: m.name,
+                    phone_number: m.phone,
+                    date: bookingDay,
+                    startTime: m.startTime,
+                    endTime: m.endTime,
+                    status: "PENDING",
+                    paymentStatus: "AUTHORIZED",
+                    paymentIntentId: session.payment_intent as string,
+                    stripeSessionId: session.id,
+                    totalAmount: m.totalAmount,
+                }
+            });
+            console.log(`[Stripe] Booking created after payment for session ${session.id}`);
+        } catch (error) {
+            // Rethrow — Stripe will retry the webhook automatically
+            console.error("[Stripe] CRITICAL: Payment received but booking creation failed", {
+                sessionId: session.id,
+                metadata: m,
+                error,
+            });
+            throw error;
+        }
+    }
+
+    //  ADD — notifies user their session expired
+    private async onCheckoutExpired(session: Stripe.CheckoutSession) {
+        const email = session.customer_email || session.metadata?.clientEmail;
+        console.log(`[Stripe] Checkout session expired for ${email} — session: ${session.id}`);
+        // TODO: sendEmailWithTemplate(email, "Your booking session expired", "sessionExpired", { ... })
     }
 }
