@@ -21,10 +21,12 @@ export class PaymentService {
 
         const captureResult = await PaymentFactory.getProvider(provider).capture(bookingId);
 
-        const { BookingService } = await import("../bookings/bookings.service.js");
-        const confirmedBooking = await new BookingService().confirmBooking(bookingId);
+        //const { BookingService } = await import("../bookings/bookings.service.js");
+        //const confirmedBooking = await new BookingService().confirmBooking(bookingId);
 
-        return { ...captureResult, booking: confirmedBooking };
+        //return { ...captureResult, booking: confirmedBooking };
+
+        return await PaymentFactory.getProvider(provider).capture(bookingId);
     }
 
 
