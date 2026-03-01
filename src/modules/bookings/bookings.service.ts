@@ -4,23 +4,19 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
 import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
-import { StripeService } from "../payment/providers/stripe/stripe.service.js";
-
-import { PaymentService } from "../payment/payment.service.js";       // ← updated import
-import { PaymentFactory } from "../payment/payment.factory.js";       // ← updated import
-import { PaymentProvider } from "../payment/payment.interface.js";    // ← updated import
+import { PaymentService } from "../payment/payment.service.js";
+import { PaymentFactory } from "../payment/payment.factory.js";
+import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
 
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
-    //private stripeService: StripeService;
     private paymentService: PaymentService;
     private calendar: any;
     private meet: any;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
-        //this.stripeService = new StripeService();
         this.paymentService = new PaymentService();
 
         const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
@@ -80,7 +76,7 @@ export class BookingService {
         }
         if (cleanStartTime.split(':').length > 2) {
             const parts = cleanStartTime.split(':');
-            cleanStartTime = `${parts[0]}:${parts[1]}`;
+            cleanStartTime = `${parts[0]}:${parts[1]} `;
         }
 
         let cleanEndTime = providedEndTime;
@@ -92,7 +88,7 @@ export class BookingService {
             if (cleanEndTime.includes('.')) cleanEndTime = cleanEndTime.split('.')[0];
             if (cleanEndTime.split(':').length > 2) {
                 const parts = cleanEndTime.split(':');
-                cleanEndTime = `${parts[0]}:${parts[1]}`;
+                cleanEndTime = `${parts[0]}:${parts[1]} `;
             }
         }
 
@@ -138,75 +134,31 @@ export class BookingService {
             throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
-        //const customer = await this.stripeService.createCustomer(clientEmail, payload.name);
+        const stripeProvider = PaymentFactory.getProvider("STRIPE") as StripeProvider;
+        const customer = await stripeProvider.createCustomer(clientEmail, payload.name);
 
-        const booking = await prisma.$transaction(async (tx) => {
-            const overlappingBooking = await tx.booking.findFirst({
-                where: {
-                    date: bookingDay,
-                    status: { not: "CANCELLED" },
-                    startTime: { lt: endTime },
-                    endTime: { gt: cleanStartTime }
-                }
-            });
+        const paymentResult = await this.paymentService.createPayment(
+            customer.id,
+            service.price as any,
+            {
+                serviceId,
+                clientEmail,
+                name: payload.name,
+                phone: payload.phone_number,
+                date: format(bookingDay, "yyyy-MM-dd"),
+                startTime: cleanStartTime,
+                endTime,
+                totalAmount: String(service.price),
+            },
+            "STRIPE"
+        );
 
-            if (overlappingBooking) {
-                throw new AppResponse(false, "TIME_SLOT_UNAVAILABLE", null, 409);
-            }
-
-            return await tx.booking.create({
-                data: {
-                    serviceId,
-                    clientEmail,
-                    name: payload.name,
-                    phone_number: payload.phone_number,
-                    date: bookingDay,
-                    startTime: cleanStartTime,
-                    endTime,
-                    status: "PENDING",
-                    totalAmount: service.price || 0,
-                },
-                include: { service: true }
-            });
-        });
-
-        // const payment_link = await this.stripeService.createPaymentLink(
-        //     customer.id,
-        //     service.price as any,
-        //     booking.id
-        // );
-
-        // if (!payment_link) {
-        //     throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
-        // }
-
-        const paymentResult = await this.paymentService.createPayment(booking.id, provider);
-
-        if (!paymentResult?.url) {
+        if (!paymentResult || !paymentResult.url) {
             throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
         }
 
-        // Generate Meet link immediately so it's available on the PENDING booking
-        let meetLink: string | null = null;
-        let calendarUrl: string | null = null;
-        try {
-            meetLink = await this.createMeetLink();
-        } catch (e: any) {
-            console.warn("Could not pre-generate Meet link:", e?.message);
-        }
-
-        // Persist links on the booking
-        const finalBooking = await prisma.booking.update({
-            where: { id: booking.id },
-            data: { meetLink, calendarUrl },
-            include: { service: true },
-        });
-
-        return {
-            payment_link: paymentResult.url,
-            provider: paymentResult.provider,
-            ...finalBooking,
-        };
+        // No booking saved yet — it gets created in the webhook after payment
+        return { payment_link: paymentResult.url };
     }
 
     async confirmBooking(id: string) {
@@ -215,7 +167,6 @@ export class BookingService {
 
         if (booking.status === "CONFIRMED") return booking;
 
-        //await this.stripeService.captureAndConfirm(booking.paymentIntentId);
         // if (!this.calendar) {
         //     console.error("Google Calendar integration is not initialized.");
         //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
@@ -259,7 +210,7 @@ export class BookingService {
         try {
             const space = await this.meet.spaces.create({ requestBody: {} });
             const uri = space.data?.meetingUri ?? null;
-            if (uri) console.log(`Google Meet link created: ${uri}`);
+            if (uri) console.log(`Google Meet link created: ${uri} `);
             return uri;
         } catch (err: any) {
             console.warn('Could not create Meet space:', err?.message ?? err);
@@ -273,19 +224,19 @@ export class BookingService {
         meetLink: string | null = null
     ): Promise<{ calendarUrl: string | null }> {
         const startDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.startTime}`,
+            `${format(booking.date, "yyyy-MM-dd")} ${booking.startTime} `,
             "yyyy-MM-dd HH:mm",
             new Date()
         );
         const endDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.endTime}`,
+            `${format(booking.date, "yyyy-MM-dd")} ${booking.endTime} `,
             "yyyy-MM-dd HH:mm",
             new Date()
         );
 
         const eventBody: any = {
-            summary: `Booking: ${serviceName}`,
-            description: `Client: ${booking.clientEmail}`,
+            summary: `Booking: ${serviceName} `,
+            description: `Client: ${booking.clientEmail} `,
             start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
             end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
         };
@@ -350,9 +301,7 @@ export class BookingService {
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
 
         if (booking.paymentIntentId) {
-            const stripeService = new StripeService();
-            //return await stripeService.cancelAndRefund(id);
-            return await this.paymentService.cancel(id, provider);
+            return await this.paymentService.cancel(id, "STRIPE");
         }
 
         return await prisma.booking.update({
