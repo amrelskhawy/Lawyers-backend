@@ -38,15 +38,25 @@ export interface WebhookResult {
 export type PaymentProvider = "STRIPE" | "TAMARA" | "TABBY";
 export type PaymentStatus = "UNPAID" | "PENDING" | "AUTHORIZED" | "PAID" | "RELEASED" | "REFUNDED" | "CANCELLED";
 
+export interface BookingPayload {
+    serviceId: string;
+    clientEmail: string;
+    name: string;
+    phone: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+    totalAmount: string;
+}
+
 export interface IPaymentProvider {
     readonly name: PaymentProvider;
 
     /**
      * Step 1 — Initiate payment for a booking.
      * Returns a URL (hosted checkout) or clientSecret (embedded elements).
-     * Must save paymentIntentId / sessionId to the booking in DB.
      */
-    createPayment(bookingId: string): Promise<CreatePaymentResult>;
+    createPayment(customer_id: string, amount: number, bookingPayload: BookingPayload): Promise<CreatePaymentResult>;
 
     /**
      * Step 2 — Capture authorized/frozen funds (called on admin confirm).
