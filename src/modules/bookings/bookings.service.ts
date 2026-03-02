@@ -219,7 +219,12 @@ export class BookingService {
         const booking = await BookingValidator.validateBookingExists(id);
 
         if (booking.paymentIntentId) {
+            //stripe booking
             return await this.paymentService.cancel(id, "STRIPE");
+        }
+        if ((booking as any).tabbyPaymentId) {
+            // Tabby booking
+            return await this.paymentService.cancel(id, "TABBY");
         }
 
         return await prisma.booking.update({
