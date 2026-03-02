@@ -2,51 +2,55 @@ import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { PaymentService } from "./payment.service.js";
 import { PaymentFactory } from "./payment.factory.js";
-import { PaymentValidator } from "./validators/payment.validator.js";
-import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { BookingService } from "../../modules/bookings/bookings.service.js";
 
 const paymentService = new PaymentService();
-const bookingService = new BookingService();
 
-export const capturePayment = asyncHandler(async (req: AuthRequest, res: Response) => {
+export const capturePayment = asyncHandler(async (req: Request, res: Response) => {
     const { bookingId } = req.params;
-    const { provider: providerStr } = req.body;
+    const providerStr = req.body?.provider || "STRIPE";
+    const provider = PaymentFactory.resolveProvider(providerStr);
 
-    const provider = PaymentFactory.resolveProvider(providerStr || "STRIPE");
-    //const result = await paymentService.capture(bookingId, provider);
-
-    // 1. Capture funds
+    // 1. Capture funds (validates AUTHORIZED state + provider-side status check)
     const captureResult = await paymentService.capture(bookingId, provider);
 
-    // 2. Confirm booking (Meet, Calendar, Email)
-    const confirmedBooking = await bookingService.confirmBooking(bookingId);
+    // 2. Confirm booking — sets CONFIRMED + handles Meet/Calendar/Email
+    //    Lazy import prevents circular dependency: BookingService ↔ PaymentService
+    const { BookingService } = await import("../bookings/bookings.service.js");
+    const confirmedBooking = await new BookingService().confirmBooking(bookingId);
+
     res.status(200).json(new AppResponse(true, "PAYMENT_CAPTURED", {
         ...captureResult,
-        booking: confirmedBooking
+        booking: confirmedBooking,
     }));
-    //res.status(200).json(new AppResponse(true, "PAYMENT_CAPTURED", result));
 });
 
-export const cancelPayment = asyncHandler(async (req: AuthRequest, res: Response) => {
+export const cancelPayment = asyncHandler(async (req: Request, res: Response) => {
     const { bookingId } = req.params;
-    const { provider: providerStr } = req.body;
+    const providerStr = req.body?.provider || "STRIPE";
+    const provider = PaymentFactory.resolveProvider(providerStr);
 
-    const provider = PaymentFactory.resolveProvider(providerStr || "STRIPE");
     const result = await paymentService.cancel(bookingId, provider);
 
     res.status(200).json(new AppResponse(true, "PAYMENT_CANCELLED", result));
 });
 
-export const handleWebhook = asyncHandler(async (req: Request, res: Response) => {
-    const { provider: providerStr } = req.params;
-    const signature = req.headers["stripe-signature"] as string
-        || req.headers["x-tamara-signature"] as string
-        || req.headers["x-tabby-signature"] as string;
+export const stripeWebhook = asyncHandler(async (req: Request, res: Response) => {
+    const signature = req.headers["stripe-signature"] as string;
+    const rawBody = req.body as Buffer;
 
-    const provider = PaymentFactory.resolveProvider(providerStr);
-    const result = await paymentService.handleWebhook(req.body, signature, provider);
+    const result = await paymentService.handleWebhook(rawBody, signature, "STRIPE");
+    res.status(200).json(result);
+});
 
+
+export const tabbyWebhook = asyncHandler(async (req: Request, res: Response) => {
+    // Accept either header name — use whichever your Tabby webhook registration uses
+    const signature = (req.headers["x-webhook-signature"] as string)
+        || (req.headers["x-tabby-signature"] as string)
+        || "";
+    const rawBody = req.body as Buffer;
+
+    const result = await paymentService.handleWebhook(rawBody, signature, "TABBY");
     res.status(200).json(result);
 });
