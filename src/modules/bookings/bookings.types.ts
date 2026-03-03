@@ -12,4 +12,4 @@ export const BookingSchema = z.object({
   phone_number: z.string().min(1, "Phone number is required"),
 });
 
-export type BookingPayload = z.infer<typeof BookingSchema>;
+export type CreateBookingInput = z.infer<typeof BookingSchema>;
