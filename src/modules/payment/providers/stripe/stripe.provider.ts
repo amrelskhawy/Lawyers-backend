@@ -75,8 +75,22 @@ export class StripeProvider implements IPaymentProvider {
     async capture(bookingId: string): Promise<CaptureResult> {
         const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
 
+        if (!booking?.paymentIntentId) {
+            throw new AppResponse(false, "NO_PAYMENT_INTENT_FOUND", null, 400);
+        }
+
         // Verify PI is still capturable on Stripe's side (handles 7-day expiry)
-        const pi = await stripe.paymentIntents.retrieve(booking!.paymentIntentId!);
+        const pi = await stripe.paymentIntents.retrieve(booking.paymentIntentId);
+
+        if (pi.status === "succeeded") {
+            return {
+                success: true,
+                provider: this.name,
+                paymentIntentId: pi.id,
+                status: pi.status,
+            };
+        }
+
         if (pi.status !== "requires_capture") {
             throw new AppResponse(
                 false,
@@ -86,13 +100,7 @@ export class StripeProvider implements IPaymentProvider {
             );
         }
 
-        const captured = await stripe.paymentIntents.capture(booking!.paymentIntentId!);
-
-        // Update paymentStatus here — confirmBooking() will set status: CONFIRMED
-        await prisma.booking.update({
-            where: { id: bookingId },
-            data: { paymentStatus: "PAID" },
-        });
+        const captured = await stripe.paymentIntents.capture(booking.paymentIntentId);
 
         return {
             success: true,
