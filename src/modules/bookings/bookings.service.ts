@@ -86,7 +86,13 @@ export class BookingService {
     async confirmBooking(id: string) {
         const booking = await BookingValidator.validateBookingExists(id);
         if (booking.status === "CONFIRMED") return booking;
+        if (booking.status === "CANCELLED") {
+            throw new AppResponse(false, "CANNOT_CONFIRM_CANCELLED_BOOKING", null, 400);
+        }
 
+        if (booking.paymentIntentId) {
+            await this.paymentService.capture(id, "STRIPE");
+        }
         // if (!this.calendar) {
         //     console.error("Google Calendar integration is not initialized.");
         //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
