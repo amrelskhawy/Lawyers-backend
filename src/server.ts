@@ -24,7 +24,7 @@ app.use(
 );
 
 app.use((req, res, next) => {
-    if (req.originalUrl.startsWith("/payment/webhook")) return next();
+    if (req.originalUrl.startsWith("/api/v1/payment/webhook")) return next();
     express.json()(req, res, next);
 });
 app.use(express.urlencoded({ extended: true }));
