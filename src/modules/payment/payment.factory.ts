@@ -1,42 +1,50 @@
 import { IPaymentProvider, PaymentProvider } from "./interfaces/payment.interface.js";
 import { StripeProvider } from "./providers/stripe/stripe.provider.js";
+import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
 import { TabbyProvider } from "./providers/tabby/tabby.provider.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
 
-/**
- * PaymentFactory
- *
- * Singleton registry for all payment providers.
- * Adding a new provider = one new case here + one new provider file.
- * Nothing else in the system needs to change.
- */
 export class PaymentFactory {
-    private static instances: Map<PaymentProvider, IPaymentProvider> = new Map();
+    private static instances = new Map<PaymentProvider, IPaymentProvider>();
 
     static getProvider(provider: PaymentProvider): IPaymentProvider {
-        if (!this.instances.has(provider)) {
-            switch (provider) {
-                case "STRIPE":
-                    this.instances.set(provider, new StripeProvider());
-                    break;
-                case "TABBY":
-                    this.instances.set(provider, new TabbyProvider());
-                    break;
-                default:
-                    throw new Error(`Unknown payment provider: ${provider}`);
-            }
+        if (this.instances.has(provider)) {
+            return this.instances.get(provider)!;
         }
-        return this.instances.get(provider)!;
+
+        let instance: IPaymentProvider;
+
+        switch (provider) {
+            case "STRIPE":
+                instance = new StripeProvider();
+                break;
+            case "TAMARA":
+                instance = new TamaraProvider();
+                break;
+            case "TABBY":
+                instance = new TabbyProvider();
+                break;
+            default:
+                throw new AppResponse(false, "UNSUPPORTED_PAYMENT_PROVIDER", null, 400);
+        }
+
+        this.instances.set(provider, instance);
+        return instance;
     }
 
-    /**
-     * Resolves a raw string from the request body to a typed PaymentProvider.
-     * Throws if unsupported.
-     */
-    static resolveProvider(raw: string): PaymentProvider {
-        const upper = raw?.toUpperCase();
-        if (upper === "STRIPE" || upper === "TABBY") {
-            return upper as PaymentProvider;
+    static resolveProvider(providerStr: string): PaymentProvider {
+        const valid: PaymentProvider[] = ["STRIPE", "TAMARA", "TABBY"];
+        const upper = providerStr?.toUpperCase() as PaymentProvider;
+
+        if (!valid.includes(upper)) {
+            throw new AppResponse(
+                false,
+                `INVALID_PAYMENT_PROVIDER. Must be one of: ${valid.join(", ")}`,
+                null,
+                400
+            );
         }
-        throw new Error(`UNSUPPORTED_PROVIDER: ${raw}`);
+
+        return upper;
     }
 }
