@@ -54,12 +54,19 @@ export class BookingService {
         const { bookingDay, cleanStartTime, endTime, service } =
             await BookingValidator.validateCreateBooking(payload);
 
-        const stripeProvider = PaymentFactory.getProvider("STRIPE") as StripeProvider;
-
-        const customer = await stripeProvider.checkCustomerEmail(clientEmail) || await stripeProvider.createCustomer(clientEmail, payload.name);
+        const provider = PaymentFactory.resolveProvider(payload.provider || "STRIPE");
+        console.log("PROVIDER RESOLVED:", provider);
+        // Stripe requires a customer object. Tabby and other providers do not.
+        let customerId = "";
+        if (provider === "STRIPE") {
+            const stripeProvider = PaymentFactory.getProvider("STRIPE") as StripeProvider;
+            const customer = await stripeProvider.checkCustomerEmail(clientEmail)
+                || await stripeProvider.createCustomer(clientEmail, payload.name);
+            customerId = customer.id;
+        }
 
         const paymentResult = await this.paymentService.createPayment(
-            customer.id,
+            customerId,
             service.price as any,
             {
                 serviceId: payload.serviceId,
@@ -71,7 +78,7 @@ export class BookingService {
                 endTime,
                 totalAmount: String(service.price),
             },
-            "STRIPE"
+            provider
         );
 
 
@@ -80,7 +87,10 @@ export class BookingService {
         }
 
         // No booking saved yet — it gets created in the webhook after payment
-        return { payment_link: paymentResult.url };
+        return {
+            payment_link: paymentResult.url,
+            qr_code: paymentResult.qrCode ?? null
+        };
     }
 
     async confirmBooking(id: string) {
@@ -90,9 +100,13 @@ export class BookingService {
             throw new AppResponse(false, "CANNOT_CONFIRM_CANCELLED_BOOKING", null, 400);
         }
 
+        // Detect provider from whichever payment ID field is set on the booking
         if (booking.paymentIntentId) {
             await this.paymentService.capture(id, "STRIPE");
+        } else if ((booking as any).tabbyPaymentId) {
+            await this.paymentService.capture(id, "TABBY");
         }
+        // If neither field is set, no capture needed (booking was created without payment)
         // if (!this.calendar) {
         //     console.error("Google Calendar integration is not initialized.");
         //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
