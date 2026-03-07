@@ -2,33 +2,6 @@ import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { IPaymentProvider, BookingPayload } from "../../interfaces/payment.interface.js";
 
-/**
- * TabbyProvider
- *
- * Implements manual-capture flow with NO auto-confirm.
- * Your Tabby merchant account must have auto-capture DISABLED.
- *
- * Full flow:
- *   createPayment()  → POST /v2/checkout                      → returns hosted checkout URL
- *   handleWebhook()  → payment.authorized                     → creates booking PENDING/AUTHORIZED
- *   capture()        → POST /v1/payments/{tabbyPaymentId}/captures → CONFIRMED/PAID
- *   cancel()         → AUTHORIZED → POST /close               → CANCELLED/RELEASED  (no charge)
- *                    → PAID       → POST /refunds              → CANCELLED/REFUNDED  (full refund)
- *
- * Webhook signature:
- *   When you register the webhook you set a custom header name + value.
- *   Example: { "header": { "title": "X-Webhook-Signature", "value": "my-secret" } }
- *   Tabby sends that header with every webhook. We compare it directly (plain string).
- *
- * ENV vars required:
- *   TABBY_SECRET_KEY        sk_test_xxx
- *   TABBY_MERCHANT_CODE     e.g. "MYSHOP"
- *   TABBY_WEBHOOK_SECRET    same string as the header value you set when registering webhook
- *   TABBY_CURRENCY          SAR | AED | KWD  (default SAR)
- *   TABBY_SUCCESS_URL       https://yourapp.com/payment/success
- *   TABBY_CANCEL_URL        https://yourapp.com/payment/cancel
- */
-
 const TABBY_BASE_URL = "https://api.tabby.ai/api";
 
 async function tabbyRequest(
@@ -48,7 +21,13 @@ async function tabbyRequest(
         body: body ? JSON.stringify(body) : undefined,
     });
 
-    const data = await response.json();
+    const rawText = await response.text();
+    let data: any;
+    try {
+        data = JSON.parse(rawText);
+    } catch {
+        data = { raw: rawText };
+    }
 
     if (!response.ok) {
         console.error("[Tabby] API error:", { path, status: response.status, data });
@@ -58,15 +37,8 @@ async function tabbyRequest(
     return data;
 }
 
-export class TabbyProvider implements IPaymentProvider {
 
-    // ── createPayment ─────────────────────────────────────────────────────────
-    // Creates a Tabby checkout session.
-    // Returns the hosted payment URL for the client.
-    // NO booking saved to DB here — booking is created only in onPaymentAuthorized().
-    //
-    // Tabby has no metadata field like Stripe, so we encode all booking data
-    // into order.reference_id as a pipe-delimited string.
+export class TabbyProvider implements IPaymentProvider {
     async createPayment(
         _customer_id: string,    // unused — Tabby has no customer object
         amount: number,
@@ -74,15 +46,13 @@ export class TabbyProvider implements IPaymentProvider {
     ) {
         const currency = process.env.TABBY_CURRENCY || "SAR";
         const merchantCode = process.env.TABBY_MERCHANT_CODE;
-        const successUrl = process.env.TABBY_SUCCESS_URL || "https://example.com/payment/success";
-        const cancelUrl = process.env.TABBY_CANCEL_URL || "https://example.com/payment/cancel";
+        const successUrl = process.env.TABBY_SUCCESS_URL;
+        const cancelUrl = process.env.TABBY_CANCEL_URL;
 
         if (!merchantCode) {
             throw new AppResponse(false, "TABBY_MERCHANT_CODE_MISSING", null, 500);
         }
 
-        // Encode booking metadata into reference_id (pipe-delimited)
-        // Order matters — must match parsing in onPaymentAuthorized()
         const referenceId = [
             payload.serviceId,
             payload.clientEmail,
@@ -143,7 +113,6 @@ export class TabbyProvider implements IPaymentProvider {
             throw new AppResponse(false, "TABBY_CUSTOMER_REJECTED", session, 400);
         }
 
-        // Extract hosted checkout URL from session response
         const checkoutUrl =
             session.configuration?.available_products?.installments?.[0]?.web_url ||
             session.configuration?.available_products?.pay_in_full?.[0]?.web_url;
@@ -158,19 +127,12 @@ export class TabbyProvider implements IPaymentProvider {
             url: checkoutUrl,
             sessionId: session.id,
             paymentId: session.payment?.id,
+            qrCode: session.configuration?.available_products?.installments?.[0]?.qr_code ?? null,
             provider: "TABBY",
         };
     }
 
-    // ── handleWebhook ─────────────────────────────────────────────────────────
-    // Called by PaymentController for POST /payment/webhook/tabby
-    //
-    // Tabby webhook event types:
-    //   payment.authorized  → customer paid, hold placed
-    //   payment.closed      → payment captured (by us or auto)
-    //   payment.expired     → session timed out, no payment
     async handleWebhook(rawBody: Buffer, signature: string): Promise<any> {
-        // Validate signature — plain string comparison with your webhook secret
         const webhookSecret = process.env.TABBY_WEBHOOK_SECRET;
         if (!webhookSecret || signature !== webhookSecret) {
             throw new AppResponse(false, "INVALID_WEBHOOK_SIGNATURE", null, 400);
@@ -183,33 +145,28 @@ export class TabbyProvider implements IPaymentProvider {
             throw new AppResponse(false, "INVALID_WEBHOOK_PAYLOAD", null, 400);
         }
 
+        console.log("[Tabby Webhook] Raw event:", JSON.stringify(event, null, 2));
+
         const eventType = event.type as string;
-        const payment = event.payment as any;
+        const status = (event.status as string)?.toLowerCase();
+        const payment = event;
 
         console.log(`[Tabby Webhook] ${eventType}`);
 
-        switch (eventType) {
-            case "payment.authorized":
-                await this.onPaymentAuthorized(payment);
-                break;
-
-            case "payment.closed":
-                await this.onPaymentClosed(payment);
-                break;
-
-            case "payment.expired":
-                console.log(`[Tabby] Payment expired: ${payment?.id}`);
-                break;
-
-            default:
-                console.log(`[Tabby Webhook] Unhandled: ${eventType}`);
+        if (eventType === "payment.authorized" || status === "authorized") {
+            await this.onPaymentAuthorized(payment);
+        } else if (eventType === "payment.closed" || status === "closed") {
+            await this.onPaymentClosed(payment);
+        } else if (eventType === "payment.expired" || status === "expired") {
+            console.log(`[Tabby] Payment expired: ${payment?.id}`);
+        } else {
+            console.log(`[Tabby Webhook] Unhandled: type=${eventType} status=${status}`);
         }
 
         return { received: true };
     }
 
-    // ── capture ───────────────────────────────────────────────────────────────
-    // Admin APPROVES → captures the authorized hold → booking becomes CONFIRMED/PAID
+
     async capture(bookingId: string): Promise<any> {
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
@@ -257,9 +214,6 @@ export class TabbyProvider implements IPaymentProvider {
         return { success: true, provider: "TABBY", booking: updated };
     }
 
-    // ── cancel ────────────────────────────────────────────────────────────────
-    // Admin REJECTS AUTHORIZED  → close payment (void, no charge) → RELEASED
-    // Admin CANCELS PAID        → refund full amount              → REFUNDED
     async cancel(bookingId: string): Promise<any> {
         const booking = await prisma.booking.findUnique({
             where: { id: bookingId },
@@ -323,8 +277,6 @@ export class TabbyProvider implements IPaymentProvider {
         );
     }
 
-    // payment.authorized — customer paid, funds on hold
-    // Parse metadata from reference_id, handle race conditions, create booking
     private async onPaymentAuthorized(payment: any) {
         if (!payment?.id) {
             console.warn("[Tabby] payment.authorized missing payment id — skipping");
@@ -408,8 +360,6 @@ export class TabbyProvider implements IPaymentProvider {
         }
     }
 
-    // payment.closed — payment was captured
-    // Sync paymentStatus to PAID in case our capture() webhook fires before DB update
     private async onPaymentClosed(payment: any) {
         if (!payment?.id) return;
 
@@ -424,6 +374,11 @@ export class TabbyProvider implements IPaymentProvider {
 
         if (booking.paymentStatus === "PAID") {
             console.log(`[Tabby] payment.closed already handled for booking ${booking.id} — skipping`);
+            return;
+        }
+
+        if (booking.paymentStatus === "RELEASED") {
+            console.log(`[Tabby] payment.closed was a void (cancel), not a capture — skipping for booking ${booking.id}`);
             return;
         }
 
