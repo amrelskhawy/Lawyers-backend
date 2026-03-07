@@ -10,7 +10,7 @@ export const BookingSchema = z.object({
   clientEmail: z.string().email("Invalid email address"),
   name: z.string().min(1, "Name is required"),
   phone_number: z.string().min(1, "Phone number is required"),
-  provider: z.enum(["STRIPE", "TABBY"]).optional().default("STRIPE"),
+  provider: z.enum(["STRIPE", "TABBY", "TAMARA"]).optional().default("STRIPE"),
 });
 
 export type CreateBookingInput = z.infer<typeof BookingSchema>;
