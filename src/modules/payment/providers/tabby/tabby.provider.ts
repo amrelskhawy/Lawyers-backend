@@ -151,7 +151,7 @@ export class TabbyProvider implements IPaymentProvider {
         const status = (event.status as string)?.toLowerCase();
         const payment = event;
 
-        console.log(`[Tabby Webhook] ${eventType}`);
+        console.log(`[Tabby Webhook] type=${eventType} status=${status}`);
 
         if (eventType === "payment.authorized" || status === "authorized") {
             await this.onPaymentAuthorized(payment);
