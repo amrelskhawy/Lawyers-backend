@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 30px auto;
+            background: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        }
+
+        .header {
+            background-color: #1a73e8;
+            padding: 30px 20px;
+            text-align: center;
+            color: #ffffff;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+        .content {
+            padding: 30px 24px;
+            color: #333333;
+            line-height: 1.6;
+        }
+
+        .details-box {
+            background-color: #f8f9fa;
+            border-left: 4px solid #1a73e8;
+            border-radius: 4px;
+            padding: 16px 20px;
+            margin: 20px 0;
+        }
+
+        .details-box p {
+            margin: 6px 0;
+        }
+
+        .button {
+            display: inline-block;
+            padding: 14px 28px;
+            background-color: #1a73e8;
+            color: #ffffff !important;
+            text-decoration: none;
+            border-radius: 6px;
+            font-size: 16px;
+            font-weight: bold;
+            margin: 20px 0;
+        }
+
+        .warning {
+            background-color: #fff3cd;
+            border: 1px solid #ffc107;
+            border-radius: 4px;
+            padding: 12px 16px;
+            margin: 16px 0;
+            font-size: 14px;
+            color: #856404;
+        }
+
+        .footer {
+            text-align: center;
+            font-size: 12px;
+            color: #6c757d;
+            padding: 16px 20px;
+            border-top: 1px solid #e9ecef;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Complete Your Booking Payment</h1>
+        </div>
+        <div class="content">
+            <p>Hello <strong>{{name}}</strong>,</p>
+            <p>Your booking request has been received. To secure your appointment, please complete the payment using the link below.</p>
+
+            <div class="details-box">
+                <p><strong>Service:</strong> {{service_name}}</p>
+                <p><strong>Date:</strong> {{date}}</p>
+                <p><strong>Time:</strong> {{start_time}} – {{end_time}}</p>
+                <p><strong>Payment Provider:</strong> {{provider}}</p>
+            </div>
+
+            <div class="warning">
+                ⏳ This payment link expires in <strong>{{expires_in_minutes}} minutes</strong>. If payment is not completed in time, your booking slot will be released.
+            </div>
+
+            <p style="text-align:center;">
+                <a href="{{payment_link}}" class="button">Pay Now</a>
+            </p>
+
+            <p style="font-size:13px; color:#666;">If you have already completed the payment, you can ignore this email. You will receive a confirmation email once your booking is approved.</p>
+        </div>
+        <div class="footer">
+            <p>Thank you for choosing our service.</p>
+        </div>
+    </div>
+</body>
+
+</html>
