@@ -1,4 +1,6 @@
 import { google } from "googleapis";
+import { GoogleAuth, auth as googleAuth } from "google-auth-library";
+import { readFileSync } from "fs";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
@@ -8,6 +10,13 @@ import { PaymentService } from "../payment/payment.service.js";
 import { PaymentFactory } from "../payment/payment.factory.js";
 import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
 import { BookingValidator } from "./bookings.validator.js";
+import path from "path";
+import { fileURLToPath } from "url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const SERVICE_ACCOUNT_PATH = path.resolve(__dirname, "../../core/constants/google-service-account.json");
+const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
@@ -19,34 +28,21 @@ export class BookingService {
         this.availabilityEngine = new AvailabilityEngine();
         this.paymentService = new PaymentService();
 
-        const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-        const privateKey = process.env.GOOGLE_PRIVATE_KEY;
+        try {
+            const serviceAccountJson = JSON.parse(readFileSync(SERVICE_ACCOUNT_PATH, "utf-8"));
+            const client = googleAuth.fromJSON(serviceAccountJson) as any;
+            client.scopes = GOOGLE_SCOPES;
 
-        if (clientEmail && privateKey) {
-            try {
-                const auth = new google.auth.GoogleAuth({
-                    credentials: {
-                        client_email: clientEmail,
-                        private_key: privateKey.replace(/\\n/g, '\n'),
-                    },
-                    scopes: [
-                        'https://www.googleapis.com/auth/calendar',
-                        'https://www.googleapis.com/auth/meetings.space.created',
-                    ],
-                });
-                this.calendar = google.calendar({ version: 'v3', auth });
-                this.meet = google.meet({ version: 'v2', auth });
-            } catch (error) {
-                console.error("Failed to initialize Google APIs:", error);
-                this.calendar = null;
-                this.meet = null;
-            }
-        } else {
-            console.warn("Google credentials missing. Calendar/Meet integration disabled.");
+            this.calendar = google.calendar({ version: 'v3', auth: client });
+            this.meet = google.meet({ version: 'v2', auth: client });
+            console.log("Google APIs initialized successfully via service account JSON.");
+        } catch (error) {
+            console.error("Failed to initialize Google APIs:", error);
             this.calendar = null;
             this.meet = null;
         }
     }
+
 
     async createBooking(payload: any) {
         const { clientEmail } = payload;
