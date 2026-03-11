@@ -93,24 +93,24 @@ export class BookingService {
         if (booking.paymentIntentId) {
             await this.paymentService.capture(id, "STRIPE");
         }
-        // if (!this.calendar) {
-        //     console.error("Google Calendar integration is not initialized.");
-        //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
-        // }
+        if (!this.calendar) {
+            console.error("Google Calendar integration is not initialized.");
+            throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
+        }
 
         try {
             // 1. Create Meet link via Meet REST API (best-effort)
-            //const meetLink = await this.createMeetLink();
+            const meetLink = await this.createMeetLink();
 
             // 2. Create Google Calendar Event with the Meet link attached
-            //const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
+            const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
 
             // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
-                    //meetLink,
-                    //calendarUrl,
+                    meetLink,
+                    calendarUrl,
                     status: "CONFIRMED",
                     paymentStatus: "PAID",
                 },
@@ -118,7 +118,7 @@ export class BookingService {
             });
 
             // 3. Send Confirmation Email
-            //await this.sendConfirmationEmail(updatedBooking);
+            await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
