@@ -15,7 +15,6 @@ import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const SERVICE_ACCOUNT_PATH = path.resolve(__dirname, "../../core/constants/google-service-account.json");
 const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 export class BookingService {
@@ -29,7 +28,6 @@ export class BookingService {
         this.paymentService = new PaymentService();
 
         try {
-            const serviceAccountJson = JSON.parse(readFileSync(SERVICE_ACCOUNT_PATH, "utf-8"));
             const client = googleAuth.fromJSON(serviceAccountJson) as any;
             client.scopes = GOOGLE_SCOPES;
 
