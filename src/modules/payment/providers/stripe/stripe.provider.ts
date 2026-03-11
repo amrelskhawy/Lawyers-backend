@@ -223,6 +223,7 @@ export class StripeProvider implements IPaymentProvider {
         // Race condition guard — re-check slot availability at payment time
         const conflict = await prisma.booking.findFirst({
             where: {
+                serviceId: m.serviceId,
                 date: bookingDay,
                 status: { not: "CANCELLED" },
                 startTime: { lt: m.endTime },
@@ -233,11 +234,9 @@ export class StripeProvider implements IPaymentProvider {
         if (conflict) {
             console.warn(`[Stripe] Slot conflict for session ${session.id} — cancelling PI`);
             await stripe.paymentIntents.cancel(session.payment_intent as string);
-            // TODO: sendEmail to m.clientEmail — slot taken, refund coming
             return;
         }
 
-        // Create the real booking — rethrow so Stripe retries on failure
         try {
             await prisma.booking.create({
                 data: {
@@ -262,14 +261,13 @@ export class StripeProvider implements IPaymentProvider {
                 metadata: m,
                 error,
             });
-            throw error; // Stripe retries on 500
+            throw error;
         }
     }
 
     private async onCheckoutExpired(session: Stripe.CheckoutSession) {
         const email = session.customer_email || session.metadata?.clientEmail;
         console.log(`[Stripe] Session expired for ${email} — session: ${session.id}`);
-        // TODO: sendEmailWithTemplate(email, "sessionExpired", {...})
     }
 
     private async onAuthorized(pi: Stripe.PaymentIntent) {
@@ -317,5 +315,18 @@ export class StripeProvider implements IPaymentProvider {
             data: { paymentStatus: "REFUNDED", status: "CANCELLED" },
         });
         console.log(`[Stripe] Booking ${booking.id} REFUNDED`);
+    }
+}
+
+export async function getStripeReceiptUrl(paymentIntentId: string): Promise<string | null> {
+    try {
+        const pi = await stripe.paymentIntents.retrieve(paymentIntentId, {
+            expand: ["latest_charge"],
+        }) as any;
+        const receiptUrl: string | null = pi.latest_charge?.receipt_url ?? null;
+        return receiptUrl;
+    } catch (err: any) {
+        console.error("[Stripe] Failed to fetch receipt URL:", err?.message);
+        return null;
     }
 }
