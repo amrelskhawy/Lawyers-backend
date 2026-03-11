@@ -1,23 +1,25 @@
 import { SpacesServiceClient } from '@google-apps/meet';
 import { auth } from './index.js';
 
-async function createMeetSpace() {
-    const authClient = await auth.getClient();
+export async function createMeetLink(): Promise<string | null> {
+    try {
+        const meetClient = new SpacesServiceClient({
+            auth,
+        });
 
-
-    const meetClient = new SpacesServiceClient({
-        auth,
-    });
-
-    const [response] = await meetClient.createSpace({
-        space: {
-            config: {
-                accessType: 'OPEN', // Or 'TRUSTED'
+        const [space] = await meetClient.createSpace({
+            space: {
+                config: {
+                    accessType: 'OPEN', // Or 'TRUSTED'
+                }
             }
-        }
-    });
+        });
 
-    console.log('Meet URL:', response.meetingUri);
+        const uri = space.meetingUri ?? null;
+        if (uri) console.log(`Google Meet link created: ${uri}`);
+        return uri;
+    } catch (err: any) {
+        console.warn('Could not create Meet space:', err?.message ?? err);
+        return null;
+    }
 }
-
-const meet = await createMeetSpace();

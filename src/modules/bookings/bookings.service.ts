@@ -1,44 +1,27 @@
-import { google } from "googleapis";
-import { GoogleAuth, auth as googleAuth } from "google-auth-library";
-import { readFileSync } from "fs";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
-import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
+import { format, startOfDay } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { PaymentService } from "../payment/payment.service.js";
 import { PaymentFactory } from "../payment/payment.factory.js";
 import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
 import { BookingValidator } from "./bookings.validator.js";
+import { createMeetLink } from "../../core/services/google/meeting.js";
+import { createGoogleEvent } from "../../core/services/google/calendar.js";
 import path from "path";
 import { fileURLToPath } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const GOOGLE_SCOPES = ['https://www.googleapis.com/auth/calendar'];
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
     private paymentService: PaymentService;
-    private calendar: any;
-    private meet: any;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
         this.paymentService = new PaymentService();
-
-        try {
-            const client = googleAuth.fromJSON(serviceAccountJson) as any;
-            client.scopes = GOOGLE_SCOPES;
-
-            this.calendar = google.calendar({ version: 'v3', auth: client });
-            this.meet = google.meet({ version: 'v2', auth: client });
-            console.log("Google APIs initialized successfully via service account JSON.");
-        } catch (error) {
-            console.error("Failed to initialize Google APIs:", error);
-            this.calendar = null;
-            this.meet = null;
-        }
     }
 
 
@@ -87,17 +70,13 @@ export class BookingService {
         if (booking.paymentIntentId) {
             await this.paymentService.capture(id, "STRIPE");
         }
-        if (!this.calendar) {
-            console.error("Google Calendar integration is not initialized.");
-            throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
-        }
 
         try {
             // 1. Create Meet link via Meet REST API (best-effort)
-            const meetLink = await this.createMeetLink();
+            const meetLink = await createMeetLink();
 
             // 2. Create Google Calendar Event with the Meet link attached
-            const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
+            const { calendarUrl } = await createGoogleEvent(booking, booking.service.name_en, meetLink);
 
             // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
@@ -122,64 +101,6 @@ export class BookingService {
             console.error("Booking confirmation failed:", msg);
             throw new AppResponse(false, "BOOKING_CONFIRMATION_FAILED", null, 500);
         }
-    }
-
-    // Create a Meet space using the Meet REST API (works with service accounts)
-    private async createMeetLink(): Promise<string | null> {
-        if (!this.meet) return null;
-        try {
-            const space = await this.meet.spaces.create({ requestBody: {} });
-            const uri = space.data?.meetingUri ?? null;
-            if (uri) console.log(`Google Meet link created: ${uri} `);
-            return uri;
-        } catch (err: any) {
-            console.warn('Could not create Meet space:', err?.message ?? err);
-            return null;
-        }
-    }
-
-    private async createGoogleEvent(
-        booking: any,
-        serviceName: string,
-        meetLink: string | null = null
-    ): Promise<{ calendarUrl: string | null }> {
-        const startDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.startTime} `,
-            "yyyy-MM-dd HH:mm",
-            new Date()
-        );
-        const endDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.endTime} `,
-            "yyyy-MM-dd HH:mm",
-            new Date()
-        );
-
-        const eventBody: any = {
-            summary: `Booking: ${serviceName} `,
-            description: `Client: ${booking.clientEmail} `,
-            start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
-        };
-
-        // Attach the Meet link as a virtual conference entry if provided
-        if (meetLink) {
-            eventBody.conferenceData = {
-                conferenceSolution: { key: { type: 'hangoutsMeet' }, name: 'Google Meet' },
-                entryPoints: [{
-                    entryPointType: 'video',
-                    uri: meetLink,
-                    label: meetLink.replace('https://', ''),
-                }],
-            };
-        }
-
-        const response = await this.calendar.events.insert({
-            calendarId: 'primary',
-            conferenceDataVersion: meetLink ? 1 : 0,
-            requestBody: eventBody,
-        });
-
-        return { calendarUrl: response.data.htmlLink ?? null };
     }
 
     private async sendConfirmationEmail(booking: any) {
