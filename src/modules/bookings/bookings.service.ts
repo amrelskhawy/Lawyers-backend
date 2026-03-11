@@ -1,52 +1,24 @@
-import { google } from "googleapis";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
-import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
-import { sendEmailWithTemplate } from "../../core/utils/email.js";
+import { startOfDay, format } from "date-fns";
 import { PaymentService } from "../payment/payment.service.js";
 import { PaymentFactory } from "../payment/payment.factory.js";
 import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
-import { getStripeReceiptUrl } from "../payment/providers/stripe/stripe.provider.js";
 import { BookingValidator } from "./bookings.validator.js";
+import { sendPaymentLinkEmail, sendConfirmationEmail, sendCancellationEmail } from "./bookings.email.js";
+import { GoogleIntegration } from "./bookings.google.js";
+import { detectProvider, buildMetadataResponse } from "./bookings.helpers.js";
 
 export class BookingService {
     private availabilityEngine: AvailabilityEngine;
     private paymentService: PaymentService;
-    private calendar: any;
-    private meet: any;
+    private googleIntegration: GoogleIntegration;
 
     constructor() {
         this.availabilityEngine = new AvailabilityEngine();
         this.paymentService = new PaymentService();
-
-        const clientEmail = process.env.GOOGLE_CLIENT_EMAIL;
-        const privateKey = process.env.GOOGLE_PRIVATE_KEY;
-
-        if (clientEmail && privateKey) {
-            try {
-                const auth = new google.auth.GoogleAuth({
-                    credentials: {
-                        client_email: clientEmail,
-                        private_key: privateKey.replace(/\\n/g, '\n'),
-                    },
-                    scopes: [
-                        'https://www.googleapis.com/auth/calendar',
-                        'https://www.googleapis.com/auth/meetings.space.created',
-                    ],
-                });
-                this.calendar = google.calendar({ version: 'v3', auth });
-                this.meet = google.meet({ version: 'v2', auth });
-            } catch (error) {
-                console.error("Failed to initialize Google APIs:", error);
-                this.calendar = null;
-                this.meet = null;
-            }
-        } else {
-            console.warn("Google credentials missing. Calendar/Meet integration disabled.");
-            this.calendar = null;
-            this.meet = null;
-        }
+        this.googleIntegration = new GoogleIntegration();
     }
 
     async createBooking(payload: any) {
@@ -82,31 +54,21 @@ export class BookingService {
             provider
         );
 
-
         if (!paymentResult || !paymentResult.url) {
             throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
         }
 
         // EMAIL 1 — Payment Link Sent (best-effort, never blocks response)
-        try {
-            await sendEmailWithTemplate(
-                clientEmail,
-                "Complete your booking payment — link expires in 30 minutes",
-                "paymentLinkSent",
-                {
-                    name: payload.name,
-                    payment_link: paymentResult.url,
-                    service_name: service.name_en,
-                    date: format(bookingDay, "yyyy-MM-dd"),
-                    start_time: cleanStartTime,
-                    end_time: endTime,
-                    expires_in_minutes: 30,
-                    provider,
-                }
-            );
-        } catch (emailErr: any) {
-            console.error("[Email] Failed to send paymentLinkSent:", emailErr?.message);
-        }
+        await sendPaymentLinkEmail(
+            clientEmail,
+            payload,
+            paymentResult,
+            service,
+            bookingDay,
+            cleanStartTime,
+            endTime,
+            provider
+        );
 
         // No booking saved yet — it gets created in the webhook after payment
         return {
@@ -122,24 +84,22 @@ export class BookingService {
             throw new AppResponse(false, "CANNOT_CONFIRM_CANCELLED_BOOKING", null, 400);
         }
 
-        // Detect provider from whichever payment ID field is set on the booking
-        if (booking.paymentIntentId) {
-            await this.paymentService.capture(id, "STRIPE");
-        } else if ((booking as any).tabbyPaymentId) {
-            await this.paymentService.capture(id, "TABBY");
+        const provider = detectProvider(booking);
+        if (provider) {
+            await this.paymentService.capture(id, provider as any);
         }
-        // If neither field is set, no capture needed (booking was created without payment)
-        // if (!this.calendar) {
+
+        // if (!this.googleIntegration.calendar) {
         //     console.error("Google Calendar integration is not initialized.");
         //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
         // }
 
         try {
             // 1. Create Meet link via Meet REST API (best-effort)
-            //const meetLink = await this.createMeetLink();
+            //const meetLink = await this.googleIntegration.createMeetLink(this.googleIntegration.meet);
 
             // 2. Create Google Calendar Event with the Meet link attached
-            //const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
+            //const { calendarUrl } = await this.googleIntegration.createGoogleEvent(this.googleIntegration.calendar, booking, booking.service.name_en, meetLink);
 
             // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
@@ -154,7 +114,7 @@ export class BookingService {
             });
 
             // 3. Send Confirmation Email (best-effort)
-            await this.sendConfirmationEmail(updatedBooking);
+            await sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
@@ -163,120 +123,6 @@ export class BookingService {
             const msg = error?.cause?.message ?? error?.response?.data?.error?.message ?? error?.message ?? "Unknown error";
             console.error("Booking confirmation failed:", msg);
             throw new AppResponse(false, "BOOKING_CONFIRMATION_FAILED", null, 500);
-        }
-    }
-
-    // Create a Meet space using the Meet REST API (works with service accounts)
-    private async createMeetLink(): Promise<string | null> {
-        if (!this.meet) return null;
-        try {
-            const space = await this.meet.spaces.create({ requestBody: {} });
-            const uri = space.data?.meetingUri ?? null;
-            if (uri) console.log(`Google Meet link created: ${uri} `);
-            return uri;
-        } catch (err: any) {
-            console.warn('Could not create Meet space:', err?.message ?? err);
-            return null;
-        }
-    }
-
-    private async createGoogleEvent(
-        booking: any,
-        serviceName: string,
-        meetLink: string | null = null
-    ): Promise<{ calendarUrl: string | null }> {
-        const startDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.startTime} `,
-            "yyyy-MM-dd HH:mm",
-            new Date()
-        );
-        const endDateTime = parse(
-            `${format(booking.date, "yyyy-MM-dd")} ${booking.endTime} `,
-            "yyyy-MM-dd HH:mm",
-            new Date()
-        );
-
-        const eventBody: any = {
-            summary: `Booking: ${serviceName} `,
-            description: `Client: ${booking.clientEmail} `,
-            start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
-            end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
-        };
-
-        // Attach the Meet link as a virtual conference entry if provided
-        if (meetLink) {
-            eventBody.conferenceData = {
-                conferenceSolution: { key: { type: 'hangoutsMeet' }, name: 'Google Meet' },
-                entryPoints: [{
-                    entryPointType: 'video',
-                    uri: meetLink,
-                    label: meetLink.replace('https://', ''),
-                }],
-            };
-        }
-
-        const response = await this.calendar.events.insert({
-            calendarId: 'primary',
-            conferenceDataVersion: meetLink ? 1 : 0,
-            requestBody: eventBody,
-        });
-
-        return { calendarUrl: response.data.htmlLink ?? null };
-    }
-
-    // EMAIL 2 — Booking Confirmed (best-effort, never blocks response)
-    private async sendConfirmationEmail(booking: any) {
-        const providerLabel = booking.paymentIntentId
-            ? "STRIPE"
-            : (booking as any).tabbyPaymentId
-                ? "TABBY"
-                : "TAMARA";
-
-        const formattedDate = format(new Date(booking.date), "yyyy-MM-dd");
-        const subject = `Booking Confirmed — ${booking.service.name_en} on ${formattedDate}`;
-
-        // For Stripe bookings: attempt to fetch and attach the payment receipt PDF
-        let attachments: { filename: string; content: Buffer; contentType: string }[] | undefined;
-        if (booking.paymentIntentId) {
-            try {
-                const receiptUrl = await getStripeReceiptUrl(booking.paymentIntentId);
-                if (receiptUrl) {
-                    const response = await fetch(receiptUrl);
-                    if (response.ok) {
-                        const arrayBuffer = await response.arrayBuffer();
-                        attachments = [{
-                            filename: "payment-receipt.pdf",
-                            content: Buffer.from(arrayBuffer),
-                            contentType: "application/pdf",
-                        }];
-                    }
-                }
-            } catch (pdfErr: any) {
-                console.error("[Email] Failed to fetch Stripe receipt PDF — sending without attachment:", pdfErr?.message);
-                // Continue without attachment
-            }
-        }
-
-        try {
-            await sendEmailWithTemplate(
-                booking.clientEmail,
-                subject,
-                "bookingConfirmed",
-                {
-                    name: booking.name,
-                    service_name: booking.service.name_en,
-                    date: formattedDate,
-                    start_time: booking.startTime,
-                    end_time: booking.endTime,
-                    meet_link: booking.meetLink || null,
-                    calendar_url: booking.calendarUrl || null,
-                    total_amount: String(booking.totalAmount),
-                    provider: providerLabel,
-                },
-                attachments
-            );
-        } catch (emailErr: any) {
-            console.error("[Email] Failed to send bookingConfirmed:", emailErr?.message);
         }
     }
 
@@ -300,16 +146,10 @@ export class BookingService {
     async cancelBooking(id: string) {
         const booking = await BookingValidator.validateBookingExists(id);
 
-        if (booking.paymentIntentId) {
-            // Stripe booking
-            const result = await this.paymentService.cancel(id, "STRIPE");
-            await this.sendCancellationEmail(booking, result);
-            return result;
-        }
-        if ((booking as any).tabbyPaymentId) {
-            // Tabby booking
-            const result = await this.paymentService.cancel(id, "TABBY");
-            await this.sendCancellationEmail(booking, result);
+        const provider = detectProvider(booking);
+        if (provider) {
+            const result = await this.paymentService.cancel(id, provider as any);
+            await sendCancellationEmail(booking, result);
             return result;
         }
 
@@ -318,63 +158,8 @@ export class BookingService {
             data: { status: "CANCELLED" },
             include: { service: true }
         });
-        await this.sendCancellationEmail(booking, { status: "cancelled" });
+        await sendCancellationEmail(booking, { status: "cancelled" });
         return result;
-    }
-
-    // EMAIL 3 — Booking Cancelled (best-effort, never blocks response)
-    private async sendCancellationEmail(booking: any, result: any) {
-        const providerLabel = booking.paymentIntentId
-            ? "STRIPE"
-            : (booking as any).tabbyPaymentId
-                ? "TABBY"
-                : "TAMARA";
-
-        const serviceName = booking.service?.name_en || "";
-        const subject = `Your booking has been cancelled — ${serviceName}`;
-
-        // For Stripe refunds: attempt to fetch and attach the refund receipt PDF
-        let attachments: { filename: string; content: Buffer; contentType: string }[] | undefined;
-        if (booking.paymentIntentId && result?.status === "refunded") {
-            try {
-                const receiptUrl = await getStripeReceiptUrl(booking.paymentIntentId);
-                if (receiptUrl) {
-                    const response = await fetch(receiptUrl);
-                    if (response.ok) {
-                        const arrayBuffer = await response.arrayBuffer();
-                        attachments = [{
-                            filename: "refund-receipt.pdf",
-                            content: Buffer.from(arrayBuffer),
-                            contentType: "application/pdf",
-                        }];
-                    }
-                }
-            } catch (pdfErr: any) {
-                console.error("[Email] Failed to fetch Stripe refund receipt PDF — sending without attachment:", pdfErr?.message);
-                // Continue without attachment
-            }
-        }
-
-        try {
-            await sendEmailWithTemplate(
-                booking.clientEmail,
-                subject,
-                "bookingCancelled",
-                {
-                    name: booking.name,
-                    service_name: serviceName,
-                    date: format(new Date(booking.date), "yyyy-MM-dd"),
-                    start_time: booking.startTime,
-                    end_time: booking.endTime,
-                    payment_status: result?.status ?? "cancelled",
-                    total_amount: String(booking.totalAmount),
-                    provider: providerLabel,
-                },
-                attachments
-            );
-        } catch (emailErr: any) {
-            console.error("[Email] Failed to send bookingCancelled:", emailErr?.message);
-        }
     }
 
     async getBookingMetadata(startDateStr: string, endDateStr: string) {
@@ -382,15 +167,12 @@ export class BookingService {
             startDateStr,
             endDateStr
         );
-
-        // 1. Get Working Days configuration (optional - may be empty)
         const workingDays = await prisma.workingDay.findMany({
             orderBy: {
                 day: 'asc'
             }
         });
 
-        // 2. Get Holidays in Range
         const holidays = await prisma.holiday.findMany({
             where: {
                 date: {
@@ -400,7 +182,6 @@ export class BookingService {
             }
         });
 
-        // 3. Get Booked Dates
         const bookings = await prisma.booking.findMany({
             where: {
                 date: {
@@ -416,23 +197,6 @@ export class BookingService {
             }
         });
 
-        const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
-
-        return {
-            workingDays: workingDays.length > 0 ? workingDays : [{
-                day: "DEFAULT",
-                isOpen: true,
-                startTime: "09:00",
-                endTime: "17:00"
-            }],
-            holidays: holidays.map((h: any) => ({
-                date: format(h.date, "yyyy-MM-dd"),
-                name: h.name,
-                startTime: h.startTime,
-                endTime: h.endTime,
-                isFullDay: h.isFullDay
-            })),
-            bookedDates
-        };
+        return buildMetadataResponse(workingDays, holidays, bookings);
     }
 }
