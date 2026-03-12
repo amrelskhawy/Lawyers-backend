@@ -5,8 +5,7 @@ import { parse, format } from "date-fns";
 export async function createGoogleEvent(
     booking: any,
     serviceName: string,
-    meetLink: string | null = null
-): Promise<{ calendarUrl: string | null }> {
+): Promise<{ calendarUrl: string | null, meetLink: string | null }> {
     try {
         const calendar = google.calendar({
             version: 'v3',
@@ -29,26 +28,37 @@ export async function createGoogleEvent(
             description: `Client: ${booking.clientEmail}`,
             start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
             end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
+            conferenceData: {
+                createRequest: {
+                    requestId: 'meet-' + Date.now(),
+                    conferenceSolutionKey: {
+                        type: 'hangoutsMeet'
+                    }
+                }
+            }
         };
 
-        if (meetLink) {
-            eventBody.conferenceData = {
-                conferenceSolution: { key: { type: 'hangoutsMeet' }, name: 'Google Meet' },
-                entryPoints: [{
-                    entryPointType: 'video',
-                    uri: meetLink,
-                    label: meetLink.replace('https://', ''),
-                }],
-            };
-        }
+        // if (meetLink) {
+        //     eventBody.conferenceData = {
+        //         conferenceSolution: { key: { type: 'hangoutsMeet' }, name: 'Google Meet' },
+        //         entryPoints: [{
+        //             entryPointType: 'video',
+        //             uri: meetLink,
+        //             label: meetLink.replace('https://', ''),
+        //         }],
+        //     };
+        // }
 
         const response = await calendar.events.insert({
             calendarId: 'primary',
-            conferenceDataVersion: meetLink ? 1 : 0,
+            conferenceDataVersion: 1,
             requestBody: eventBody,
         });
 
-        return { calendarUrl: response.data.htmlLink ?? null };
+        return {
+            calendarUrl: response.data.htmlLink ?? null,
+            meetLink: response.data.hangoutLink ?? null
+        };
     } catch (error: any) {
         console.error("Google Calendar event creation failed:", error?.message || error);
         throw error;
