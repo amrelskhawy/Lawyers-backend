@@ -47,6 +47,8 @@ model Booking {
   totalAmount      Decimal       @default(0) @db.Decimal(10, 2)
   paymentStatus    PaymentStatus @default(UNPAID)
 
+  tabbyPaymentId   String?
+  
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }

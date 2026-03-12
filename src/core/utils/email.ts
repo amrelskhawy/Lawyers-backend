@@ -31,6 +31,9 @@ export const sendEmail = async (
             extName: ".handlebars",
             partialsDir: path.resolve(__dirname, "../../views"),
             defaultLayout: false,
+            helpers: {
+                eq: (v1: any, v2: any) => v1 === v2,
+            },
         },
         viewPath: path.resolve(__dirname, "../../views"),
         extName: ".handlebars",
@@ -64,7 +67,8 @@ export const sendEmailWithTemplate = async (
     to: string,
     subject: string,
     template: string,
-    context: any
+    context: any,
+    attachments?: { filename: string; content: Buffer; contentType: string }[]
 ) => {
     const transporter = nodeMailer.createTransport({
         service: "gmail",
@@ -82,6 +86,9 @@ export const sendEmailWithTemplate = async (
             extName: ".handlebars",
             partialsDir: path.resolve(__dirname, "../../views"),
             defaultLayout: false,
+            helpers: {
+                eq: (v1: any, v2: any) => v1 === v2,
+            },
         },
         viewPath: path.resolve(__dirname, "../../views"),
         extName: ".handlebars",
@@ -89,12 +96,13 @@ export const sendEmailWithTemplate = async (
 
     transporter.use("compile", hbs(handlebarsOptions));
 
-    const mailOptions = {
+    const mailOptions: any = {
         from: process.env.EMAIL_USER,
         to,
         subject,
         template,
         context,
+        ...(attachments && attachments.length > 0 ? { attachments } : {}),
     };
 
     try {
