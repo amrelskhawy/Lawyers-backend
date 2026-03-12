@@ -12,6 +12,7 @@ import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
 import { BookingValidator } from "./bookings.validator.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GoogleService } from "@app/core/services/google/service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -96,25 +97,42 @@ export class BookingService {
 
         try {
             // 1. Create Meet link via Meet REST API (best-effort)
-            const meetLink = await this.createMeetLink();
+            // const meetLink = await   // generate meeting and clendar
+            const googleService = new GoogleService();
 
-            // 2. Create Google Calendar Event with the Meet link attached
-            const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
+            console.log("Bookeing ", {
+                from: booking.date.toISOString().split('T')[0] + "T" + booking.startTime,
+                to: booking.date.toISOString().split('T')[0] + "T" + booking.endTime,
+            });
+
+
+            const { meetingLink: meetLink } = await googleService.createEvent({
+                client_email: booking.clientEmail,
+                client_name: booking.name,
+                client_phone: booking.phone_number,
+                from: booking.date.toISOString().split('T')[0] + "T" + booking.startTime,
+                to: booking.date.toISOString().split('T')[0] + "T" + booking.endTime,
+
+            })
+
+
+
+            // // 2. Create Google Calendar Event with the Meet link attached
+            // const { calendarUrl } = await this.createGoogleEvent(booking, booking.service.name_en, meetLink);
 
             // 2. Update Booking with Links & Status
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {
                     meetLink,
-                    calendarUrl,
                     status: "CONFIRMED",
                     paymentStatus: "PAID",
                 },
-                include: { service: true }
+                include: { service: true },
             });
 
             // 3. Send Confirmation Email
-            await this.sendConfirmationEmail(updatedBooking);
+            // await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
