@@ -1,10 +1,10 @@
 import { SpacesServiceClient } from '@google-apps/meet';
-import { auth } from './index.js';
+import { getAuth } from './index.js';
 
 export async function createMeetLink(): Promise<string | null> {
     try {
         const meetClient = new SpacesServiceClient({
-            auth,
+            auth: getAuth()
         });
 
         const [space] = await meetClient.createSpace({

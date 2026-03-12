@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { auth } from './index.js';
+import { getAuth } from './index.js';
 import { parse, format } from "date-fns";
 
 export async function createGoogleEvent(
@@ -10,7 +10,7 @@ export async function createGoogleEvent(
     try {
         const calendar = google.calendar({
             version: 'v3',
-            auth,
+            auth: getAuth()
         });
 
         const startDateTime = parse(
