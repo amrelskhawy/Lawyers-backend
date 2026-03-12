@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { auth } from './index.js';
+import { auth } from './index.ts';
 
 const drive = google.drive({ version: 'v3', auth });
 
@@ -58,3 +58,7 @@ export const driveService = {
         return { success: true };
     }
 };
+
+console.log(
+    await driveService.listFilesByFolder('1aGu5-Y4Dog6F994QRK-yGJpQXrbasKgp')
+)

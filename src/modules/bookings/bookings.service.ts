@@ -11,6 +11,7 @@ import { createMeetLink } from "../../core/services/google/meeting.js";
 import { createGoogleEvent } from "../../core/services/google/calendar.js";
 import path from "path";
 import { fileURLToPath } from "url";
+import { GoogleService } from "@app/core/services/google/service.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -83,15 +84,14 @@ export class BookingService {
                 where: { id: booking.id },
                 data: {
                     meetLink,
-                    calendarUrl,
                     status: "CONFIRMED",
                     paymentStatus: "PAID",
                 },
-                include: { service: true }
+                include: { service: true },
             });
 
             // 3. Send Confirmation Email
-            await this.sendConfirmationEmail(updatedBooking);
+            // await this.sendConfirmationEmail(updatedBooking);
 
             return updatedBooking;
 
