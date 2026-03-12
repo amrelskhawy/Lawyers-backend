@@ -101,6 +101,13 @@ export class BookingValidator {
     }
 
 
+    static validateConfirmable(booking: any): void {
+        if (booking.status === "CANCELLED") {
+            throw new AppResponse(false, "CANNOT_CONFIRM_CANCELLED_BOOKING", null, 400);
+        }
+    }
+
+
     static validateDateRange(startDateStr: string, endDateStr: string): {
         startDate: Date;
         endDate: Date;

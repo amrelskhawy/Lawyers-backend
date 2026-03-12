@@ -12,6 +12,7 @@ import {
     isBefore
 } from "date-fns";
 import prisma from "../../core/db/prisma.js";
+import { BookingValidator } from "./bookings.validator.js";
 
 interface TimeSlot {
     startTime: string;
@@ -337,6 +338,65 @@ export class AvailabilityEngine {
         }
 
         return results;
+    }
+
+    async getBookingMetadata(startDateStr: string, endDateStr: string) {
+        const { startDate, endDate } = BookingValidator.validateDateRange(
+            startDateStr,
+            endDateStr
+        );
+
+        // 1. Get Working Days configuration (optional - may be empty)
+        const workingDays = await prisma.workingDay.findMany({
+            orderBy: {
+                day: 'asc'
+            }
+        });
+
+        // 2. Get Holidays in Range
+        const holidays = await prisma.holiday.findMany({
+            where: {
+                date: {
+                    gte: startOfDay(startDate),
+                    lte: startOfDay(endDate)
+                }
+            }
+        });
+
+        // 3. Get Booked Dates
+        const bookings = await prisma.booking.findMany({
+            where: {
+                date: {
+                    gte: startOfDay(startDate),
+                    lte: startOfDay(endDate)
+                },
+                status: {
+                    not: "CANCELLED"
+                }
+            },
+            select: {
+                date: true
+            }
+        });
+
+        const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
+
+        return {
+            workingDays: workingDays.length > 0 ? workingDays : [{
+                day: "DEFAULT",
+                isOpen: true,
+                startTime: "09:00",
+                endTime: "17:00"
+            }],
+            holidays: holidays.map((h: any) => ({
+                date: format(h.date, "yyyy-MM-dd"),
+                name: h.name,
+                startTime: h.startTime,
+                endTime: h.endTime,
+                isFullDay: h.isFullDay
+            })),
+            bookedDates
+        };
     }
 
     // Legacy compatibility

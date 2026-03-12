@@ -9,7 +9,6 @@ const bookingService = new BookingService();
 const availabilityEngine = new AvailabilityEngine();
 
 export const createBooking = asyncHandler(async (req: Request, res: Response) => {
-    // Validation handled by middleware
     const booking = await bookingService.createBooking(req.body);
     res.status(201).json(new AppResponse(true, "BOOKING_CREATED_SUCCESS", booking));
 });
@@ -77,7 +76,7 @@ export const getBookingMetadata = asyncHandler(async (req: Request, res: Respons
         throw new AppResponse(false, "DATE_RANGE_REQUIRED", null, 400);
     }
 
-    const metadata = await bookingService.getBookingMetadata(startDate as string, endDate as string);
+    const metadata = await availabilityEngine.getBookingMetadata(startDate as string, endDate as string);
     res.status(200).json(new AppResponse(true, "BOOKING_METADATA_RETRIEVED", metadata));
 });
 
