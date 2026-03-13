@@ -34,8 +34,8 @@ export interface DetailedTimeSlot {
 
 export class AvailabilityEngine {
     // Default working hours if no WorkingDay configuration exists
-    private readonly DEFAULT_START_TIME = "00:00";
-    private readonly DEFAULT_END_TIME = "23:59";
+    private readonly DEFAULT_START_TIME = "09:00";
+    private readonly DEFAULT_END_TIME = "17:00";
 
     public async getHolidayBlocks(date: Date) {
         return await prisma.holiday.findMany({
@@ -71,22 +71,9 @@ export class AvailabilityEngine {
             where: { day: dayOfWeek },
         });
 
-        // If configured and marked as closed, check if there's a full-day holiday
+        // If configured and marked as closed
         if (workingDay && !workingDay.isOpen) {
-            // Day is configured as closed, return default but check for holidays
-            const holidays = await this.getHolidayBlocks(date);
-            const hasFullDayHoliday = holidays.some(h => h.isFullDay);
-
-            if (hasFullDayHoliday) {
-                // Truly closed due to holiday
-                return { startTime: "00:00", endTime: "00:00" };
-            }
-
-            // If no holiday, treat as regular day with default hours
-            return {
-                startTime: this.DEFAULT_START_TIME,
-                endTime: this.DEFAULT_END_TIME
-            };
+            return { startTime: "00:00", endTime: "00:00" };
         }
 
         // If configured with hours, use those
@@ -99,8 +86,8 @@ export class AvailabilityEngine {
 
         // Default working hours
         return {
-            startTime: this.DEFAULT_START_TIME,
-            endTime: this.DEFAULT_END_TIME
+            startTime: "09:00",
+            endTime: "17:00"
         };
     }
 
