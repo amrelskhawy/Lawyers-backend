@@ -34,7 +34,8 @@
             "SERVICE_RETRIEVED_SUCCESS": "SERVICE_RETRIEVED_SUCCESS",
             "SERVICE_CREATED_SUCCESS": "SERVICE_CREATED_SUCCESS",
             "SERVICE_UPDATED_SUCCESS": "SERVICE_UPDATED_SUCCESS",
-            "SERVICE_DELETED_SUCCESS": "Service deleted successfully"
+            "SERVICE_DELETED_SUCCESS": "Service deleted successfully",
+            "SERVICE_STATUS_TOGGLED_SUCCESS": "Service status toggled successfully"
         },
         "error": {
             "SERVICE_NOT_FOUND": "Service not found"

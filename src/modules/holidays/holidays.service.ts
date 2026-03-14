@@ -121,4 +121,16 @@ export class HolidaysService {
 
         return result;
     }
+
+    async deleteMultipleHolidays(ids: string[]) {
+        const results = await Promise.allSettled(ids.map((id) => this.deleteHoliday(id)));
+
+        const deleted = ids
+            .filter((_, i) => results[i].status === "fulfilled");
+        const failed = ids
+            .map((id, i) => ({ id, reason: results[i].status === "rejected" ? (results[i] as PromiseRejectedResult).reason : null }))
+            .filter((r) => r.reason !== null);
+
+        return { deletedCount: deleted.length, failed };
+    }
 }

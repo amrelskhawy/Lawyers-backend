@@ -28,8 +28,20 @@ export const updateService = asyncHandler(async (req: Request, res: Response) =>
     res.status(200).json(new AppResponse(true, "SERVICE_UPDATED_SUCCESS", service));
 });
 
+export const toggleStatus = asyncHandler(async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    const service = await serviceService.toggleServiceStatus(id);
+    res.status(200).json(new AppResponse(true, "SERVICE_STATUS_TOGGLED_SUCCESS", service));
+});
+
 export const deleteService = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const result = await serviceService.deleteService(id);
-    res.status(200).json(new AppResponse(true, "SERVICE_DELETED_SUCCESS"));
+    res.status(200).json(new AppResponse(true, result.message));
+});
+
+export const deleteMultipleServices = asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    const result = await serviceService.deleteMultipleServices(ids);
+    res.status(200).json(new AppResponse(true, "SERVICES_DELETED_SUCCESS", result));
 });

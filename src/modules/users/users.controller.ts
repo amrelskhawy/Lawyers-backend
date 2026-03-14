@@ -44,3 +44,13 @@ export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
         res.status(500).json({ message: "Cannot Delete User" });
     }
 });
+
+export const deleteMultipleUsers = asyncHandler(async (req: Request, res: Response) => {
+    const { ids } = req.body;
+    try {
+        const result = await usersService.deleteMultipleUsers(ids);
+        res.status(200).json(new AppResponse(true, "USERS_DELETED_SUCCESS", result));
+    } catch (error: any) {
+        res.status(500).json({ message: "Cannot Delete Users" });
+    }
+});
