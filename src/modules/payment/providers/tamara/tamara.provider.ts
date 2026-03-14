@@ -9,6 +9,7 @@ async function tamaraRequest(
 ): Promise<any> {
     const baseUrl = process.env.TAMARA_API_URL || "https://api-sandbox.tamara.co";
     const token = process.env.TAMARA_MERCHANT_TOKEN;
+    console.log("Tamara token:", token);
     if (!token) throw new AppResponse(false, "TAMARA_MERCHANT_TOKEN_MISSING", null, 500);
 
     const response = await fetch(`${baseUrl}${path}`, {
