@@ -113,19 +113,14 @@ export class ServiceService {
     }
 
     async deleteMultipleServices(ids: string[]) {
-        const results = await Promise
-            .allSettled(ids.map((id) => this.deleteService(id)));
-
-        const summary = ids.map((id, i) => {
-            if (results[i].status === "fulfilled") {
-                return { id, result: (results[i] as PromiseFulfilledResult<any>).value };
+        const results = await prisma.service.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
             }
-            return { id, error: (results[i] as PromiseRejectedResult).reason };
-        });
+        })
 
-        const succeeded = summary.filter((s) => !s.error);
-        const failed = summary.filter((s) => s.error);
-
-        return { processedCount: succeeded.length, failedCount: failed.length, details: summary };
+        return { deletedCount: results.count };
     }
 }

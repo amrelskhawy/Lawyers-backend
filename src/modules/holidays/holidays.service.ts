@@ -123,14 +123,14 @@ export class HolidaysService {
     }
 
     async deleteMultipleHolidays(ids: string[]) {
-        const results = await Promise.allSettled(ids.map((id) => this.deleteHoliday(id)));
+        const results = await prisma.holiday.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
+            }
+        })
 
-        const deleted = ids
-            .filter((_, i) => results[i].status === "fulfilled");
-        const failed = ids
-            .map((id, i) => ({ id, reason: results[i].status === "rejected" ? (results[i] as PromiseRejectedResult).reason : null }))
-            .filter((r) => r.reason !== null);
-
-        return { deletedCount: deleted.length, failed };
+        return { deletedCount: results.count };
     }
 }

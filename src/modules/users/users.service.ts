@@ -65,13 +65,14 @@ export class UsersService {
     }
 
     async deleteMultipleUsers(ids: string[]) {
-        const results = await Promise
-            .allSettled(ids.map((id) => this.deleteUser(id)));
-        const deleted = ids
-            .filter((_, i) => results[i].status === "fulfilled");
-        const failed = ids
-            .filter((_, i) => results[i].status === "rejected");
+        const results = await prisma.user.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
+            }
+        })
 
-        return { deletedCount: deleted.length, failedIds: failed };
+        return { deletedCount: results.count };
     }
 }
