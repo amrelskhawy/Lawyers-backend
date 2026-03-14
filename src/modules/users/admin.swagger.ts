@@ -26,7 +26,7 @@
  *       200:
  *         description: Success
  * 
- * /admin/users/bulk-delete:
+ * /admin/users/many:
  *   delete:
  *     tags: [Admin]
  *     summary: Bulk delete users (Admin only)

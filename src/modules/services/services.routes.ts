@@ -19,7 +19,7 @@ router.get("/:id", getService);
 router.get("/", listServices); // get services only when user is logged in ( for dashboard )
 router.post("/", protect, moderatorMiddleware, validateCreateService, createService);
 router.put("/:id", protect, moderatorMiddleware, validateUpdateService, updateService);
-router.delete("/bulk-delete", protect, moderatorMiddleware, validateRequest(BulkDeleteSchema as any), deleteMultipleServices);
+router.delete("/many", protect, moderatorMiddleware, validateRequest(BulkDeleteSchema as any), deleteMultipleServices);
 router.delete("/:id", protect, moderatorMiddleware, deleteService);
 router.patch("/:id/toggle-status", protect, moderatorMiddleware, toggleStatus);
 

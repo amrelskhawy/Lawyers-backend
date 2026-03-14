@@ -195,7 +195,7 @@
  *       404:
  *         description: Service not found
  * 
- * /services/bulk-delete:
+ * /services/many:
  *   delete:
  *     tags: [Services]
  *     summary: Bulk delete services (Moderator/Admin only)

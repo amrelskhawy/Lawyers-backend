@@ -10,7 +10,7 @@ const router = express.Router();
 router.route("/users")
     .get(protect, getAllUsers);
 
-router.route("/users/bulk-delete")
+router.route("/users/many")
     .delete(protect, adminMiddleware, validateRequest(BulkDeleteSchema as any), deleteMultipleUsers);
 
 router.route("/users/:id")

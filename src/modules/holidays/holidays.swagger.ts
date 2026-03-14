@@ -122,7 +122,7 @@
  *       404:
  *         description: Holiday not found
  * 
- * /holidays/bulk-delete:
+ * /holidays/many:
  *   delete:
  *     tags: [Holidays]
  *     summary: Bulk delete holidays (Moderator/Admin only)
