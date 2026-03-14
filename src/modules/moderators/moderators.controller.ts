@@ -3,6 +3,7 @@ import asyncHandler from "express-async-handler";
 import { ModeratorService } from "./moderators.service.js";
 
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { Role } from "@prisma/client";
 
 const moderatorService = new ModeratorService();
 
@@ -24,6 +25,12 @@ export const getAllModerators = asyncHandler(async (req: Request, res: Response)
 
 export const deleteModerator = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
+
+    const isAdmin = req.user?.role === Role.ADMIN;
+
+    if (!isAdmin) {
+        throw new AppResponse(false, "ADMIN_ROLE_REQUIRED", null, 401);
+    }
     const result = await moderatorService.deleteModerator(id);
     res.status(200).json(new AppResponse(true, "MODERATOR_DELETED_SUCCESS"));
 });

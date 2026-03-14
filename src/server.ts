@@ -9,6 +9,7 @@ import { Request, Response } from "express";
 import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
+import paymentRoutes from "./modules/payment/payment.routes.js";
 
 dotenv.config();
 
@@ -21,7 +22,11 @@ app.use(
         credentials: true,
     })
 );
-app.use(express.json());
+
+app.use((req, res, next) => {
+    if (req.originalUrl.startsWith("/api/v1/payment/webhook")) return next();
+    express.json()(req, res, next);
+});
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 

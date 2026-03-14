@@ -62,10 +62,6 @@ export class ModeratorService {
             throw new AppResponse(false, "MODERATOR_NOT_FOUND", null, 404);
         }
 
-        if (moderator.role !== Role.ADMIN) {
-            throw new AppResponse(false, "INVALID_ROLE_OPERATION", null, 400);
-        }
-
         await prisma.user.delete({ where: { id } });
         return { message: "Moderator deleted successfully" };
     }

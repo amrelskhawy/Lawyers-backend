@@ -1,0 +1,50 @@
+import { IPaymentProvider, PaymentProvider } from "./interfaces/payment.interface.js";
+import { StripeProvider } from "./providers/stripe/stripe.provider.js";
+import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
+import { TabbyProvider } from "./providers/tabby/tabby.provider.js";
+import { AppResponse } from "../../core/utils/AppResponse.js";
+
+export class PaymentFactory {
+    private static instances = new Map<PaymentProvider, IPaymentProvider>();
+
+    static getProvider(provider: PaymentProvider): IPaymentProvider {
+        if (this.instances.has(provider)) {
+            return this.instances.get(provider)!;
+        }
+
+        let instance: IPaymentProvider;
+
+        switch (provider) {
+            case "STRIPE":
+                instance = new StripeProvider();
+                break;
+            case "TAMARA":
+                instance = new TamaraProvider();
+                break;
+            case "TABBY":
+                instance = new TabbyProvider();
+                break;
+            default:
+                throw new AppResponse(false, "UNSUPPORTED_PAYMENT_PROVIDER", null, 400);
+        }
+
+        this.instances.set(provider, instance);
+        return instance;
+    }
+
+    static resolveProvider(providerStr: string): PaymentProvider {
+        const valid: PaymentProvider[] = ["STRIPE", "TAMARA", "TABBY"];
+        const upper = providerStr?.toUpperCase() as PaymentProvider;
+
+        if (!valid.includes(upper)) {
+            throw new AppResponse(
+                false,
+                `INVALID_PAYMENT_PROVIDER. Must be one of: ${valid.join(", ")}`,
+                null,
+                400
+            );
+        }
+
+        return upper;
+    }
+}
