@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 import asyncHandler from "express-async-handler";
 import { BookingService } from "./bookings.service.js";
-import { AvailabilityEngine } from "./availability.engine.js";
+import { AvailabilityEngine } from "../availability/index.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
 
@@ -64,6 +64,9 @@ export const getDetailedDaySlots = asyncHandler(async (req: Request, res: Respon
     }
 
     const duration = serviceDuration ? parseInt(serviceDuration as string) : 60;
+    if (isNaN(duration) || duration <= 0) {
+        throw new AppResponse(false, "INVALID_SERVICE_DURATION", null, 400);
+    }
 
     const slots = await availabilityEngine.getDetailedDailySlots(dateObj, duration);
 
@@ -77,7 +80,7 @@ export const getBookingMetadata = asyncHandler(async (req: Request, res: Respons
         throw new AppResponse(false, "DATE_RANGE_REQUIRED", null, 400);
     }
 
-    const metadata = await bookingService.getBookingMetadata(startDate as string, endDate as string);
+    const metadata = await availabilityEngine.getBookingMetadata(startDate as string, endDate as string);
     res.status(200).json(new AppResponse(true, "BOOKING_METADATA_RETRIEVED", metadata));
 });
 
