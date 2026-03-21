@@ -1,4 +1,4 @@
-export type PaymentProvider = "STRIPE" | "TABBY";
+export type PaymentProvider = "STRIPE" | "TABBY" | "TAMARA";
 
 export interface BookingPayload {
     serviceId: string;
@@ -17,6 +17,7 @@ export interface CreatePaymentResult {
     url: string;
     sessionId?: string;
     paymentId?: string;
+    orderId?: string;
     qrCode?: string | null;
     amount?: number;
     currency?: string;
