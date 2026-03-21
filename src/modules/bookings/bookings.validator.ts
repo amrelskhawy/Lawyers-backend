@@ -87,6 +87,20 @@ export class BookingValidator {
             throw new AppResponse(false, "SLOT_BLOCKED", null, 400);
         }
 
+        const conflict = await prisma.booking.findFirst({
+            where: {
+                serviceId: payload.serviceId,
+                date: bookingDay,
+                status: { not: "CANCELLED" },
+                startTime: { lt: endTime },
+                endTime: { gt: cleanStartTime },
+            },
+        });
+
+        if (conflict) {
+            throw new AppResponse(false, "SLOT_NOT_AVAILABLE", null, 409);
+        }
+
         return { bookingDay, cleanStartTime, endTime, service };
     }
 

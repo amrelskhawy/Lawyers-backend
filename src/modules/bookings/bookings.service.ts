@@ -87,6 +87,43 @@ export class BookingService {
             throw new AppResponse(false, "PAYMENT_LINK_CREATION_FAILED", null, 500);
         }
 
+        // RESERVED row — locks the slot before client pays
+        // Webhook will promote this to PENDING/AUTHORIZED after payment
+        // onCheckoutExpired / onPaymentExpired will cancel this if client never pays
+        const reservationData: any = {
+            serviceId: payload.serviceId,
+            clientEmail,
+            name: payload.name,
+            phone_number: payload.phone_number,
+            date: bookingDay,
+            startTime: cleanStartTime,
+            endTime,
+            status: "RESERVED",
+            paymentStatus: "UNPAID",
+            totalAmount: String(service.price),
+        };
+
+        // Set the provider-specific ID so the webhook can find this row later
+        if (provider === "STRIPE") {
+            reservationData.stripeSessionId = paymentResult.sessionId;
+        } else if (provider === "TABBY") {
+            reservationData.tabbyPaymentId = paymentResult.paymentId;
+        } else if (provider === "TAMARA") {
+            reservationData.tamaraOrderId = paymentResult.orderId;
+        }
+
+        try {
+            const reservation = await prisma.booking.create({ data: reservationData });
+            console.log(`[Booking] Slot RESERVED: ${reservation.id} — provider: ${provider}`);
+        } catch (err: any) {
+            if (err?.code === "P2002") {
+                // Unique constraint violation — another request just took this slot
+                console.warn(`[Booking] Slot just taken by concurrent request — rejecting`);
+                throw new AppResponse(false, "SLOT_NOT_AVAILABLE", null, 409);
+            }
+            throw err;
+        }
+
         // EMAIL 1 — Payment Link Sent (best-effort, never blocks response)
         try {
             await sendEmailWithTemplate(

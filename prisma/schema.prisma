@@ -22,6 +22,7 @@ model User {
 }
 
 enum BookingStatus {
+  RESERVED
   PENDING
   CONFIRMED
   COMPLETED
@@ -42,15 +43,18 @@ model Booking {
   meetLink     String?
   calendarUrl  String?
 
-  paymentIntentId  String?
-  stripeSessionId  String?
+  paymentIntentId  String? @unique
+  stripeSessionId  String? @unique
   totalAmount      Decimal       @default(0) @db.Decimal(10, 2)
   paymentStatus    PaymentStatus @default(UNPAID)
 
-  tabbyPaymentId   String?
+  tabbyPaymentId   String? @unique
+  tamaraOrderId    String? @unique
   
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
+
+  @@unique([serviceId, date, startTime], name: "unique_slot")
 }
 
 model WorkingDay {
