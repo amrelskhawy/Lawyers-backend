@@ -156,9 +156,23 @@ export class TabbyProvider implements IPaymentProvider {
         if (eventType === "payment.authorized" || status === "authorized") {
             await this.onPaymentAuthorized(payment);
         } else if (eventType === "payment.closed" || status === "closed") {
+            await prisma.booking.updateMany({
+                where: {
+                    tabbyPaymentId: payment.id,
+                    status: "RESERVED",
+                },
+                data: { status: "CANCELLED" },
+            });
             await this.onPaymentClosed(payment);
         } else if (eventType === "payment.expired" || status === "expired") {
-            console.log(`[Tabby] Payment expired: ${payment?.id}`);
+            await prisma.booking.updateMany({
+                where: {
+                    tabbyPaymentId: payment.id,
+                    status: "RESERVED",
+                },
+                data: { status: "CANCELLED" },
+            });
+            console.log(`[Tabby] Reservation CANCELLED — payment expired: ${payment?.id}`);
         } else {
             console.log(`[Tabby Webhook] Unhandled: type=${eventType} status=${status}`);
         }
@@ -278,86 +292,33 @@ export class TabbyProvider implements IPaymentProvider {
     }
 
     private async onPaymentAuthorized(payment: any) {
-        if (!payment?.id) {
-            console.warn("[Tabby] payment.authorized missing payment id — skipping");
-            return;
-        }
+        await prisma.$transaction(async (tx) => {
+            // Find the RESERVED row created at booking time
+            const reservation = await tx.booking.findFirst({
+                where: { tabbyPaymentId: payment.id },
+            });
 
-        // ── Idempotency: already processed? ──────────────────────────────────
-        const existing = await prisma.booking.findFirst({
-            where: { tabbyPaymentId: payment.id },
-        });
-        if (existing) {
-            console.log(`[Tabby] Payment ${payment.id} already processed — skipping`);
-            return;
-        }
-
-        // ── Parse reference_id back into booking fields ───────────────────────
-        const referenceId = payment.order?.reference_id;
-        if (!referenceId || !referenceId.includes("|")) {
-            console.error(`[Tabby] payment.authorized missing or invalid reference_id: ${referenceId}`);
-            return;
-        }
-
-        const [serviceId, clientEmail, name, phone, date, startTime, endTime, totalAmount] =
-            referenceId.split("|");
-
-        if (!serviceId || !clientEmail || !date || !startTime) {
-            console.error(`[Tabby] payment.authorized incomplete reference_id: ${referenceId}`);
-            return;
-        }
-
-        // ── Race condition: slot already booked by someone else? ─────────────
-        const conflict = await prisma.booking.findFirst({
-            where: {
-                serviceId,
-                date: new Date(date),
-                startTime,
-                endTime,
-                status: { not: "CANCELLED" },
-            },
-        });
-
-        if (conflict) {
-            console.error(
-                `[Tabby] Slot conflict for payment ${payment.id} — closing payment (no charge)`
-            );
-            try {
-                await tabbyRequest("POST", `/v1/payments/${payment.id}/close`, {});
-            } catch (err: any) {
-                console.error(`[Tabby] Failed to close conflicting payment: ${err?.message}`);
+            if (!reservation) {
+                console.error("[Tabby] No RESERVED row found for payment:", payment.id);
+                return;
             }
-            return;
-        }
 
-        // ── Create booking ────────────────────────────────────────────────────
-        try {
-            await prisma.booking.create({
+            // Idempotency guard
+            if (reservation.paymentStatus === "AUTHORIZED") {
+                console.log(`[Tabby] Payment ${payment.id} already processed — skipping`);
+                return;
+            }
+
+            await tx.booking.update({
+                where: { id: reservation.id },
                 data: {
-                    serviceId,
-                    clientEmail,
-                    name,
-                    phone_number: phone,
-                    date: new Date(date),
-                    startTime,
-                    endTime,
-                    totalAmount: parseFloat(totalAmount || "0"),
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",
-                    tabbyPaymentId: payment.id,
                 },
             });
 
-            console.log(`[Tabby] Booking created after payment for payment id ${payment.id}`);
-        } catch (err: any) {
-            // Rethrow so Tabby retries the webhook (returns non-200)
-            console.error("[Tabby] CRITICAL: Payment received but booking creation failed", {
-                paymentId: payment.id,
-                referenceId,
-                error: err,
-            });
-            throw err;
-        }
+            console.log(`[Tabby] Booking ${reservation.id} promoted RESERVED → PENDING/AUTHORIZED`);
+        }, { isolationLevel: "Serializable" });
     }
 
     private async onPaymentClosed(payment: any) {

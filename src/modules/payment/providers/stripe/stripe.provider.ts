@@ -203,71 +203,51 @@ export class StripeProvider implements IPaymentProvider {
 
 
     private async onCheckoutCompleted(session: Stripe.CheckoutSession) {
-        // Idempotency guard — skip if already processed (handles Stripe retries)
-        const existing = await prisma.booking.findFirst({
-            where: { stripeSessionId: session.id },
-        });
-        if (existing) {
-            console.log(`[Stripe] Session ${session.id} already processed — skipping`);
-            return;
-        }
+        await prisma.$transaction(async (tx) => {
+            // Find the RESERVED row created at booking time
+            const reservation = await tx.booking.findFirst({
+                where: { stripeSessionId: session.id },
+            });
 
-        const m = session.metadata as any;
-        if (!m?.serviceId) {
-            console.error("[Stripe] checkout.session.completed missing metadata", session.id);
-            return;
-        }
+            if (!reservation) {
+                console.error("[Stripe] No RESERVED row found for session — possible flow error:", session.id);
+                return;
+            }
 
-        const bookingDay = startOfDay(new Date(m.date));
+            // Idempotency guard — already promoted by a previous webhook delivery
+            if (reservation.paymentStatus === "AUTHORIZED") {
+                console.log(`[Stripe] Session ${session.id} already processed — skipping`);
+                return;
+            }
 
-        // Race condition guard — re-check slot availability at payment time
-        const conflict = await prisma.booking.findFirst({
-            where: {
-                serviceId: m.serviceId,
-                date: bookingDay,
-                status: { not: "CANCELLED" },
-                startTime: { lt: m.endTime },
-                endTime: { gt: m.startTime },
-            },
-        });
-
-        if (conflict) {
-            console.warn(`[Stripe] Slot conflict for session ${session.id} — cancelling PI`);
-            await stripe.paymentIntents.cancel(session.payment_intent as string);
-            return;
-        }
-
-        try {
-            await prisma.booking.create({
+            // Promote RESERVED → PENDING / AUTHORIZED
+            await tx.booking.update({
+                where: { id: reservation.id },
                 data: {
-                    serviceId: m.serviceId,
-                    clientEmail: m.clientEmail,
-                    name: m.name,
-                    phone_number: m.phone,
-                    date: bookingDay,
-                    startTime: m.startTime,
-                    endTime: m.endTime,
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",
                     paymentIntentId: session.payment_intent as string,
-                    stripeSessionId: session.id,
-                    totalAmount: m.totalAmount,
                 },
             });
-            console.log(`[Stripe] Booking created after payment for session ${session.id}`);
-        } catch (error) {
-            console.error("[Stripe] CRITICAL: Payment received but booking creation failed", {
-                sessionId: session.id,
-                metadata: m,
-                error,
-            });
-            throw error;
-        }
+
+            console.log(`[Stripe] Booking ${reservation.id} promoted RESERVED → PENDING/AUTHORIZED`);
+        }, { isolationLevel: "Serializable" });
     }
 
     private async onCheckoutExpired(session: Stripe.CheckoutSession) {
-        const email = session.customer_email || session.metadata?.clientEmail;
-        console.log(`[Stripe] Session expired for ${email} — session: ${session.id}`);
+        const updated = await prisma.booking.updateMany({
+            where: {
+                stripeSessionId: session.id,
+                status: "RESERVED",
+            },
+            data: { status: "CANCELLED" },
+        });
+
+        if (updated.count > 0) {
+            console.log(`[Stripe] Reservation CANCELLED — session expired: ${session.id}`);
+        } else {
+            console.log(`[Stripe] Expired session had no RESERVED row (already promoted or cancelled): ${session.id}`);
+        }
     }
 
     private async onAuthorized(pi: Stripe.PaymentIntent) {
