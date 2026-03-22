@@ -3,7 +3,6 @@ import { AvailabilitySlots } from "./availability.slots.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import {
     startOfDay,
-    endOfDay,
     eachDayOfInterval,
     startOfMonth,
     endOfMonth,
@@ -53,19 +52,12 @@ export class AvailabilityEngine {
     ): Promise<boolean> {
         const holidays = await this.getHolidayBlocks(date);
 
-        const hasFullDayHoliday = holidays.some(h => h.isFullDay);
-        if (hasFullDayHoliday) {
-            return true;
-        }
-
-        for (const h of holidays) {
+        return holidays.some(h => {
+            if (h.isFullDay) return true;
             const hStart = h.startTime || "00:00";
             const hEnd = h.endTime || "23:59";
-            if (startTime < hEnd && endTime > hStart) {
-                return true;
-            }
-        }
-        return false;
+            return startTime < hEnd && endTime > hStart;
+        });
     }
 
     public async getWorkingHours(date: Date) {
@@ -120,15 +112,17 @@ export class AvailabilityEngine {
         );
     }
 
-    async getMonthlyAvailability(year: number, month: number) {
+    async getMonthlyAvailability(year: number, month: number, serviceDurationMinutes: number = 60) {
         const start = startOfMonth(new Date(year, month - 1));
         const end = endOfMonth(start);
         const days = eachDayOfInterval({ start, end });
         const today = startOfDay(new Date());
 
-        const monthHolidays = await this.queries.getMonthHolidays(start, end);
-        const monthBookings = await this.queries.getMonthBookings(start, end);
-        const workingDaysConfig = await this.queries.getWorkingDaysConfig();
+        const [monthHolidays, monthBookings, workingDaysConfig] = await Promise.all([
+            this.queries.getMonthHolidays(start, end),
+            this.queries.getMonthBookings(start, end),
+            this.queries.getWorkingDaysConfig(),
+        ]);
 
         const results = [];
 
@@ -159,7 +153,7 @@ export class AvailabilityEngine {
                 continue;
             }
 
-            const workingHours = await this.queries.getWorkingHours(day);
+            const workingHours = this.queries.resolveWorkingHoursFromConfig(day, workingDaysConfig);
 
             if (workingHours.startTime === "00:00" && workingHours.endTime === "00:00") {
                 results.push({
@@ -172,7 +166,7 @@ export class AvailabilityEngine {
             }
 
             const dayBookings = monthBookings.filter(b => isSameDay(b.date, day));
-            const slots = this.slots.generateSlots(workingHours.startTime, workingHours.endTime, day, 60);
+            const slots = this.slots.generateSlots(workingHours.startTime, workingHours.endTime, day, serviceDurationMinutes);
 
             const summary = this.slots.calculateDayAvailabilitySummary(slots, dayHolidays, dayBookings);
 
@@ -194,11 +188,11 @@ export class AvailabilityEngine {
         const startDate = new Date(startDateStr);
         const endDate = new Date(endDateStr);
 
-        const workingDays = await this.queries.getWorkingDaysConfig();
-
-        const holidays = await this.queries.getMonthHolidays(startOfDay(startDate), startOfDay(endDate));
-
-        const bookings = await this.queries.getMonthBookings(startOfDay(startDate), startOfDay(endDate));
+        const [workingDays, holidays, bookings] = await Promise.all([
+            this.queries.getWorkingDaysConfig(),
+            this.queries.getMonthHolidays(startOfDay(startDate), startOfDay(endDate)),
+            this.queries.getMonthBookings(startOfDay(startDate), startOfDay(endDate)),
+        ]);
 
         const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
 

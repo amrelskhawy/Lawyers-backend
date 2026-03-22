@@ -68,6 +68,27 @@ export class AvailabilityQueries {
         return await prisma.workingDay.findMany();
     }
 
+    resolveWorkingHoursFromConfig(
+        date: Date,
+        config: any[]
+    ): { startTime: string; endTime: string } {
+        const dayOfWeek = this.DAY_NAMES[date.getDay()];
+        const workingDay = config.find((d: any) => d.day === dayOfWeek);
+
+        if (!workingDay) {
+            return { startTime: this.FALLBACK_START_TIME, endTime: this.FALLBACK_END_TIME };
+        }
+
+        if (!workingDay.isOpen) {
+            return this.CLOSED_SIGNAL;
+        }
+
+        return {
+            startTime: workingDay.startTime ?? this.FALLBACK_START_TIME,
+            endTime: workingDay.endTime ?? this.FALLBACK_END_TIME,
+        };
+    }
+
     async getMonthHolidays(start: Date, end: Date) {
         return await prisma.holiday.findMany({
             where: {
