@@ -1,7 +1,8 @@
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { AvailabilityEngine } from "./availability.engine.js";
-import { format, startOfDay } from "date-fns";
+import { format } from "date-fns";
+import { sendEmailWithTemplate } from "../../core/utils/email.js"; ``
 import { PaymentService } from "../payment/payment.service.js";
 import { PaymentFactory } from "../payment/payment.factory.js";
 import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";

@@ -44,7 +44,7 @@ export class UsersService {
         };
     }
 
-    async getAllUsers() {
+    async getAllUsers(userRole: 'ALL' | 'ADMIN' | 'MODERATOR' = 'ALL') {
         const users = await prisma.user.findMany({
             select: {
                 id: true,
@@ -55,11 +55,24 @@ export class UsersService {
                 createdAt: true,
                 updatedAt: true,
             },
+            where: userRole !== 'ALL' ? { role: userRole } : undefined,
         });
         return users;
     }
 
     async deleteUser(id: string) {
         return await prisma.user.delete({ where: { id } });
+    }
+
+    async deleteMultipleUsers(ids: string[]) {
+        const results = await prisma.user.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
+            }
+        })
+
+        return { deletedCount: results.count };
     }
 }

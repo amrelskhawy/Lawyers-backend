@@ -121,4 +121,16 @@ export class HolidaysService {
 
         return result;
     }
+
+    async deleteMultipleHolidays(ids: string[]) {
+        const results = await prisma.holiday.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
+            }
+        })
+
+        return { deletedCount: results.count };
+    }
 }

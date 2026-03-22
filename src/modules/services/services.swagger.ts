@@ -60,6 +60,15 @@
  *         price:
  *           type: number
  *           format: decimal
+ *     BulkDeleteInput:
+ *       type: object
+ *       required:
+ *         - ids
+ *       properties:
+ *         ids:
+ *           type: array
+ *           items:
+ *             type: string
  *     ApiResponse:
  *       type: object
  *       properties:
@@ -174,7 +183,58 @@
  *         description: The service ID
  *     responses:
  *       200:
- *         description: Service deleted successfully
+ *         description: Service deleted or disabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Moderator/Admin only)
+ *       404:
+ *         description: Service not found
+ * 
+ * /services/many:
+ *   delete:
+ *     tags: [Services]
+ *     summary: Bulk delete services (Moderator/Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/BulkDeleteInput'
+ *     responses:
+ *       200:
+ *         description: Services deleted or disabled successfully
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/ApiResponse'
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden (Moderator/Admin only)
+ * 
+ * /services/{id}/toggle-status:
+ *   patch:
+ *     tags: [Services]
+ *     summary: Toggle service status (Moderator/Admin only)
+ *     security:
+ *       - cookieAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: The service ID
+ *     responses:
+ *       200:
+ *         description: Service status toggled successfully
  *         content:
  *           application/json:
  *             schema:

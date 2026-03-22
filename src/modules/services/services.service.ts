@@ -1,7 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { CreateServiceSchema, UpdateServiceSchema } from "./services.types.js";
+import { CreateServicePayload, UpdateServicePayload } from "./services.validator.js";
 import z from "zod";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
 
@@ -25,21 +25,14 @@ export class ServiceService {
         return service;
     }
 
-    async createService(payload: any) {
-        // Handle generic name/description for convenience, while respecting explicit _ar/_en fields
-        const name_ar = payload.name_ar || payload.name || "";
-        const name_en = payload.name_en || payload.name || "";
-        const description_ar = payload.description_ar || payload.description;
-        const description_en = payload.description_en || payload.description;
-        const price = payload.price;
-
+    async createService(payload: CreateServicePayload) {
         const service = await prisma.service.create({
             data: {
-                name_ar,
-                name_en,
-                description_ar,
-                description_en,
-                price: price !== undefined ? new Prisma.Decimal(price) : null,
+                name_ar: payload.name_ar,
+                name_en: payload.name_en,
+                description_ar: payload.description_ar,
+                description_en: payload.description_en,
+                price: payload.price !== undefined ? new Prisma.Decimal(payload.price) : null,
             },
         });
 
@@ -48,12 +41,14 @@ export class ServiceService {
         return service;
     }
 
-
-    async updateService(id: string, payload: z.infer<typeof UpdateServiceSchema>) {
+    async updateService(id: string, payload: UpdateServicePayload) {
         try {
             const updatedService = await prisma.service.update({
                 where: { id },
-                data: payload, // prisma by default ignores undefined fields
+                data: {
+                    ...payload,
+                    price: payload.price !== undefined ? new Prisma.Decimal(payload.price) : undefined,
+                },
             });
 
             appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: updatedService.id });
@@ -67,11 +62,47 @@ export class ServiceService {
         }
     }
 
-    async deleteService(id: string) {
+    async toggleServiceStatus(id: string) {
         const service = await prisma.service.findUnique({ where: { id } });
 
         if (!service) {
             throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
+        }
+
+        const updatedService = await prisma.service.update({
+            where: { id },
+            data: { isActive: !service.isActive },
+        });
+
+        appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: updatedService.id });
+
+        return updatedService;
+    }
+
+    async deleteService(id: string) {
+        const service = await prisma.service.findUnique({
+            where: { id },
+            include: { Booking: { take: 1 } }
+        });
+
+        if (!service) {
+            throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
+        }
+
+        if (service.Booking.length > 0) {
+            // Check if it's already disabled
+            if (!service.isActive) {
+                return { message: "Service is already disabled and cannot be deleted because it has associated bookings", id: service.id, status: "ALREADY_DISABLED" };
+            }
+
+            await prisma.service.update({
+                where: { id },
+                data: { isActive: false },
+            });
+
+            appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
+
+            return { message: "Service has bookings, so it has been disabled instead of deleted", id: service.id, status: "DISABLED_ONLY" };
         }
 
         await prisma.service.delete({ where: { id } });
@@ -79,5 +110,17 @@ export class ServiceService {
         appEvents.emitDataChange(SystemEvents.SERVICE_DELETED, { serviceId: service.id });
 
         return { message: "Service deleted successfully" };
+    }
+
+    async deleteMultipleServices(ids: string[]) {
+        const results = await prisma.service.deleteMany({
+            where: {
+                id: {
+                    in: ids
+                }
+            }
+        })
+
+        return { deletedCount: results.count };
     }
 }
