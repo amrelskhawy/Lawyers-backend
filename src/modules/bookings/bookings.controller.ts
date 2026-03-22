@@ -9,7 +9,6 @@ const bookingService = new BookingService();
 const availabilityEngine = new AvailabilityEngine();
 
 export const createBooking = asyncHandler(async (req: Request, res: Response) => {
-    // Validation handled by middleware
     const booking = await bookingService.createBooking(req.body);
     res.status(201).json(new AppResponse(true, "BOOKING_CREATED_SUCCESS", booking));
 });
