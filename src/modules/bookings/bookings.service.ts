@@ -1,6 +1,5 @@
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { AvailabilityEngine } from "./availability.engine.js";
 import { format } from "date-fns";
 import { sendEmailWithTemplate } from "../../core/utils/email.js"; ``
 import { PaymentService } from "../payment/payment.service.js";
@@ -9,17 +8,14 @@ import { StripeProvider } from "../payment/providers/stripe/stripe.provider.js";
 import { getStripeReceiptUrl } from "../payment/providers/stripe/stripe.provider.js";
 import { BookingValidator } from "./bookings.validator.js";
 import { createGoogleEvent } from "../../core/services/google/calendar.js";
-import { GoogleService } from "@app/core/services/google/service.js";
 import { EmailService } from "../emails/index.js";
 
 
 export class BookingService {
-    private availabilityEngine: AvailabilityEngine;
     private paymentService: PaymentService;
     private emailService: EmailService;
 
     constructor() {
-        this.availabilityEngine = new AvailabilityEngine();
         this.paymentService = new PaymentService();
         this.emailService = new EmailService();
     }
