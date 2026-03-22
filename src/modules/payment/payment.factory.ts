@@ -1,6 +1,6 @@
 import { IPaymentProvider, PaymentProvider } from "./interfaces/payment.interface.js";
 import { StripeProvider } from "./providers/stripe/stripe.provider.js";
-import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
+//import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
 import { TabbyProvider } from "./providers/tabby/tabby.provider.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
@@ -18,9 +18,9 @@ export class PaymentFactory {
             case "STRIPE":
                 instance = new StripeProvider();
                 break;
-            case "TAMARA":
-                instance = new TamaraProvider();
-                break;
+            // case "TAMARA":
+            //     instance = new TamaraProvider();
+            //     break;
             case "TABBY":
                 instance = new TabbyProvider();
                 break;
@@ -33,7 +33,7 @@ export class PaymentFactory {
     }
 
     static resolveProvider(providerStr: string): PaymentProvider {
-        const valid: PaymentProvider[] = ["STRIPE", "TAMARA", "TABBY"];
+        const valid: PaymentProvider[] = ["STRIPE", "TABBY"];
         const upper = providerStr?.toUpperCase() as PaymentProvider;
 
         if (!valid.includes(upper)) {
