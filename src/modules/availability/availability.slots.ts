@@ -1,9 +1,26 @@
-import { parse, format, isBefore, addMinutes, isAfter } from "date-fns";
+import { parse, format, isBefore, addMinutes } from "date-fns";
 import { SlotStatus, DetailedTimeSlot } from "./availability.engine.js";
 
-export class AvailabilitySlots {
-    private readonly DEFAULT_SLOT_DURATION = 60;
+/**
+ * Checks if two time ranges overlap using "HH:mm" string comparison.
+ * Works because lexicographic order matches chronological order for this format.
+ */
+function timeRangesOverlap(startA: string, endA: string, startB: string, endB: string): boolean {
+    return startA < endB && endA > startB;
+}
 
+function isBlockedByHoliday(
+    slotStart: string,
+    slotEnd: string,
+    holidays: any[]
+): boolean {
+    return holidays.some(h => {
+        if (h.isFullDay) return true;
+        return timeRangesOverlap(slotStart, slotEnd, h.startTime || "00:00", h.endTime || "23:59");
+    });
+}
+
+export class AvailabilitySlots {
     generateSlots(
         startTime: string,
         endTime: string,
@@ -14,16 +31,14 @@ export class AvailabilitySlots {
         let current = parse(startTime, "HH:mm", date);
         const end = parse(endTime, "HH:mm", date);
 
-        while (
-            isAfter(end, addMinutes(current, durationMinutes)) ||
-            end.getTime() === addMinutes(current, durationMinutes).getTime()
-        ) {
-            const slotEnd = addMinutes(current, durationMinutes);
+        let slotEnd = addMinutes(current, durationMinutes);
+        while (slotEnd <= end) {
             slots.push({
                 start: format(current, "HH:mm"),
                 end: format(slotEnd, "HH:mm"),
             });
             current = slotEnd;
+            slotEnd = addMinutes(current, durationMinutes);
         }
 
         return slots;
@@ -36,41 +51,25 @@ export class AvailabilitySlots {
         existingBookings: { date: Date; startTime: string; endTime: string }[]
     ): DetailedTimeSlot[] {
         const now = new Date();
-        
-        // 1. Mark past slots
-        slots.forEach(slot => {
+
+        return slots.map(slot => {
             const slotDateTime = parse(
                 `${format(date, "yyyy-MM-dd")} ${slot.startTime}`,
                 "yyyy-MM-dd HH:mm",
                 new Date()
             );
+
             if (isBefore(slotDateTime, now)) {
-                slot.status = SlotStatus.PAST;
-            }
-        });
-
-        // 2. Map overlapping statuses
-        return slots.map(slot => {
-            if (slot.status === SlotStatus.PAST) {
-                return slot;
+                return { ...slot, status: SlotStatus.PAST };
             }
 
-            // Check holidays
-            const isBlockedByHoliday = holidayBlocks.some(h => {
-                if (h.isFullDay) return true;
-                const hStart = h.startTime || "00:00";
-                const hEnd = h.endTime || "23:59";
-                return (slot.startTime < hEnd) && (slot.endTime > hStart);
-            });
-
-            if (isBlockedByHoliday) {
+            if (isBlockedByHoliday(slot.startTime, slot.endTime, holidayBlocks)) {
                 return { ...slot, status: SlotStatus.BLOCKED };
             }
 
-            // Check bookings
-            const isBooked = existingBookings.some(booking => {
-                return (slot.startTime < booking.endTime) && (slot.endTime > booking.startTime);
-            });
+            const isBooked = existingBookings.some(booking =>
+                timeRangesOverlap(slot.startTime, slot.endTime, booking.startTime, booking.endTime)
+            );
 
             if (isBooked) {
                 return { ...slot, status: SlotStatus.BOOKED };
@@ -89,23 +88,14 @@ export class AvailabilitySlots {
         let blockedCount = 0;
 
         for (const slot of slots) {
-            // Check if blocked by holiday
-            const isHoliday = dayHolidays.some(h => {
-                if (h.isFullDay) return true;
-                const hStart = h.startTime || "00:00";
-                const hEnd = h.endTime || "23:59";
-                return (slot.start < hEnd) && (slot.end > hStart);
-            });
-
-            if (isHoliday) {
+            if (isBlockedByHoliday(slot.start, slot.end, dayHolidays)) {
                 blockedCount++;
                 continue;
             }
 
-            // Check if booked
-            const isBooked = dayBookings.some(b => {
-                return (slot.start < b.endTime) && (slot.end > b.startTime);
-            });
+            const isBooked = dayBookings.some(b =>
+                timeRangesOverlap(slot.start, slot.end, b.startTime, b.endTime)
+            );
 
             if (!isBooked) {
                 availableCount++;
