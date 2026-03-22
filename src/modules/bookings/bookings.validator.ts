@@ -1,6 +1,6 @@
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { AvailabilityEngine } from "./availability.engine.js";
+import { AvailabilityEngine } from "../availability/index.js";
 import { addMinutes, parse, format, startOfDay, isToday, isBefore } from "date-fns";
 
 const availabilityEngine = new AvailabilityEngine();
