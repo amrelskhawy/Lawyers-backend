@@ -9,10 +9,10 @@ const bookingService = new BookingService();
 
 
 export const handleWebhook = asyncHandler(async (req: Request, res: Response) => {
-    const { provider: providerStr } = req.params;
-    const signature = req.headers["stripe-signature"] as string
-        || req.headers["x-tamara-signature"] as string
-        || req.headers["x-tabby-signature"] as string;
+    const providerStr = req.params.provider as string;
+    const signature = (req.headers["stripe-signature"]
+        || req.headers["x-tamara-signature"]
+        || req.headers["x-tabby-signature"]) as string;
 
     const provider = PaymentFactory.resolveProvider(providerStr);
     const result = await paymentService.handleWebhook(req.body, signature, provider);

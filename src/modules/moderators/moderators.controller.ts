@@ -1,13 +1,14 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import asyncHandler from "express-async-handler";
 import { ModeratorService } from "./moderators.service.js";
 
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 import { Role } from "@prisma/client";
 
 const moderatorService = new ModeratorService();
 
-export const createModerator = asyncHandler(async (req: Request, res: Response) => {
+export const createModerator = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { name, email, password } = req.body;
 
     if (password.length < 6) {
@@ -18,12 +19,12 @@ export const createModerator = asyncHandler(async (req: Request, res: Response) 
     res.status(201).json(new AppResponse(true, "MODERATOR_CREATED_SUCCESS", moderator));
 });
 
-export const getAllModerators = asyncHandler(async (req: Request, res: Response) => {
+export const getAllModerators = asyncHandler(async (req: AuthRequest, res: Response) => {
     const moderators = await moderatorService.getAllModerators();
     res.status(200).json(new AppResponse(true, "MODERATORS_RETRIEVED_SUCCESS", moderators));
 });
 
-export const deleteModerator = asyncHandler(async (req: Request, res: Response) => {
+export const deleteModerator = asyncHandler(async (req: AuthRequest, res: Response) => {
     const id = req.params.id as string;
 
     const isAdmin = req.user?.role === Role.ADMIN;

@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { auth } from './index.ts';
+import { auth } from './index.js';
 
 const drive = google.drive({ version: 'v3', auth });
 

@@ -1,5 +1,5 @@
 import { google } from 'googleapis';
-import { auth } from './index.ts';
+import { auth } from './index.js';
 import { parse, format } from "date-fns";
 
 export async function createGoogleEvent(

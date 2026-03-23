@@ -13,7 +13,7 @@ import {
 } from "../../interfaces/payment.interface.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-    apiVersion: "2024-11-20.acacia",
+    apiVersion: "2026-02-25.clover",
 });
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
@@ -177,10 +177,10 @@ export class StripeProvider implements IPaymentProvider {
 
         switch (event.type) {
             case "checkout.session.completed":
-                await this.onCheckoutCompleted(event.data.object as Stripe.CheckoutSession);
+                await this.onCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
                 break;
             case "checkout.session.expired":
-                await this.onCheckoutExpired(event.data.object as Stripe.CheckoutSession);
+                await this.onCheckoutExpired(event.data.object as Stripe.Checkout.Session);
                 break;
             case "payment_intent.amount_capturable_updated":
                 await this.onAuthorized(event.data.object as Stripe.PaymentIntent);
@@ -202,7 +202,7 @@ export class StripeProvider implements IPaymentProvider {
     }
 
 
-    private async onCheckoutCompleted(session: Stripe.CheckoutSession) {
+    private async onCheckoutCompleted(session: Stripe.Checkout.Session) {
         // Idempotency guard — skip if already processed (handles Stripe retries)
         const existing = await prisma.booking.findFirst({
             where: { stripeSessionId: session.id },
@@ -265,7 +265,7 @@ export class StripeProvider implements IPaymentProvider {
         }
     }
 
-    private async onCheckoutExpired(session: Stripe.CheckoutSession) {
+    private async onCheckoutExpired(session: Stripe.Checkout.Session) {
         const email = session.customer_email || session.metadata?.clientEmail;
         console.log(`[Stripe] Session expired for ${email} — session: ${session.id}`);
     }
