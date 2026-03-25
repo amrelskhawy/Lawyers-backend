@@ -12,7 +12,7 @@ export const handleWebhook = asyncHandler(async (req: Request, res: Response) =>
     const providerStr = req.params.provider as string;
     const signature = (req.headers["stripe-signature"]
         || req.headers["x-tamara-signature"]
-        || req.headers["x-tabby-signature"]) as string;
+        || req.headers[process.env.TABBY_WEBHOOK_SIGNATURE!]) as string;
 
     const provider = PaymentFactory.resolveProvider(providerStr);
     const result = await paymentService.handleWebhook(req.body, signature, provider);
