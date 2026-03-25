@@ -3,6 +3,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { startOfDay, format } from "date-fns";
 import { HolidayPayload } from "./holidays.types.js";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
+import { parseTimeTo24h } from "./holidays.types.js";
 
 export class HolidaysService {
     async createHoliday(payload: HolidayPayload) {
@@ -35,7 +36,7 @@ export class HolidaysService {
             newStart = newStart || "00:00";
             newEnd = newEnd || "23:59";
 
-            if (newStart >= newEnd) {
+            if (parseTimeTo24h(newStart) >= parseTimeTo24h(newEnd)) {
                 throw new AppResponse(false, "INVALID_TIME_RANGE", null, 400);
             }
         }
@@ -56,7 +57,7 @@ export class HolidaysService {
             const nStart = newStart || "00:00";
             const nEnd = newEnd || "23:59";
 
-            if (nStart < hEnd && nEnd > hStart) {
+            if (parseTimeTo24h(nStart) < parseTimeTo24h(hEnd) && parseTimeTo24h(nEnd) > parseTimeTo24h(hStart)) {
                 throw new AppResponse(false, "HOLIDAY_OVERLAP", null, 409);
             }
         }
