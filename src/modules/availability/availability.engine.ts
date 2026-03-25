@@ -10,6 +10,7 @@ import {
     isSameDay,
     format
 } from "date-fns";
+import { parseTimeTo24h } from "../holidays/holidays.types.js";
 
 export enum SlotStatus {
     AVAILABLE = "AVAILABLE",
@@ -41,6 +42,14 @@ export class AvailabilityEngine {
         this.slots = new AvailabilitySlots();
     }
 
+    private toHHmm(time: string): string {
+        const minutes = parseTimeTo24h(time);
+        if (minutes === -1) return time;
+        const h = Math.floor(minutes / 60);
+        const m = minutes % 60;
+        return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+    }
+
     public async getHolidayBlocks(date: Date) {
         return this.queries.getHolidayBlocks(date);
     }
@@ -54,8 +63,8 @@ export class AvailabilityEngine {
 
         return holidays.some(h => {
             if (h.isFullDay) return true;
-            const hStart = h.startTime || "00:00";
-            const hEnd = h.endTime || "23:59";
+            const hStart = this.toHHmm(h.startTime || "00:00");
+            const hEnd = this.toHHmm(h.endTime || "23:59");
             return startTime < hEnd && endTime > hStart;
         });
     }
