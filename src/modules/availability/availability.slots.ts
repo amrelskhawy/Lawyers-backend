@@ -1,5 +1,6 @@
 import { parse, format, isBefore, addMinutes } from "date-fns";
 import { SlotStatus, DetailedTimeSlot } from "./availability.engine.js";
+import { parseTimeTo24h } from "../holidays/holidays.types.js";
 
 /**
  * Checks if two time ranges overlap using "HH:mm" string comparison.
@@ -9,6 +10,18 @@ function timeRangesOverlap(startA: string, endA: string, startB: string, endB: s
     return startA < endB && endA > startB;
 }
 
+/**
+ * Converts a time string to "HH:mm" format.
+ * Handles both "HH:mm" (24h) and "hh:mm AM/PM" (12h) formats.
+ */
+function toHHmm(time: string): string {
+    const minutes = parseTimeTo24h(time);
+    if (minutes === -1) return time; // already in HH:mm format
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return `${h.toString().padStart(2, "0")}:${m.toString().padStart(2, "0")}`;
+}
+
 function isBlockedByHoliday(
     slotStart: string,
     slotEnd: string,
@@ -16,7 +29,9 @@ function isBlockedByHoliday(
 ): boolean {
     return holidays.some(h => {
         if (h.isFullDay) return true;
-        return timeRangesOverlap(slotStart, slotEnd, h.startTime || "00:00", h.endTime || "23:59");
+        const hStart = toHHmm(h.startTime || "00:00");
+        const hEnd = toHHmm(h.endTime || "23:59");
+        return timeRangesOverlap(slotStart, slotEnd, hStart, hEnd);
     });
 }
 
