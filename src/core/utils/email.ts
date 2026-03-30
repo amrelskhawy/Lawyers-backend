@@ -71,9 +71,8 @@ export const sendEmailWithTemplate = async (
     attachments?: { filename: string; content: Buffer; contentType: string }[]
 ) => {
     const transporter = nodeMailer.createTransport({
-        service: "gmail",
-        host: "smtp.gmail.com",
-        port: 587,
+        host: process.env.EMAIL_HOST ?? "smtp.hostinger.com",
+        port: process.env.EMAIL_PORT ? parseInt(process.env.EMAIL_PORT) : 587,
         secure: false,
         auth: {
             user: process.env.EMAIL_USER,
