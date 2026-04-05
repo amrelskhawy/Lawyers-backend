@@ -2,6 +2,7 @@ import express from "express";
 import dotenv from "dotenv";
 import cors from "cors";
 import cookieParser from "cookie-parser";
+import morgan from "morgan";
 import { errorHandler } from "./core/middlewares/errorMiddleware.js";
 import prisma from "./core/db/prisma.js";
 import v1Routes from "./core/routes/v1/index.js";
@@ -9,7 +10,7 @@ import { Request, Response } from "express";
 import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
-import paymentRoutes from "./modules/payment/payment.routes.js";
+import logger from "./core/utils/logger.js";
 
 dotenv.config();
 
@@ -21,6 +22,33 @@ app.use(
         origin: true,
         credentials: true,
     })
+);
+
+// Colored request logging
+morgan.token("body", (req: Request) => {
+    if (req.method === "GET") return "";
+    const body = { ...(req as any).body };
+    for (const key of ["password", "token", "secret", "creditCard"]) {
+        if (body[key]) body[key] = "[REDACTED]";
+    }
+    return JSON.stringify(body);
+});
+
+app.use(
+    morgan(
+        (tokens, req, res) => {
+            const method = tokens.method(req, res) || "GET";
+            const url = tokens.url(req, res) || "/";
+            const status = parseInt(tokens.status(req, res) || "0", 10);
+            const responseTime = tokens["response-time"](req, res) || "0";
+            const body = tokens["body"](req, res) || "";
+            logger.request(method, url, status, responseTime, body);
+            return null; // suppress morgan's default output
+        },
+        {
+            skip: (req) => req.url === "/" || req.url?.startsWith("/api-docs"),
+        }
+    )
 );
 
 app.use((req, res, next) => {
@@ -55,18 +83,19 @@ app.use(errorHandler);
 const startServer = async () => {
     try {
         await prisma.$connect();
-        console.log("Connected to database");
+        logger.success("Connected to database");
 
         // Initialize Chatbot (load context)
         await chatbotService.initialize();
+        logger.success("Chatbot initialized");
 
         if (process.env.NODE_ENV !== "production" || !process.env.VERCEL) {
             app.listen(port, () => {
-                console.log(`Server is running on port ${port}`);
+                logger.success(`Server is running on port ${port}`);
             });
         }
     } catch (error: any) {
-        console.log("Failed to start server!", error.message);
+        logger.error("Failed to start server!", error.message);
         if (process.env.NODE_ENV !== "production") {
             process.exit(1);
         }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { AppResponse } from "../utils/AppResponse.js";
+import logger from "../utils/logger.js";
 
 export const errorHandler = (err: any, req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
@@ -41,7 +42,9 @@ export const errorHandler = (err: any, req: Request, res: Response, next: NextFu
         data
     });
 
-    if (statusCode === 500) {
-        console.error("UNKNOWN ERROR:", err);
+    if (statusCode >= 500) {
+        logger.error(`${req.method} ${req.originalUrl} - ${statusCode} - ${message}`, err.stack || err);
+    } else if (statusCode >= 400) {
+        logger.warn(`${req.method} ${req.originalUrl} - ${statusCode} - ${message}`);
     }
 };
