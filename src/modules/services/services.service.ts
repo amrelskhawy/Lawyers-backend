@@ -33,6 +33,7 @@ export class ServiceService {
                 description_ar: payload.description_ar,
                 description_en: payload.description_en,
                 price: payload.price !== undefined ? new Prisma.Decimal(payload.price) : null,
+                isFree: payload.isFree ?? false,
             },
         });
 
