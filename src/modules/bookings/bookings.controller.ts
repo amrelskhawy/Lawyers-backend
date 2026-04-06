@@ -3,6 +3,7 @@ import asyncHandler from "express-async-handler";
 import { BookingService } from "./bookings.service.js";
 import { AvailabilityEngine } from "../availability/index.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 
 
 const bookingService = new BookingService();
@@ -104,4 +105,15 @@ export const cancelBooking = asyncHandler(async (req: Request, res: Response) =>
     const { id } = req.params as { id: string };
     const booking = await bookingService.cancelBooking(id);
     res.status(200).json(new AppResponse(true, "BOOKING_CANCELLED", booking));
+});
+
+export const createManualBooking = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const booking = await bookingService.createManualBooking(req.body, req.user.role);
+    res.status(201).json(new AppResponse(true, "MANUAL_BOOKING_CREATED_SUCCESS", booking));
+});
+
+export const capturePayment = asyncHandler(async (req: Request, res: Response) => {
+    const { id } = req.params as { id: string };
+    const booking = await bookingService.captureManualPayment(id);
+    res.status(200).json(new AppResponse(true, "PAYMENT_CAPTURED_SUCCESS", booking));
 });
