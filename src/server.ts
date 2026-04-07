@@ -11,6 +11,9 @@ import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
 import logger from "./core/utils/logger.js";
+import { startReportWorker } from './core/queue/reportQueue.js';
+import path from "path";
+import fs from "fs";
 
 dotenv.config();
 
@@ -58,6 +61,17 @@ app.use((req, res, next) => {
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 
+// Serve static files from /storage
+const storagePath = path.join(process.cwd(), "storage");
+if (!fs.existsSync(storagePath)) {
+    fs.mkdirSync(storagePath);
+}
+const reportsPath = path.join(storagePath, "reports");
+if (!fs.existsSync(reportsPath)) {
+    fs.mkdirSync(reportsPath);
+}
+app.use("/modules/reports/storage", express.static(storagePath));
+
 app.get("/api-docs-json", (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
     res.send(swaggerSpec);
@@ -94,6 +108,9 @@ const startServer = async () => {
                 logger.success(`Server is running on port ${port}`);
             });
         }
+
+        // Start Background Workers
+        startReportWorker();
     } catch (error: any) {
         logger.error("Failed to start server!", error.message);
         if (process.env.NODE_ENV !== "production") {
@@ -103,5 +120,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-export default app;
