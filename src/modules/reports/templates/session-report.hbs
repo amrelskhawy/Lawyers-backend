@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>نموذج بيانات العميل</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;900&display=swap');
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Cairo', 'Arial', sans-serif;
+      background: #ffffff;
+      color: #1a1f4e;
+      direction: rtl;
+      font-size: 14px;
+    }
+
+    /* ── PAGE WRAPPER ── */
+    .page {
+      width: 794px;
+      min-height: 1123px;
+      margin: 0 auto;
+      background: #ffffff;
+      position: relative;
+      page-break-after: always;
+    }
+
+    /* ── HEADER ── */
+    .header {
+      background: #1a1f4e;
+      padding: 20px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .header-logo-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .logo-icon {
+      width: 56px;
+      height: 56px;
+      background: #c9a84c;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+      font-weight: 900;
+      color: #1a1f4e;
+    }
+
+    .logo-text {
+      color: #ffffff;
+      font-size: 12px;
+      font-weight: 600;
+      line-height: 1.5;
+    }
+
+    .logo-text span {
+      display: block;
+      font-size: 10px;
+      color: #c9a84c;
+    }
+
+    .header-brand {
+      font-family: 'Cairo', serif;
+      font-size: 42px;
+      font-weight: 900;
+      color: #c9a84c;
+      letter-spacing: 2px;
+    }
+
+    /* ── GOLD DIVIDER ── */
+    .gold-divider {
+      height: 6px;
+      background: repeating-linear-gradient(
+        90deg,
+        #c9a84c 0px,
+        #c9a84c 12px,
+        #e8d48a 12px,
+        #e8d48a 18px,
+        #c9a84c 18px,
+        #c9a84c 24px,
+        transparent 24px,
+        transparent 28px
+      );
+    }
+
+    /* ── PAGE TITLE ── */
+    .page-title-bar {
+      background: #1a1f4e;
+      text-align: center;
+      padding: 14px 32px;
+      margin: 0;
+    }
+
+    .page-title-bar h1 {
+      color: #ffffff;
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+
+    /* ── CONTENT AREA ── */
+    .content {
+      padding: 24px 32px;
+    }
+
+    /* ── FIELD ROWS ── */
+    .field-row {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 18px;
+      align-items: flex-end;
+    }
+
+    .field-group {
+      flex: 1;
+    }
+
+    .field-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1f4e;
+      margin-bottom: 6px;
+      display: block;
+    }
+
+    .field-value {
+      border-bottom: 1.5px dashed #c9a84c;
+      min-height: 28px;
+      padding: 4px 8px;
+      font-size: 14px;
+      color: #333;
+      background: transparent;
+    }
+
+    .field-value.empty {
+      color: #999;
+    }
+
+    /* ── SECTION BADGE ── */
+    .section-badge {
+      display: inline-block;
+      background: #1a1f4e;
+      color: #c9a84c;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 5px 16px;
+      border-radius: 4px;
+      margin-bottom: 14px;
+    }
+
+    /* ── CASE TYPE GRID ── */
+    .case-type-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .case-type-grid-row2 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-bottom: 18px;
+    }
+
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: #1a1f4e;
+    }
+
+    .checkbox-box {
+      width: 16px;
+      height: 16px;
+      border: 2px solid #1a1f4e;
+      border-radius: 2px;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: transparent;
+    }
+
+    .checkbox-box.checked {
+      background: #1a1f4e;
+      border-color: #1a1f4e;
+    }
+
+    .checkbox-box.checked::after {
+      content: '✓';
+      color: #c9a84c;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    /* ── LAWYER QUESTION ── */
+    .lawyer-question {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      border: 1px solid #e8d48a;
+      border-radius: 6px;
+      background: #fdfaf3;
+    }
+
+    .lawyer-question-text {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1f4e;
+      flex: 1;
+    }
+
+    .yn-options {
+      display: flex;
+      gap: 16px;
+    }
+
+    .yn-option {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #1a1f4e;
+    }
+
+    /* ── DIVIDER LINE ── */
+    .divider {
+      border: none;
+      border-top: 1px dashed #c9a84c;
+      margin: 16px 0;
+    }
+
+    /* ── REQUIREMENTS BOX ── */
+    .requirements-section {
+      background: #fafafa;
+      border: 1px solid #e0d9c8;
+      border-radius: 8px;
+      padding: 16px 20px;
+      margin-top: 16px;
+    }
+
+    .requirements-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #1a1f4e;
+      margin-bottom: 12px;
+    }
+
+    .requirements-title span {
+      color: #c9a84c;
+    }
+
+    .req-list {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .req-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 13px;
+      color: #333;
+    }
+
+    .req-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #1a1f4e;
+      flex-shrink: 0;
+    }
+
+    .req-dot.checked {
+      background: #c9a84c;
+    }
+
+    /* ── FOOTER ── */
+    .footer {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: #1a1f4e;
+      padding: 14px 32px;
+      text-align: center;
+    }
+
+    .footer p {
+      color: #c9a84c;
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    /* ── PAGE 2: LAWYER FORM ── */
+    .notice-box {
+      background: #1a1f4e;
+      color: #ffffff;
+      text-align: center;
+      padding: 18px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      line-height: 1.7;
+    }
+
+    .notice-box .gold {
+      color: #c9a84c;
+    }
+
+    .session-header-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-bottom: 20px;
+      gap: 24px;
+    }
+
+    .notes-area {
+      border: 1.5px dashed #c9a84c;
+      border-radius: 4px;
+      min-height: 80px;
+      padding: 10px 12px;
+      font-size: 13px;
+      color: #333;
+      line-height: 1.8;
+    }
+
+    .notes-area.large {
+      min-height: 160px;
+    }
+
+    .section-label {
+      font-size: 13px;
+      font-weight: 700;
+      color: #1a1f4e;
+      margin-bottom: 8px;
+      display: block;
+    }
+
+    .notes-section {
+      margin-bottom: 20px;
+    }
+
+    /* ── STATUS BADGE ── */
+    .status-badge {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .status-DRAFT      { background: #f3f4f6; color: #6b7280; }
+    .status-GENERATING { background: #fef3c7; color: #92400e; }
+    .status-READY      { background: #d1fae5; color: #065f46; }
+    .status-SENT       { background: #dbeafe; color: #1e40af; }
+
+    @media print {
+      .page { page-break-after: always; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ════════════════════════════════════════════════
+     PAGE 1 — CLIENT INFORMATION FORM
+     ════════════════════════════════════════════════ -->
+<div class="page">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo-section">
+      <div class="logo-icon">SB</div>
+      <div class="logo-text">
+        شركة سعد البقمي
+        <span>للمحاماة والاستشارات القانونية</span>
+      </div>
+    </div>
+    <div class="header-brand">كيا كم</div>
+  </div>
+
+  <!-- Gold Pattern Divider -->
+  <div class="gold-divider"></div>
+
+  <!-- Page Title -->
+  <div class="page-title-bar">
+    <h1>نـمـوذج بيانـات الـعـميـل</h1>
+  </div>
+
+  <div class="content">
+
+    <!-- Name + Phone -->
+    <div class="field-row">
+      <div class="field-group">
+        <span class="field-label">الإسم</span>
+        <div class="field-value">{{clientName}}</div>
+      </div>
+      <div class="field-group">
+        <span class="field-label">رقم الجوال</span>
+        <div class="field-value">{{clientPhone}}</div>
+      </div>
+    </div>
+
+    <!-- Date -->
+    <div class="field-row">
+      <div class="field-group" style="max-width: 260px;">
+        <span class="field-label">التاريخ</span>
+        <div class="field-value">{{clientDate}}</div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Case Type -->
+    <div class="section-badge">نـوع الـقضية</div>
+
+    <div class="case-type-grid">
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isCriminal}}checked{{/if}}"></div>
+        <span>جنائية</span>
+      </div>
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isAdministrative}}checked{{/if}}"></div>
+        <span>إدارية</span>
+      </div>
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isLabor}}checked{{/if}}"></div>
+        <span>عمالية</span>
+      </div>
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isCommercial}}checked{{/if}}"></div>
+        <span>تجارية</span>
+      </div>
+    </div>
+
+    <div class="case-type-grid-row2">
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isGeneral}}checked{{/if}}"></div>
+        <span>جزائية عامة</span>
+      </div>
+      <div class="checkbox-item">
+        <div class="checkbox-box {{#if isPersonal}}checked{{/if}}"></div>
+        <span>أحوال شخصية</span>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Lawyer Question -->
+    <div class="lawyer-question">
+      <span class="lawyer-question-text">هل تطلب التعامل مع محامي معين من الشركة ؟</span>
+      <div class="yn-options">
+        <div class="yn-option">
+          <div class="checkbox-box {{#if specificLawyerYes}}checked{{/if}}"></div>
+          <span>نعم</span>
+        </div>
+        <div class="yn-option">
+          <div class="checkbox-box {{#if specificLawyerNo}}checked{{/if}}"></div>
+          <span>لا</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Lawyer Name -->
+    {{#if lawyerName}}
+    <div class="field-row">
+      <div class="field-group">
+        <span class="section-badge">إسم المحامي</span>
+        <div class="field-value" style="margin-top: 8px;">{{lawyerName}}</div>
+      </div>
+    </div>
+    <hr class="divider" />
+    {{/if}}
+
+    <!-- Requirements -->
+    <div class="requirements-section">
+      <div class="requirements-title">
+        <span>* </span>متطلبات مهمة يجب توافرها سواءً بشكل الكتروني أو مطبوع...
+      </div>
+      <div class="req-list">
+        <div class="req-item">
+          <div class="req-dot {{#if hasIdCopy}}checked{{/if}}"></div>
+          <span>صــورة الـهـويـة</span>
+        </div>
+        <div class="req-item">
+          <div class="req-dot {{#if hasAbsherMobile}}checked{{/if}}"></div>
+          <span>رقـم جـوال أبـشـر</span>
+        </div>
+        <div class="req-item">
+          <div class="req-dot {{#if hasNationalAddress}}checked{{/if}}"></div>
+          <span>الـعـنـوان الـوطـني</span>
+        </div>
+        <div class="req-item">
+          <div class="req-dot {{#if hasDocumentsCopy}}checked{{/if}}"></div>
+          <span>صورة من المستندات</span>
+        </div>
+        <div class="req-item">
+          <div class="req-dot {{#if hasTawakkalna}}checked{{/if}}"></div>
+          <span>تحميل تطبيق توكلنا</span>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>يرجي إرفاق النموذج مع نموذج الضبط وتسليمه للقسم المسؤول</p>
+  </div>
+
+</div><!-- /page 1 -->
+
+
+<!-- ════════════════════════════════════════════════
+     PAGE 2 — LAWYER SESSION FORM
+     ════════════════════════════════════════════════ -->
+<div class="page" style="margin-top: 0;">
+
+  <!-- Header -->
+  <div class="header">
+    <div class="header-logo-section">
+      <div class="logo-icon">SB</div>
+      <div class="logo-text">
+        شركة سعد البقمي
+        <span>للمحاماة والاستشارات القانونية</span>
+      </div>
+    </div>
+    <div class="header-brand">كيا كم</div>
+  </div>
+
+  <div class="gold-divider"></div>
+
+  <div class="page-title-bar">
+    <h1>نـمـوذج الـمـحـامـي</h1>
+  </div>
+
+  <div class="content">
+
+    <!-- Notice -->
+    <div class="notice-box">
+      برجاء <span class="gold">التركيز</span> على النقاط التالية أثناء الجلسة ومراجعتها <span class="gold">بعناية</span>
+      <br />
+      <span style="font-size: 13px; color: #c9a84c;">● نقاط القوة &nbsp;&nbsp; ● نقاط الضعف &nbsp;&nbsp; ● الثغرات</span>
+    </div>
+
+    <div style="height: 20px;"></div>
+
+    <!-- Session Receiver + Date -->
+    <div class="session-header-row">
+      <div class="field-group">
+        <span class="field-label">إسم مستقبل الجلسة</span>
+        <div class="field-value">{{sessionReceiverName}}</div>
+      </div>
+      <div class="field-group" style="max-width: 220px;">
+        <span class="field-label">التاريخ</span>
+        <div class="field-value">{{sessionDate}}</div>
+      </div>
+    </div>
+
+    <hr class="divider" />
+
+    <!-- Strengths -->
+    <div class="notes-section">
+      <span class="section-label">● نقاط القوة</span>
+      <div class="notes-area">{{strengths}}</div>
+    </div>
+
+    <!-- Weaknesses -->
+    <div class="notes-section">
+      <span class="section-label">● نقاط الضعف</span>
+      <div class="notes-area">{{weaknesses}}</div>
+    </div>
+
+    <!-- Gaps -->
+    <div class="notes-section">
+      <span class="section-label">● الثغرات</span>
+      <div class="notes-area">{{gaps}}</div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- Footer -->
+  <div class="footer">
+    <p>يرجـي إرفـاق الـنـموذج مـع استبيان العميل وتـسليمه للقسم المسؤول</p>
+  </div>
+
+</div><!-- /page 2 -->
+
+</body>
+</html>
