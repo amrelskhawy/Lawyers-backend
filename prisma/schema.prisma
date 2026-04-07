@@ -113,3 +113,58 @@ enum PaymentStatus {
   FAILED
   CANCELLED
 }
+
+enum ReportStatus {
+  DRAFT
+  GENERATING
+  READY
+  SENT
+}
+
+enum CaseType {
+  CRIMINAL
+  ADMINISTRATIVE
+  LABOR
+  COMMERCIAL
+  PERSONAL_STATUS
+  GENERAL
+}
+
+model SessionReport {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  status    ReportStatus @default(DRAFT)
+
+  clientName             String
+  clientPhone            String
+  clientDate             DateTime
+  caseType               CaseType
+  specificLawyerRequested Boolean  @default(false)
+  lawyerName             String?
+
+  hasIdCopy              Boolean  @default(false)
+  hasAbsherMobile        Boolean  @default(false)
+  hasNationalAddress     Boolean  @default(false)
+  hasDocumentsCopy       Boolean  @default(false)
+  hasTawakkalna          Boolean  @default(false)
+
+  sessionReceiverName    String?
+  sessionDate            DateTime?
+  strengths              String?
+  weaknesses             String?
+  gaps                   String?
+
+  pdfPath                String?   // local filesystem path
+  pdfUrl                 String?   // public preview URL
+
+  sentAt                 DateTime?
+  sentVia                String?   // "email" | "sms" | "whatsapp"
+
+  // ---------- Relations ----------
+  // Uncomment if you want to link reports to a user
+  // createdById  String?
+  // createdBy    User?   @relation(fields: [createdById], references: [id])
+
+  @@map("session_reports")
+}
