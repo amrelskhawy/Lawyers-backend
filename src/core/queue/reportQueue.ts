@@ -4,12 +4,14 @@ import { generateReportPDF } from '../../modules/reports/services/pdf.service.js
 import logger from '../utils/logger.js';
 import prisma from '../db/prisma.js';
 
-//redis connecting
-const redisConnection = {
-    host: process.env.REDIS_HOST ?? '127.0.0.1',
-    port: Number(process.env.REDIS_PORT ?? 6379),
-    password: process.env.REDIS_PASSWORD || undefined,
-};
+//redis connecting — uses REDIS_URL for Upstash, falls back to localhost
+const redisConnection = process.env.REDIS_URL
+    ? { url: process.env.REDIS_URL }
+    : {
+        host: process.env.REDIS_HOST ?? '127.0.0.1',
+        port: Number(process.env.REDIS_PORT ?? 6379),
+        password: process.env.REDIS_PASSWORD || undefined,
+    };
 
 //queue definition 
 export const reportQueue = new Queue('report-generation', {
@@ -26,8 +28,6 @@ export interface ReportJobData {
     reportId: string;
 }
 
-// ── Worker ────────────────────────────────────────────────────────────────────
-// Call startReportWorker() once during app bootstrap (server.ts)
 
 export function startReportWorker(): Worker {
     const worker = new Worker<ReportJobData>(

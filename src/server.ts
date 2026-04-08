@@ -70,7 +70,7 @@ const reportsPath = path.join(storagePath, "reports");
 if (!fs.existsSync(reportsPath)) {
     fs.mkdirSync(reportsPath);
 }
-app.use("/modules/reports/storage", express.static(storagePath));
+app.use("/storage", express.static(storagePath));
 
 app.get("/api-docs-json", (req: Request, res: Response) => {
     res.setHeader("Content-Type", "application/json");
