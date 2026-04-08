@@ -5,13 +5,13 @@ import {
   previewReport,
   sendReport,
   listReports,
-} from './reports.controller';
-import { authMiddleware } from '../../core/middlewares/authMiddleware'; // adjust to your path
+} from './reports.controller.js';
+import { protect, moderatorMiddleware } from '../../core/middlewares/authMiddleware.js';
 
 const router = Router();
 
 // All routes require authentication
-router.use(authMiddleware);
+router.use(protect, moderatorMiddleware);
 
 // ── CRUD + Pipeline ───────────────────────────────────────────────────────────
 

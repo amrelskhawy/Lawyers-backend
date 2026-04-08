@@ -126,6 +126,7 @@ export const sendReport = asyncHandler(async (req: Request, res: Response) => {
     reportId: report.id,
     previewUrl: report.pdfUrl,
     clientName: report.clientName,
+    pdfPath: report.pdfPath ?? undefined,
   });
 
   const updatedReport = await prisma.sessionReport.update({
