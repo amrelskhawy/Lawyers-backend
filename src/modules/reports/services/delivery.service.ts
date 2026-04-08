@@ -1,10 +1,7 @@
 import nodemailer from 'nodemailer';
-import logger from '../../core/utils/logger'; // adjust to your logger path
+import logger from '../../../core/utils/logger.js';
 
-// ─────────────────────────────────────────────────────────────────────────────
 // Types
-// ─────────────────────────────────────────────────────────────────────────────
-
 export type DeliveryChannel = 'email' | 'sms' | 'whatsapp';
 
 export interface DeliveryPayload {
@@ -13,12 +10,11 @@ export interface DeliveryPayload {
   reportId: string;
   previewUrl: string;
   clientName: string;
+  pdfPath?: string; // local filesystem path for email attachment
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Email delivery  (Nodemailer — already in your stack)
-// ─────────────────────────────────────────────────────────────────────────────
 
+// Email delivery
 async function sendViaEmail(payload: DeliveryPayload): Promise<void> {
   const transporter = nodemailer.createTransport({
     host: process.env.EMAIL_HOST,
@@ -47,6 +43,10 @@ async function sendViaEmail(payload: DeliveryPayload): Promise<void> {
           <p style="color: #333; line-height: 1.8;">
             يسعدنا إعلامكم بأن تقرير جلستكم القانونية قد تم إعداده وهو جاهز للاطلاع.
           </p>
+          ${payload.pdfPath ? `
+          <p style="color: #555; font-size: 13px; text-align: center; margin-top: 0;">
+            📎 التقرير مرفق بهذا البريد الإلكتروني
+          </p>` : `
           <div style="text-align: center; margin: 28px 0;">
             <a href="${reportLink}"
                style="background: #1a1f4e; color: #c9a84c; text-decoration: none;
@@ -57,7 +57,7 @@ async function sendViaEmail(payload: DeliveryPayload): Promise<void> {
           <p style="color: #999; font-size: 12px; text-align: center;">
             إذا كان الرابط لا يعمل، يمكنكم نسخ هذا الرابط:<br />
             <span style="color: #1a1f4e;">${reportLink}</span>
-          </p>
+          </p>`}
         </div>
         <div style="background: #1a1f4e; padding: 14px; text-align: center;">
           <p style="color: #c9a84c; margin: 0; font-size: 12px;">
@@ -66,15 +66,20 @@ async function sendViaEmail(payload: DeliveryPayload): Promise<void> {
         </div>
       </div>
     `,
+    attachments: payload.pdfPath
+      ? [{
+        filename: `تقرير-جلسة-${payload.clientName}.pdf`,
+        path: payload.pdfPath,
+        contentType: 'application/pdf',
+      }]
+      : [],
   });
 
   logger.info(`Report ${payload.reportId} delivered via email to ${payload.destination}`);
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// SMS delivery  (STUB — plug your provider here)
-// ─────────────────────────────────────────────────────────────────────────────
-//
+
+// SMS delivery 
 // Recommended providers for Saudi Arabia:
 //   • Unifonic  — https://www.unifonic.com
 //   • Taqnyat   — https://www.taqnyat.sa
@@ -105,9 +110,8 @@ async function sendViaSMS(payload: DeliveryPayload): Promise<void> {
   throw new Error('SMS provider not yet configured. See delivery.service.ts for instructions.');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// WhatsApp delivery  (STUB — plug your provider here)
-// ─────────────────────────────────────────────────────────────────────────────
+
+// WhatsApp delivery  
 //
 // Recommended providers:
 //   • Twilio WhatsApp — https://www.twilio.com/whatsapp
@@ -138,9 +142,6 @@ async function sendViaWhatsApp(payload: DeliveryPayload): Promise<void> {
   throw new Error('WhatsApp provider not yet configured. See delivery.service.ts for instructions.');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// Public dispatcher
-// ─────────────────────────────────────────────────────────────────────────────
 
 export async function deliverReport(payload: DeliveryPayload): Promise<void> {
   switch (payload.channel) {

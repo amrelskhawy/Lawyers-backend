@@ -3,7 +3,7 @@ import Handlebars from 'handlebars';
 import fs from 'fs';
 import path from 'path';
 import { SessionReport, CaseType } from '@prisma/client';
-import logger from '../../core/utils/logger'; // adjust to your logger path
+import logger from '../../../core/utils/logger.js';
 
 // ── Storage root on the VPS ──────────────────────────────────────────────────
 const STORAGE_DIR = path.join(process.cwd(), 'storage', 'reports');
