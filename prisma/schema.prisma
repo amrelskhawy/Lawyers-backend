@@ -105,6 +105,17 @@ model Service {
   Booking Booking[]
 }
 
+model Customer {
+  id        String   @id @default(uuid())
+  fullName  String
+  email     String
+  phone     String
+  location  String?
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 enum PaymentStatus {
   UNPAID
   PENDING
