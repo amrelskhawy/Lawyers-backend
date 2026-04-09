@@ -4,7 +4,7 @@ import { format } from "date-fns";
 export class EmailService {
     async sendConfirmationEmail(booking: any) {
         await sendEmailWithTemplate(
-            booking.clientEmail,
+            booking.customer.email,
             "Booking Confirmation",
             "bookingConfirmation",
             {

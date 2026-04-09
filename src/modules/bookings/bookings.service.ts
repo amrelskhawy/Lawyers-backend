@@ -92,11 +92,16 @@ export class BookingService {
         const { bookingDay, cleanStartTime, endTime, service } =
             await BookingValidator.validateCreateBooking(payload);
 
+        const customer = await prisma.customer.findUnique({
+            where: { id: payload.customerId },
+        });
+        if (!customer || customer.isDeleted) {
+            throw new AppResponse(false, "CUSTOMER_NOT_FOUND", null, 404);
+        }
+
         const booking = await prisma.booking.create({
             data: {
-                name: payload.name,
-                phone_number: payload.phone_number,
-                clientEmail: payload.clientEmail,
+                customerId: payload.customerId,
                 serviceId: payload.serviceId,
                 date: bookingDay,
                 startTime: cleanStartTime,
@@ -106,7 +111,7 @@ export class BookingService {
                 totalAmount: service.price ? new Prisma.Decimal(String(service.price)) : new Prisma.Decimal(0),
                 createdByRole,
             },
-            include: { service: true },
+            include: { service: true, customer: true },
         });
 
         return booking;
@@ -115,7 +120,7 @@ export class BookingService {
     async captureManualPayment(id: string) {
         const booking = await prisma.booking.findUnique({
             where: { id },
-            include: { service: true },
+            include: { service: true, customer: true },
         });
 
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
@@ -125,7 +130,7 @@ export class BookingService {
         const updated = await prisma.booking.update({
             where: { id },
             data: { paymentStatus: "PAID" },
-            include: { service: true },
+            include: { service: true, customer: true },
         });
 
         return updated;
@@ -157,7 +162,7 @@ export class BookingService {
                     status: "CONFIRMED",
                     paymentStatus: "PAID",
                 },
-                include: { service: true },
+                include: { service: true, customer: true },
             });
 
             await this.emailService.sendConfirmationEmail(updatedBooking);
@@ -173,7 +178,7 @@ export class BookingService {
 
     async getAllBookings() {
         return await prisma.booking.findMany({
-            include: { service: true },
+            include: { service: true, customer: true },
             orderBy: { date: "desc" },
         });
     }
@@ -184,7 +189,7 @@ export class BookingService {
         return await prisma.booking.update({
             where: { id },
             data: { status: "COMPLETED" },
-            include: { service: true }
+            include: { service: true, customer: true }
         });
     }
 
@@ -207,7 +212,7 @@ export class BookingService {
         const result = await prisma.booking.update({
             where: { id },
             data: { status: "CANCELLED" },
-            include: { service: true }
+            include: { service: true, customer: true }
         });
         await this.sendCancellationEmail(booking, { status: "cancelled" });
         return result;
@@ -248,11 +253,11 @@ export class BookingService {
 
         try {
             await sendEmailWithTemplate(
-                booking.clientEmail,
+                booking.customer.email,
                 subject,
                 "bookingCancelled",
                 {
-                    name: booking.name,
+                    name: booking.customer.fullName,
                     service_name: serviceName,
                     date: format(new Date(booking.date), "yyyy-MM-dd"),
                     start_time: booking.startTime,

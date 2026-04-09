@@ -9,6 +9,7 @@ import publicRoutes from "../../../modules/public/public.routes.js";
 import workdaysRoutes from "../../../modules/workdays/workdays.routes.js";
 import chatbotRoutes from "../../../modules/chatbot/chatbot.routes.js";
 import paymentRoutes from "../../../modules/payment/payment.routes.js";
+import customersRoutes from "../../../modules/customers/customers.routes.js";
 
 
 const router = Router();
@@ -23,5 +24,6 @@ router.use("/workdays", workdaysRoutes);
 router.use("/public", publicRoutes);
 router.use("/chat", chatbotRoutes);
 router.use("/payment", paymentRoutes);
+router.use("/customers", customersRoutes);
 
 export default router;

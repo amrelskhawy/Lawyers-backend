@@ -3,6 +3,9 @@ import { StripeProvider } from "./providers/stripe/stripe.provider.js";
 //import { TamaraProvider } from "./providers/tamara/tamara.provider.js";
 import { TabbyProvider } from "./providers/tabby/tabby.provider.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { CustomerService } from "../customers/customers.service.js";
+
+const customerService = new CustomerService();
 
 export class PaymentFactory {
     private static instances = new Map<PaymentProvider, IPaymentProvider>();
@@ -16,13 +19,13 @@ export class PaymentFactory {
 
         switch (provider) {
             case "STRIPE":
-                instance = new StripeProvider();
+                instance = new StripeProvider(customerService);
                 break;
             // case "TAMARA":
             //     instance = new TamaraProvider();
             //     break;
             case "TABBY":
-                instance = new TabbyProvider();
+                instance = new TabbyProvider(customerService);
                 break;
             default:
                 throw new AppResponse(false, "UNSUPPORTED_PAYMENT_PROVIDER", null, 400);
