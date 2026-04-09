@@ -65,4 +65,14 @@ export class ModeratorService {
         await prisma.user.delete({ where: { id } });
         return { message: "Moderator deleted successfully" };
     }
+
+    async deleteMultipleModerators(ids: string[]) {
+        const result = await prisma.user.deleteMany({
+            where: {
+                id: { in: ids },
+                role: Role.MODERATOR,
+            },
+        });
+        return result;
+    }
 }
