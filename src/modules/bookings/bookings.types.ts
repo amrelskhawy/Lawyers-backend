@@ -22,9 +22,7 @@ export const ManualBookingSchema = z.object({
   }),
   startTime: z.string().min(1, "Start time is required"),
   endTime: z.string().optional(),
-  clientEmail: z.string().email("Invalid email address"),
-  name: z.string().min(1, "Name is required"),
-  phone_number: z.string().min(1, "Phone number is required"),
+  customerId: z.string().uuid("Invalid customer ID"),
 });
 
 export type CreateManualBookingInput = z.infer<typeof ManualBookingSchema>;

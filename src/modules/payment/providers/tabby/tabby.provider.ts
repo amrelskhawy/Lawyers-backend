@@ -341,10 +341,8 @@ export class TabbyProvider implements IPaymentProvider {
 
             await prisma.booking.create({
                 data: {
+                    customerId,
                     serviceId,
-                    clientEmail,
-                    name,
-                    phone_number: phone,
                     date: new Date(date),
                     startTime,
                     endTime,
@@ -352,7 +350,6 @@ export class TabbyProvider implements IPaymentProvider {
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",
                     tabbyPaymentId: payment.id,
-                    customerId,
                 },
             });
 

@@ -247,10 +247,8 @@ export class StripeProvider implements IPaymentProvider {
 
             await prisma.booking.create({
                 data: {
+                    customerId,
                     serviceId: m.serviceId,
-                    clientEmail: m.clientEmail,
-                    name: m.name,
-                    phone_number: m.phone,
                     date: bookingDay,
                     startTime: m.startTime,
                     endTime: m.endTime,
@@ -259,7 +257,6 @@ export class StripeProvider implements IPaymentProvider {
                     paymentIntentId: session.payment_intent as string,
                     stripeSessionId: session.id,
                     totalAmount: m.totalAmount,
-                    customerId,
                 },
             });
             console.log(`[Stripe] Booking created after payment for session ${session.id}`);
