@@ -14,3 +14,15 @@ export const BookingSchema = z.object({
 });
 
 export type CreateBookingInput = z.infer<typeof BookingSchema>;
+
+export const ManualBookingSchema = z.object({
+  serviceId: z.string().min(1, "Service ID is required"),
+  date: z.string().refine((val) => !isNaN(Date.parse(val)), {
+    message: "Invalid date format",
+  }),
+  startTime: z.string().min(1, "Start time is required"),
+  endTime: z.string().optional(),
+  customerId: z.string().uuid("Invalid customer ID"),
+});
+
+export type CreateManualBookingInput = z.infer<typeof ManualBookingSchema>;

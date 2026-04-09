@@ -35,3 +35,9 @@ export const deleteModerator = asyncHandler(async (req: AuthRequest, res: Respon
     const result = await moderatorService.deleteModerator(id);
     res.status(200).json(new AppResponse(true, "MODERATOR_DELETED_SUCCESS"));
 });
+
+export const deleteMultipleModerators = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const { ids } = req.body;
+    const result = await moderatorService.deleteMultipleModerators(ids);
+    res.status(200).json(new AppResponse(true, "MODERATORS_DELETED_SUCCESS", result));
+});

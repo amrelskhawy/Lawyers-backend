@@ -25,7 +25,7 @@ export async function createGoogleEvent(
 
         const eventBody: any = {
             summary: `Booking: ${serviceName}`,
-            description: `Client: ${booking.clientEmail}`,
+            description: `Client: ${booking.customer?.email || 'N/A'}`,
             start: { dateTime: startDateTime.toISOString(), timeZone: 'UTC' },
             end: { dateTime: endDateTime.toISOString(), timeZone: 'UTC' },
             conferenceData: {

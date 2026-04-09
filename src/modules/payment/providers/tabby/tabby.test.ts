@@ -65,6 +65,10 @@ process.env.TABBY_CANCEL_URL = "https://example.com/cancel";
 import prisma from "../../../../core/db/prisma.js";
 import { TabbyProvider } from "./tabby.provider.js";
 
+const mockCustomerService = {
+    findOrCreateCustomerFromBooking: vi.fn().mockResolvedValue("customer-123"),
+} as any;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -127,7 +131,7 @@ describe("TabbyProvider.createPayment", () => {
             },
         });
 
-        const result = await new TabbyProvider().createPayment("unused", 500, {
+        const result = await new TabbyProvider(mockCustomerService).createPayment("unused", 500, {
             serviceId: "service-abc", clientEmail: "test@test.com",
             name: "Test User", phone: "+966500000000",
             date: "2026-08-15", startTime: "10:00", endTime: "11:00", totalAmount: "500",
@@ -147,7 +151,7 @@ describe("TabbyProvider.createPayment", () => {
         tabbyOk({ id: "session_rej", status: "rejected" });
 
         await expect(
-            new TabbyProvider().createPayment("unused", 500, {
+            new TabbyProvider(mockCustomerService).createPayment("unused", 500, {
                 serviceId: "service-abc", clientEmail: "bad@customer.com",
                 name: "Bad", phone: "+1", date: "2026-08-15",
                 startTime: "10:00", endTime: "11:00", totalAmount: "500",
@@ -159,7 +163,7 @@ describe("TabbyProvider.createPayment", () => {
         tabbyOk({ id: "session_abc", status: "created", configuration: { available_products: {} } });
 
         await expect(
-            new TabbyProvider().createPayment("unused", 500, {
+            new TabbyProvider(mockCustomerService).createPayment("unused", 500, {
                 serviceId: "service-abc", clientEmail: "test@test.com",
                 name: "Test", phone: "+966", date: "2026-08-15",
                 startTime: "10:00", endTime: "11:00", totalAmount: "500",
@@ -179,7 +183,7 @@ describe("TabbyProvider.handleWebhook — payment.authorized", () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(null);   // conflict
         (prisma.booking.create as any).mockResolvedValue(makeBooking());
 
-        const result = await new TabbyProvider().handleWebhook(
+        const result = await new TabbyProvider(mockCustomerService).handleWebhook(
             webhook("payment.authorized", makePayment()), SIG
         );
 
@@ -202,7 +206,7 @@ describe("TabbyProvider.handleWebhook — payment.authorized", () => {
     it("skips if payment already processed (idempotency)", async () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking()); // already in DB
 
-        await new TabbyProvider().handleWebhook(webhook("payment.authorized", makePayment()), SIG);
+        await new TabbyProvider(mockCustomerService).handleWebhook(webhook("payment.authorized", makePayment()), SIG);
 
         expect(prisma.booking.create).not.toHaveBeenCalled();
     });
@@ -212,7 +216,7 @@ describe("TabbyProvider.handleWebhook — payment.authorized", () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking());  // conflict!
         tabbyOk({ id: "pay_tabby_123", status: "CLOSED" });
 
-        await new TabbyProvider().handleWebhook(webhook("payment.authorized", makePayment()), SIG);
+        await new TabbyProvider(mockCustomerService).handleWebhook(webhook("payment.authorized", makePayment()), SIG);
 
         expect(mockFetch).toHaveBeenCalledWith(
             expect.stringContaining("/close"),
@@ -227,14 +231,14 @@ describe("TabbyProvider.handleWebhook — payment.authorized", () => {
         (prisma.booking.create as any).mockRejectedValue(new Error("DB timeout"));
 
         await expect(
-            new TabbyProvider().handleWebhook(webhook("payment.authorized", makePayment()), SIG)
+            new TabbyProvider(mockCustomerService).handleWebhook(webhook("payment.authorized", makePayment()), SIG)
         ).rejects.toThrow("DB timeout");
     });
 
     it("skips gracefully when reference_id is missing", async () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(null);
 
-        const result = await new TabbyProvider().handleWebhook(
+        const result = await new TabbyProvider(mockCustomerService).handleWebhook(
             webhook("payment.authorized", { id: "pay_no_ref", order: {} }), SIG
         );
 
@@ -250,7 +254,7 @@ describe("TabbyProvider.handleWebhook — other events", () => {
     beforeEach(() => vi.clearAllMocks());
 
     it("handles payment.expired without creating booking", async () => {
-        const result = await new TabbyProvider().handleWebhook(
+        const result = await new TabbyProvider(mockCustomerService).handleWebhook(
             webhook("payment.expired", { id: "pay_tabby_123" }), SIG
         );
         expect(prisma.booking.create).not.toHaveBeenCalled();
@@ -261,7 +265,7 @@ describe("TabbyProvider.handleWebhook — other events", () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking({ paymentStatus: "AUTHORIZED" }));
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ paymentStatus: "PAID" }));
 
-        await new TabbyProvider().handleWebhook(
+        await new TabbyProvider(mockCustomerService).handleWebhook(
             webhook("payment.closed", { id: "pay_tabby_123" }), SIG
         );
 
@@ -273,7 +277,7 @@ describe("TabbyProvider.handleWebhook — other events", () => {
     it("skips payment.closed if booking already PAID (idempotent)", async () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking({ paymentStatus: "PAID" }));
 
-        await new TabbyProvider().handleWebhook(
+        await new TabbyProvider(mockCustomerService).handleWebhook(
             webhook("payment.closed", { id: "pay_tabby_123" }), SIG
         );
 
@@ -282,13 +286,13 @@ describe("TabbyProvider.handleWebhook — other events", () => {
 
     it("throws INVALID_WEBHOOK_SIGNATURE when signature is wrong", async () => {
         await expect(
-            new TabbyProvider().handleWebhook(Buffer.from("{}"), "wrong-secret")
+            new TabbyProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "wrong-secret")
         ).rejects.toMatchObject({ message: "INVALID_WEBHOOK_SIGNATURE" });
     });
 
     it("throws INVALID_WEBHOOK_PAYLOAD for malformed JSON", async () => {
         await expect(
-            new TabbyProvider().handleWebhook(Buffer.from("not-json"), SIG)
+            new TabbyProvider(mockCustomerService).handleWebhook(Buffer.from("not-json"), SIG)
         ).rejects.toMatchObject({ message: "INVALID_WEBHOOK_PAYLOAD" });
     });
 });
@@ -306,7 +310,7 @@ describe("TabbyProvider.capture", () => {
             .mockResolvedValueOnce({ ok: true, json: async () => ({ id: "capture_123" }) });
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ paymentStatus: "PAID" }));
 
-        const result = await new TabbyProvider().capture("booking-123");
+        const result = await new TabbyProvider(mockCustomerService).capture("booking-123");
 
         expect(mockFetch).toHaveBeenCalledWith(
             expect.stringContaining("/captures"),
@@ -322,7 +326,7 @@ describe("TabbyProvider.capture", () => {
     it("throws TABBY_NO_PAYMENT_ID when tabbyPaymentId is missing", async () => {
         (prisma.booking.findUnique as any).mockResolvedValue(makeBooking({ tabbyPaymentId: null }));
 
-        await expect(new TabbyProvider().capture("booking-123"))
+        await expect(new TabbyProvider(mockCustomerService).capture("booking-123"))
             .rejects.toMatchObject({ message: "TABBY_NO_PAYMENT_ID" });
         expect(mockFetch).not.toHaveBeenCalled();
     });
@@ -331,7 +335,7 @@ describe("TabbyProvider.capture", () => {
         (prisma.booking.findUnique as any).mockResolvedValue(makeBooking());
         mockFetch.mockResolvedValueOnce({ ok: true, json: async () => ({ id: "pay_tabby_123", status: "CLOSED" }) });
 
-        await expect(new TabbyProvider().capture("booking-123"))
+        await expect(new TabbyProvider(mockCustomerService).capture("booking-123"))
             .rejects.toMatchObject({ message: "TABBY_PAYMENT_NOT_CAPTURABLE" });
         expect(mockFetch).toHaveBeenCalledTimes(1); // only GET, no POST captures
     });
@@ -348,7 +352,7 @@ describe("TabbyProvider.cancel", () => {
         tabbyOk({ id: "pay_tabby_123", status: "CLOSED" });
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED", paymentStatus: "RELEASED" }));
 
-        const result = await new TabbyProvider().cancel("booking-123");
+        const result = await new TabbyProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockFetch).toHaveBeenCalledWith(
             expect.stringContaining("/close"), expect.objectContaining({ method: "POST" })
@@ -364,7 +368,7 @@ describe("TabbyProvider.cancel", () => {
         tabbyOk({ id: "refund_tabby_123" });
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED", paymentStatus: "REFUNDED" }));
 
-        const result = await new TabbyProvider().cancel("booking-123");
+        const result = await new TabbyProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockFetch).toHaveBeenCalledWith(
             expect.stringContaining("/refunds"), expect.objectContaining({ method: "POST" })
@@ -377,7 +381,7 @@ describe("TabbyProvider.cancel", () => {
         (prisma.booking.findUnique as any).mockResolvedValue(makeBooking({ tabbyPaymentId: null, paymentStatus: "UNPAID" }));
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED" }));
 
-        const result = await new TabbyProvider().cancel("booking-123");
+        const result = await new TabbyProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockFetch).not.toHaveBeenCalled();
         expect(result.status).toBe("cancelled");
@@ -388,7 +392,7 @@ describe("TabbyProvider.cancel", () => {
             makeBooking({ tabbyPaymentId: "pay_tabby_123", paymentStatus: "RELEASED" })
         );
 
-        await expect(new TabbyProvider().cancel("booking-123"))
+        await expect(new TabbyProvider(mockCustomerService).cancel("booking-123"))
             .rejects.toMatchObject({ message: "TABBY_INVALID_CANCEL_STATE" });
     });
 });

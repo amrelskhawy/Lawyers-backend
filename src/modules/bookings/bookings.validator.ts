@@ -94,7 +94,7 @@ export class BookingValidator {
     static async validateBookingExists(id: string) {
         const booking = await prisma.booking.findUnique({
             where: { id },
-            include: { service: true },
+            include: { service: true, customer: true },
         });
         if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
         return booking;

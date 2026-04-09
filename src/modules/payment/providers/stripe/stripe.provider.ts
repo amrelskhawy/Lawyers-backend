@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { startOfDay } from "date-fns";
+import { CustomerService } from "@app/modules/customers/customers.service.js";
 import {
     IPaymentProvider,
     CreatePaymentResult,
@@ -11,6 +12,7 @@ import {
     PaymentProvider,
     BookingPayload
 } from "../../interfaces/payment.interface.js";
+import { OrganizerService } from "@app/modules/organizers/organizers.service.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-02-25.clover",
@@ -20,6 +22,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 export class StripeProvider implements IPaymentProvider {
     readonly name: PaymentProvider = "STRIPE";
+
+    constructor(private customerService: CustomerService) { }
 
     async createCustomer(email: string, name: string) {
         return await stripe.customers.create({ email, name });
@@ -238,12 +242,16 @@ export class StripeProvider implements IPaymentProvider {
         }
 
         try {
-            await prisma.booking.create({
+            const customerId = await this.customerService.findOrCreateCustomerFromBooking({
+                fullName: m.name,
+                email: m.clientEmail,
+                phone: m.phone,
+            });
+
+            const newBooking = await prisma.booking.create({
                 data: {
+                    customerId,
                     serviceId: m.serviceId,
-                    clientEmail: m.clientEmail,
-                    name: m.name,
-                    phone_number: m.phone,
                     date: bookingDay,
                     startTime: m.startTime,
                     endTime: m.endTime,
@@ -253,8 +261,17 @@ export class StripeProvider implements IPaymentProvider {
                     stripeSessionId: session.id,
                     totalAmount: m.totalAmount,
                 },
+                include: { service: true, customer: true },
             });
             console.log(`[Stripe] Booking created after payment for session ${session.id}`);
+
+            // Notify organizers about new booking (best-effort)
+            try {
+                const organizerService = new OrganizerService();
+                await organizerService.notifyOrganizers("booked", newBooking);
+            } catch (err: any) {
+                console.error("[Organizer] Notification failed:", err?.message);
+            }
         } catch (error) {
             console.error("[Stripe] CRITICAL: Payment received but booking creation failed", {
                 sessionId: session.id,

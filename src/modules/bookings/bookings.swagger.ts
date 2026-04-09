@@ -7,8 +7,10 @@
  *       properties:
  *         id:
  *           type: string
- *         clientEmail:
+ *         customerId:
  *           type: string
+ *         customer:
+ *           $ref: '#/components/schemas/Customer'
  *         serviceId:
  *           type: string
  *         date:

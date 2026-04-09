@@ -7,8 +7,9 @@ import { format } from "date-fns";
 
 export const getPublicData = asyncHandler(async (req: Request, res: Response) => {
     const [services, holidays, workingDays] = await Promise.all([
-        // Fetch all active services
+        // Fetch all active, non-free services
         prisma.service.findMany({
+            where: { isActive: true, isFree: false },
             orderBy: { createdAt: "desc" },
             select: {
                 id: true,

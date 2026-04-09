@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { format } from "date-fns";
@@ -9,15 +10,18 @@ import { getStripeReceiptUrl } from "../payment/providers/stripe/stripe.provider
 import { BookingValidator } from "./bookings.validator.js";
 import { createGoogleEvent } from "../../core/services/google/calendar.js";
 import { EmailService } from "../emails/index.js";
+import { OrganizerService } from "../organizers/organizers.service.js";
 
 
 export class BookingService {
     private paymentService: PaymentService;
     private emailService: EmailService;
+    private organizerService: OrganizerService;
 
     constructor() {
         this.paymentService = new PaymentService();
         this.emailService = new EmailService();
+        this.organizerService = new OrganizerService();
     }
 
 
@@ -87,6 +91,61 @@ export class BookingService {
         };
     }
 
+    async createManualBooking(payload: any, createdByRole: string) {
+        const { bookingDay, cleanStartTime, endTime, service } =
+            await BookingValidator.validateCreateBooking(payload);
+
+        const customer = await prisma.customer.findUnique({
+            where: { id: payload.customerId },
+        });
+        if (!customer || customer.isDeleted) {
+            throw new AppResponse(false, "CUSTOMER_NOT_FOUND", null, 404);
+        }
+
+        const booking = await prisma.booking.create({
+            data: {
+                customerId: payload.customerId,
+                serviceId: payload.serviceId,
+                date: bookingDay,
+                startTime: cleanStartTime,
+                endTime,
+                status: "PENDING",
+                paymentStatus: "AUTHORIZED",
+                totalAmount: service.price ? new Prisma.Decimal(String(service.price)) : new Prisma.Decimal(0),
+                createdByRole,
+            },
+            include: { service: true, customer: true },
+        });
+
+        // Notify organizers about new manual booking (best-effort)
+        try {
+            await this.organizerService.notifyOrganizers("booked", booking);
+        } catch (err: any) {
+            console.error("[Organizer] Notification failed:", err?.message);
+        }
+
+        return booking;
+    }
+
+    async captureManualPayment(id: string) {
+        const booking = await prisma.booking.findUnique({
+            where: { id },
+            include: { service: true, customer: true },
+        });
+
+        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
+        if (!booking.createdByRole) throw new AppResponse(false, "NOT_A_MANUAL_BOOKING", null, 400);
+        if (booking.paymentStatus !== "AUTHORIZED") throw new AppResponse(false, "PAYMENT_NOT_AUTHORIZED", null, 400);
+
+        const updated = await prisma.booking.update({
+            where: { id },
+            data: { paymentStatus: "PAID" },
+            include: { service: true, customer: true },
+        });
+
+        return updated;
+    }
+
     async confirmBooking(id: string) {
         const booking = await BookingValidator.validateBookingExists(id);
         if (booking.status === "CONFIRMED") return booking;
@@ -113,10 +172,17 @@ export class BookingService {
                     status: "CONFIRMED",
                     paymentStatus: "PAID",
                 },
-                include: { service: true },
+                include: { service: true, customer: true },
             });
 
             await this.emailService.sendConfirmationEmail(updatedBooking);
+
+            // Notify organizers (best-effort)
+            try {
+                await this.organizerService.notifyOrganizers("confirmed", updatedBooking);
+            } catch (err: any) {
+                console.error("[Organizer] Notification failed:", err?.message);
+            }
 
             return updatedBooking;
 
@@ -129,7 +195,7 @@ export class BookingService {
 
     async getAllBookings() {
         return await prisma.booking.findMany({
-            include: { service: true },
+            include: { service: true, customer: true },
             orderBy: { date: "desc" },
         });
     }
@@ -140,7 +206,7 @@ export class BookingService {
         return await prisma.booking.update({
             where: { id },
             data: { status: "COMPLETED" },
-            include: { service: true }
+            include: { service: true, customer: true }
         });
     }
 
@@ -151,21 +217,31 @@ export class BookingService {
             // Stripe booking
             const result = await this.paymentService.cancel(id, "STRIPE");
             await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
         if ((booking as any).tabbyPaymentId) {
             // Tabby booking
             const result = await this.paymentService.cancel(id, "TABBY");
             await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
 
         const result = await prisma.booking.update({
             where: { id },
             data: { status: "CANCELLED" },
-            include: { service: true }
+            include: { service: true, customer: true }
         });
         await this.sendCancellationEmail(booking, { status: "cancelled" });
+
+        // Notify organizers about cancellation (best-effort)
+        try {
+            await this.organizerService.notifyOrganizers("cancelled", result);
+        } catch (err: any) {
+            console.error("[Organizer] Notification failed:", err?.message);
+        }
+
         return result;
     }
 
@@ -204,11 +280,11 @@ export class BookingService {
 
         try {
             await sendEmailWithTemplate(
-                booking.clientEmail,
+                booking.customer.email,
                 subject,
                 "bookingCancelled",
                 {
-                    name: booking.name,
+                    name: booking.customer.fullName,
                     service_name: serviceName,
                     date: format(new Date(booking.date), "yyyy-MM-dd"),
                     start_time: booking.startTime,
