@@ -48,7 +48,8 @@ model Booking {
   paymentStatus    PaymentStatus @default(UNPAID)
 
   tabbyPaymentId   String?
-  
+  createdByRole    String?   // 'ADMIN' | 'MODERATOR' — set only for manual bookings
+
   createdAt    DateTime      @default(now())
   updatedAt    DateTime      @updatedAt
 }
@@ -97,6 +98,7 @@ model Service {
   description_en String?
   price       Decimal? @db.Decimal(10, 2)
   isActive    Boolean  @default(true)
+  isFree      Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

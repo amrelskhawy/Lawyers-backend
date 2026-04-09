@@ -2,16 +2,27 @@ import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppResponse } from '../../core/utils/AppResponse.js';
 
-const ServiceBaseSchema = z.object({
+const ServiceBaseObject = z.object({
     name: z.string().min(3).max(50).optional(),
     name_ar: z.string().min(3).max(50).optional(),
     name_en: z.string().min(3).max(50).optional(),
     description: z.string().max(500).optional(),
     description_ar: z.string().max(500).optional(),
     description_en: z.string().max(500).optional(),
-    price: z.number().positive("Price must be a positive number"),
+    price: z.number().min(0, "Price must be a non-negative number").optional(),
     isActive: z.boolean().optional(),
+    isFree: z.boolean().optional(),
 });
+
+const priceRefinement = (data: any, ctx: z.RefinementCtx) => {
+    if (!data.isFree && (data.price === undefined || data.price < 1)) {
+        ctx.addIssue({
+            code: z.ZodIssueCode.custom,
+            message: "Price must be at least 1 when the service is not free",
+            path: ["price"],
+        });
+    }
+};
 
 const serviceTransformation = (data: any) => {
     return {
@@ -23,9 +34,14 @@ const serviceTransformation = (data: any) => {
     };
 };
 
-export const CreateServiceSchema = ServiceBaseSchema.transform(serviceTransformation);
+export const CreateServiceSchema = ServiceBaseObject
+    .superRefine(priceRefinement)
+    .transform(serviceTransformation);
 
-export const UpdateServiceSchema = ServiceBaseSchema.partial().transform(serviceTransformation);
+export const UpdateServiceSchema = ServiceBaseObject
+    .partial()
+    .superRefine(priceRefinement)
+    .transform(serviceTransformation);
 
 export type CreateServicePayload = z.output<typeof CreateServiceSchema>;
 export type UpdateServicePayload = z.output<typeof UpdateServiceSchema>;

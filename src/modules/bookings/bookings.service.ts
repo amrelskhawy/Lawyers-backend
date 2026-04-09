@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { format } from "date-fns";
@@ -85,6 +86,49 @@ export class BookingService {
             payment_link: paymentResult.url,
             qr_code: paymentResult.qrCode ?? null
         };
+    }
+
+    async createManualBooking(payload: any, createdByRole: string) {
+        const { bookingDay, cleanStartTime, endTime, service } =
+            await BookingValidator.validateCreateBooking(payload);
+
+        const booking = await prisma.booking.create({
+            data: {
+                name: payload.name,
+                phone_number: payload.phone_number,
+                clientEmail: payload.clientEmail,
+                serviceId: payload.serviceId,
+                date: bookingDay,
+                startTime: cleanStartTime,
+                endTime,
+                status: "PENDING",
+                paymentStatus: "AUTHORIZED",
+                totalAmount: service.price ? new Prisma.Decimal(String(service.price)) : new Prisma.Decimal(0),
+                createdByRole,
+            },
+            include: { service: true },
+        });
+
+        return booking;
+    }
+
+    async captureManualPayment(id: string) {
+        const booking = await prisma.booking.findUnique({
+            where: { id },
+            include: { service: true },
+        });
+
+        if (!booking) throw new AppResponse(false, "BOOKING_NOT_FOUND", null, 404);
+        if (!booking.createdByRole) throw new AppResponse(false, "NOT_A_MANUAL_BOOKING", null, 400);
+        if (booking.paymentStatus !== "AUTHORIZED") throw new AppResponse(false, "PAYMENT_NOT_AUTHORIZED", null, 400);
+
+        const updated = await prisma.booking.update({
+            where: { id },
+            data: { paymentStatus: "PAID" },
+            include: { service: true },
+        });
+
+        return updated;
     }
 
     async confirmBooking(id: string) {
