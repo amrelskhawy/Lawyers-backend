@@ -10,15 +10,18 @@ import { getStripeReceiptUrl } from "../payment/providers/stripe/stripe.provider
 import { BookingValidator } from "./bookings.validator.js";
 import { createGoogleEvent } from "../../core/services/google/calendar.js";
 import { EmailService } from "../emails/index.js";
+import { OrganizerService } from "../organizers/organizers.service.js";
 
 
 export class BookingService {
     private paymentService: PaymentService;
     private emailService: EmailService;
+    private organizerService: OrganizerService;
 
     constructor() {
         this.paymentService = new PaymentService();
         this.emailService = new EmailService();
+        this.organizerService = new OrganizerService();
     }
 
 
@@ -114,6 +117,13 @@ export class BookingService {
             include: { service: true, customer: true },
         });
 
+        // Notify organizers about new manual booking (best-effort)
+        try {
+            await this.organizerService.notifyOrganizers("booked", booking);
+        } catch (err: any) {
+            console.error("[Organizer] Notification failed:", err?.message);
+        }
+
         return booking;
     }
 
@@ -167,6 +177,13 @@ export class BookingService {
 
             await this.emailService.sendConfirmationEmail(updatedBooking);
 
+            // Notify organizers (best-effort)
+            try {
+                await this.organizerService.notifyOrganizers("confirmed", updatedBooking);
+            } catch (err: any) {
+                console.error("[Organizer] Notification failed:", err?.message);
+            }
+
             return updatedBooking;
 
         } catch (error: any) {
@@ -200,12 +217,14 @@ export class BookingService {
             // Stripe booking
             const result = await this.paymentService.cancel(id, "STRIPE");
             await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
         if ((booking as any).tabbyPaymentId) {
             // Tabby booking
             const result = await this.paymentService.cancel(id, "TABBY");
             await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
 
@@ -215,6 +234,14 @@ export class BookingService {
             include: { service: true, customer: true }
         });
         await this.sendCancellationEmail(booking, { status: "cancelled" });
+
+        // Notify organizers about cancellation (best-effort)
+        try {
+            await this.organizerService.notifyOrganizers("cancelled", result);
+        } catch (err: any) {
+            console.error("[Organizer] Notification failed:", err?.message);
+        }
+
         return result;
     }
 

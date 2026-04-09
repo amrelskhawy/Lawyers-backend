@@ -1,4 +1,5 @@
 import { CustomerService } from "@app/modules/customers/customers.service.js";
+import { OrganizerService } from "@app/modules/organizers/organizers.service.js";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { IPaymentProvider, BookingPayload } from "../../interfaces/payment.interface.js";
@@ -342,7 +343,7 @@ export class TabbyProvider implements IPaymentProvider {
                 phone,
             });
 
-            await prisma.booking.create({
+            const newBooking = await prisma.booking.create({
                 data: {
                     customerId,
                     serviceId,
@@ -354,9 +355,18 @@ export class TabbyProvider implements IPaymentProvider {
                     paymentStatus: "AUTHORIZED",
                     tabbyPaymentId: payment.id,
                 },
+                include: { service: true, customer: true },
             });
 
             console.log(`[Tabby] Booking created after payment for payment id ${payment.id}`);
+
+            // Notify organizers about new booking (best-effort)
+            try {
+                const organizerService = new OrganizerService();
+                await organizerService.notifyOrganizers("booked", newBooking);
+            } catch (notifyErr: any) {
+                console.error("[Organizer] Notification failed:", notifyErr?.message);
+            }
         } catch (err: any) {
             // Rethrow so Tabby retries the webhook (returns non-200)
             console.error("[Tabby] CRITICAL: Payment received but booking creation failed", {

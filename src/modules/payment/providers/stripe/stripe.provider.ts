@@ -12,6 +12,7 @@ import {
     PaymentProvider,
     BookingPayload
 } from "../../interfaces/payment.interface.js";
+import { OrganizerService } from "@app/modules/organizers/organizers.service.js";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
     apiVersion: "2026-02-25.clover",
@@ -247,7 +248,7 @@ export class StripeProvider implements IPaymentProvider {
                 phone: m.phone,
             });
 
-            await prisma.booking.create({
+            const newBooking = await prisma.booking.create({
                 data: {
                     customerId,
                     serviceId: m.serviceId,
@@ -260,8 +261,17 @@ export class StripeProvider implements IPaymentProvider {
                     stripeSessionId: session.id,
                     totalAmount: m.totalAmount,
                 },
+                include: { service: true, customer: true },
             });
             console.log(`[Stripe] Booking created after payment for session ${session.id}`);
+
+            // Notify organizers about new booking (best-effort)
+            try {
+                const organizerService = new OrganizerService();
+                await organizerService.notifyOrganizers("booked", newBooking);
+            } catch (err: any) {
+                console.error("[Organizer] Notification failed:", err?.message);
+            }
         } catch (error) {
             console.error("[Stripe] CRITICAL: Payment received but booking creation failed", {
                 sessionId: session.id,

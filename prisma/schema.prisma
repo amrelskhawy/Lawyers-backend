@@ -16,6 +16,7 @@ model User {
   isVerified  Boolean  @default(false)
 
   tokens      Token[]
+  organizer   Organizer?
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -115,6 +116,15 @@ model Customer {
   updatedAt DateTime @updatedAt
 
   bookings  Booking[]
+}
+
+model Organizer {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum PaymentStatus {
