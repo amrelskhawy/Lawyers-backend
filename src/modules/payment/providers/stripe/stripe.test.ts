@@ -104,6 +104,10 @@ import { PaymentService } from "../../payment.service.js";
 import { PaymentValidator } from "../../validators/payment.validator.js";
 import { BookingValidator } from "../../../bookings/bookings.validator.js";
 
+const mockCustomerService = {
+    findOrCreateCustomerFromBooking: vi.fn().mockResolvedValue("customer-123"),
+} as any;
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Helpers
 // ─────────────────────────────────────────────────────────────────────────────
@@ -161,7 +165,7 @@ describe("StripeProvider.createPayment", () => {
             url: "https://checkout.stripe.com/pay/cs_test_new",
         });
 
-        const result = await new StripeProvider().createPayment("cus_123", 500, {
+        const result = await new StripeProvider(mockCustomerService).createPayment("cus_123", 500, {
             serviceId: "service-abc", clientEmail: "test@test.com",
             name: "Test User", phone: "+966500000000",
             date: "2026-08-15", startTime: "10:00", endTime: "11:00", totalAmount: "500",
@@ -195,7 +199,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(null);   // conflict
         (prisma.booking.create as any).mockResolvedValue(makeBooking());
 
-        const result = await new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test");
+        const result = await new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test");
 
         expect(prisma.booking.create).toHaveBeenCalledWith(
             expect.objectContaining({
@@ -226,7 +230,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
             data: { object: makeSession() },
         });
 
-        const result = await new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test");
+        const result = await new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test");
 
         expect(prisma.booking.create).not.toHaveBeenCalled();
         expect(result.received).toBe(true);
@@ -242,7 +246,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking());   // conflict!
         mockStripe.paymentIntents.cancel.mockResolvedValue({ id: "pi_test_123" });
 
-        await new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test");
+        await new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test");
 
         expect(mockStripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_test_123");
         expect(prisma.booking.create).not.toHaveBeenCalled();
@@ -256,7 +260,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
         });
         (prisma.booking.findFirst as any).mockResolvedValueOnce(makeBooking()); // already exists
 
-        await new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test");
+        await new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test");
 
         expect(prisma.booking.create).not.toHaveBeenCalled();
     });
@@ -272,7 +276,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
         (prisma.booking.create as any).mockRejectedValue(new Error("DB connection failed"));
 
         await expect(
-            new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test")
+            new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test")
         ).rejects.toThrow("DB connection failed");
     });
 
@@ -284,7 +288,7 @@ describe("StripeProvider.handleWebhook — checkout.session.completed", () => {
         });
         (prisma.booking.findFirst as any).mockResolvedValueOnce(null);
 
-        const result = await new StripeProvider().handleWebhook(Buffer.from("{}"), "sig_test");
+        const result = await new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "sig_test");
 
         expect(prisma.booking.create).not.toHaveBeenCalled();
         expect(result.received).toBe(true);
@@ -303,7 +307,7 @@ describe("StripeProvider.handleWebhook — invalid signature", () => {
         });
 
         await expect(
-            new StripeProvider().handleWebhook(Buffer.from("{}"), "bad_sig")
+            new StripeProvider(mockCustomerService).handleWebhook(Buffer.from("{}"), "bad_sig")
         ).rejects.toMatchObject({ message: "INVALID_WEBHOOK_SIGNATURE" });
     });
 });
@@ -320,7 +324,7 @@ describe("StripeProvider.capture", () => {
         mockStripe.paymentIntents.capture.mockResolvedValue(makePI("succeeded"));
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ paymentStatus: "PAID" }));
 
-        const result = await new StripeProvider().capture("booking-123");
+        const result = await new StripeProvider(mockCustomerService).capture("booking-123");
 
         expect(mockStripe.paymentIntents.capture).toHaveBeenCalledWith("pi_test_123");
         expect(prisma.booking.update).toHaveBeenCalledWith(
@@ -334,7 +338,7 @@ describe("StripeProvider.capture", () => {
         mockStripe.paymentIntents.retrieve.mockResolvedValue(makePI("canceled"));
 
         await expect(
-            new StripeProvider().capture("booking-123")
+            new StripeProvider(mockCustomerService).capture("booking-123")
         ).rejects.toMatchObject({ message: expect.stringContaining("PAYMENT_INTENT_NOT_CAPTURABLE") });
 
         expect(mockStripe.paymentIntents.capture).not.toHaveBeenCalled();
@@ -352,7 +356,7 @@ describe("StripeProvider.cancel", () => {
         mockStripe.paymentIntents.cancel.mockResolvedValue({ id: "pi_test_123" });
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED", paymentStatus: "RELEASED" }));
 
-        const result = await new StripeProvider().cancel("booking-123");
+        const result = await new StripeProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockStripe.paymentIntents.cancel).toHaveBeenCalledWith("pi_test_123");
         expect(result.status).toBe("released");
@@ -363,7 +367,7 @@ describe("StripeProvider.cancel", () => {
         mockStripe.refunds.create.mockResolvedValue({ id: "re_test_123" });
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED", paymentStatus: "REFUNDED" }));
 
-        const result = await new StripeProvider().cancel("booking-123");
+        const result = await new StripeProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockStripe.refunds.create).toHaveBeenCalledWith(
             expect.objectContaining({ payment_intent: "pi_test_123", reason: "requested_by_customer" })
@@ -376,7 +380,7 @@ describe("StripeProvider.cancel", () => {
         (prisma.booking.findUnique as any).mockResolvedValue(makeBooking({ paymentIntentId: null, paymentStatus: "UNPAID" }));
         (prisma.booking.update as any).mockResolvedValue(makeBooking({ status: "CANCELLED" }));
 
-        const result = await new StripeProvider().cancel("booking-123");
+        const result = await new StripeProvider(mockCustomerService).cancel("booking-123");
 
         expect(mockStripe.paymentIntents.cancel).not.toHaveBeenCalled();
         expect(mockStripe.refunds.create).not.toHaveBeenCalled();

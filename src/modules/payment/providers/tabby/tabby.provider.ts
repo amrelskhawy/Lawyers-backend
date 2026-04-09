@@ -1,7 +1,8 @@
+import { CustomerService } from "@app/modules/customers/customers.service.js";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { IPaymentProvider, BookingPayload } from "../../interfaces/payment.interface.js";
-import { upsertCustomerFromBooking } from "../../../customers/customers.helper.js";
+
 
 const TABBY_BASE_URL = "https://api.tabby.ai/api";
 
@@ -40,6 +41,8 @@ async function tabbyRequest(
 
 
 export class TabbyProvider implements IPaymentProvider {
+    constructor(private customerService: CustomerService) { }
+
     async createPayment(
         _customer_id: string,    // unused — Tabby has no customer object
         amount: number,
@@ -333,7 +336,7 @@ export class TabbyProvider implements IPaymentProvider {
 
         // ── Create booking ────────────────────────────────────────────────────
         try {
-            const customerId = await upsertCustomerFromBooking({
+            const customerId = await this.customerService.findOrCreateCustomerFromBooking({
                 fullName: name,
                 email: clientEmail,
                 phone,

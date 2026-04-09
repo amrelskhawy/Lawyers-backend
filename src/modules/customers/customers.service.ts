@@ -59,6 +59,36 @@ export class CustomerService {
         }
     }
 
+
+    /**
+     * Find existing customer by email, or create a new one.
+     * Called from public (non-auth) booking flow — never updates existing records.
+     */
+    async findOrCreateCustomerFromBooking(data: {
+        fullName: string;
+        email: string;
+        phone: string;
+    }): Promise<string> {
+        const existing = await prisma.customer.findFirst({
+            where: { email: data.email },
+        });
+
+        if (existing) {
+            return existing.id;
+        }
+
+        const customer = await prisma.customer.create({
+            data: {
+                fullName: data.fullName,
+                email: data.email,
+                phone: data.phone,
+            },
+        });
+
+        return customer.id;
+    }
+
+
     async deleteCustomer(id: string) {
         const customer = await prisma.customer.findUnique({ where: { id } });
 

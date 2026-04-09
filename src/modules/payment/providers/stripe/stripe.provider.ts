@@ -2,7 +2,7 @@ import Stripe from "stripe";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { startOfDay } from "date-fns";
-import { upsertCustomerFromBooking } from "../../../customers/customers.helper.js";
+import { CustomerService } from "@app/modules/customers/customers.service.js";
 import {
     IPaymentProvider,
     CreatePaymentResult,
@@ -21,6 +21,8 @@ const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:3000";
 
 export class StripeProvider implements IPaymentProvider {
     readonly name: PaymentProvider = "STRIPE";
+
+    constructor(private customerService: CustomerService) { }
 
     async createCustomer(email: string, name: string) {
         return await stripe.customers.create({ email, name });
@@ -239,7 +241,7 @@ export class StripeProvider implements IPaymentProvider {
         }
 
         try {
-            const customerId = await upsertCustomerFromBooking({
+            const customerId = await this.customerService.findOrCreateCustomerFromBooking({
                 fullName: m.name,
                 email: m.clientEmail,
                 phone: m.phone,
