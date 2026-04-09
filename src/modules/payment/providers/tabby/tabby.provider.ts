@@ -1,6 +1,7 @@
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { IPaymentProvider, BookingPayload } from "../../interfaces/payment.interface.js";
+import { upsertCustomerFromBooking } from "../../../customers/customers.helper.js";
 
 const TABBY_BASE_URL = "https://api.tabby.ai/api";
 
@@ -332,6 +333,12 @@ export class TabbyProvider implements IPaymentProvider {
 
         // ── Create booking ────────────────────────────────────────────────────
         try {
+            const customerId = await upsertCustomerFromBooking({
+                fullName: name,
+                email: clientEmail,
+                phone,
+            });
+
             await prisma.booking.create({
                 data: {
                     serviceId,
@@ -345,6 +352,7 @@ export class TabbyProvider implements IPaymentProvider {
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",
                     tabbyPaymentId: payment.id,
+                    customerId,
                 },
             });
 

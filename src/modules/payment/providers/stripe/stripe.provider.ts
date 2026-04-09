@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import prisma from "../../../../core/db/prisma.js";
 import { AppResponse } from "../../../../core/utils/AppResponse.js";
 import { startOfDay } from "date-fns";
+import { upsertCustomerFromBooking } from "../../../customers/customers.helper.js";
 import {
     IPaymentProvider,
     CreatePaymentResult,
@@ -238,6 +239,12 @@ export class StripeProvider implements IPaymentProvider {
         }
 
         try {
+            const customerId = await upsertCustomerFromBooking({
+                fullName: m.name,
+                email: m.clientEmail,
+                phone: m.phone,
+            });
+
             await prisma.booking.create({
                 data: {
                     serviceId: m.serviceId,
@@ -252,6 +259,7 @@ export class StripeProvider implements IPaymentProvider {
                     paymentIntentId: session.payment_intent as string,
                     stripeSessionId: session.id,
                     totalAmount: m.totalAmount,
+                    customerId,
                 },
             });
             console.log(`[Stripe] Booking created after payment for session ${session.id}`);

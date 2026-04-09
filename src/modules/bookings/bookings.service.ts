@@ -10,6 +10,7 @@ import { getStripeReceiptUrl } from "../payment/providers/stripe/stripe.provider
 import { BookingValidator } from "./bookings.validator.js";
 import { createGoogleEvent } from "../../core/services/google/calendar.js";
 import { EmailService } from "../emails/index.js";
+import { upsertCustomerFromBooking } from "../customers/customers.helper.js";
 
 
 export class BookingService {
@@ -92,6 +93,12 @@ export class BookingService {
         const { bookingDay, cleanStartTime, endTime, service } =
             await BookingValidator.validateCreateBooking(payload);
 
+        const customerId = await upsertCustomerFromBooking({
+            fullName: payload.name,
+            email: payload.clientEmail,
+            phone: payload.phone_number,
+        });
+
         const booking = await prisma.booking.create({
             data: {
                 name: payload.name,
@@ -105,6 +112,7 @@ export class BookingService {
                 paymentStatus: "AUTHORIZED",
                 totalAmount: service.price ? new Prisma.Decimal(String(service.price)) : new Prisma.Decimal(0),
                 createdByRole,
+                customerId,
             },
             include: { service: true },
         });
@@ -173,7 +181,7 @@ export class BookingService {
 
     async getAllBookings() {
         return await prisma.booking.findMany({
-            include: { service: true },
+            include: { service: true, customer: true },
             orderBy: { date: "desc" },
         });
     }
