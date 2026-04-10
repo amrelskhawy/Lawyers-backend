@@ -1,0 +1,478 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <title>نماذج الجلسة - شركة سعد البقمي</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    /* ============================================================
+       Mirrors the Angular preview component (case-report-template).
+       Same colors, same layout, same conditional notes.
+    ============================================================ */
+
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+    @page { size: A4; margin: 0; }
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif !important;
+    }
+
+    :root {
+      --navy: #1a1a3e;
+      --gold: #c9a84c;
+      --cream: #f5f0e0;
+      --weak: #d9534f;
+      --strong: #5cb85c;
+      --gap: #f0ad4e;
+    }
+
+    html, body {
+      width: 210mm;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      direction: rtl;
+      text-align: right;
+      color: #1a1a3e;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.55;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .page {
+      width: 210mm;
+      min-height: 297mm;
+      position: relative;
+      background: #fff;
+      page-break-after: always;
+      display: flex;
+      flex-direction: column;
+    }
+    .page:last-child { page-break-after: avoid; }
+
+    /* ===== HEADER (navy bar with brand + welcome) ===== */
+    .report-header {
+      background: #1a1a3e;
+      padding: 14mm 18mm 10mm 18mm;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10mm;
+    }
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+    }
+    .brand-logo {
+      width: 18mm;
+      height: 18mm;
+      border: 0.6mm solid #c9a84c;
+      border-radius: 2mm;
+      background: rgba(201,168,76,0.1);
+      color: #c9a84c;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      font-size: 16px;
+    }
+    .brand-text { color: #fff; text-align: right; }
+    .brand-name { font-size: 14px; font-weight: 700; }
+    .brand-subtitle { font-size: 9px; color: #c9a84c; letter-spacing: 1px; }
+    .welcome { font-size: 32px; font-weight: 900; color: #c9a84c; font-style: italic; letter-spacing: 2px; }
+    .form-title-header { color: #fff; font-size: 18px; font-weight: 700; }
+
+    /* ===== TITLE BAR (page 1) ===== */
+    .title-bar {
+      background: linear-gradient(135deg, #f5f0e0, #ede4cc);
+      padding: 8mm 18mm;
+      text-align: center;
+      border-bottom: 1mm solid #c9a84c;
+    }
+    .title-bar h2 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      color: #1a1a3e;
+      letter-spacing: 4px;
+    }
+
+    /* ===== INSTRUCTION + FOCUS (page 2) ===== */
+    .instruction-banner {
+      background: rgba(201,168,76,0.08);
+      padding: 5mm 18mm;
+      text-align: center;
+      font-size: 13px;
+      color: #1a1a3e;
+      border-bottom: 0.3mm solid rgba(201,168,76,0.4);
+    }
+    .focus-tags {
+      display: flex;
+      justify-content: center;
+      gap: 8mm;
+      padding: 5mm 18mm;
+      flex-wrap: wrap;
+    }
+    .focus-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 2mm;
+      background: #f5f0e0;
+      padding: 1.5mm 4mm;
+      border-radius: 8mm;
+      font-size: 12px;
+      color: #1a1a3e;
+    }
+    .dot { width: 2.5mm; height: 2.5mm; border-radius: 50%; display: inline-block; }
+    .dot-weakness { background: #d9534f; }
+    .dot-strength { background: #5cb85c; }
+    .dot-gap      { background: #f0ad4e; }
+
+    /* ===== BODY ===== */
+    .report-body {
+      padding: 8mm 18mm;
+      flex: 1;
+    }
+
+    .form-row {
+      display: flex;
+      gap: 10mm;
+      margin-bottom: 6mm;
+      flex-wrap: wrap;
+    }
+    .form-group {
+      flex: 1;
+      min-width: 60mm;
+      display: flex;
+      align-items: baseline;
+      gap: 3mm;
+    }
+    .label {
+      font-weight: 700;
+      font-size: 13px;
+      color: #1a1a3e;
+      white-space: nowrap;
+    }
+    .value {
+      flex: 1;
+      border-bottom: 0.5mm dotted #999;
+      padding-bottom: 1mm;
+      min-height: 6mm;
+      font-size: 14px;
+      color: #333;
+    }
+
+    .section-pill {
+      display: inline-block;
+      background: #c9a84c;
+      color: #fff;
+      padding: 2mm 5mm;
+      border-radius: 2mm;
+      font-size: 13px;
+      font-weight: 700;
+      margin: 5mm 0 4mm;
+    }
+
+    .checkbox-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4mm 9mm;
+      margin-bottom: 6mm;
+    }
+    .checkbox-item {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      font-size: 13px;
+    }
+    .checkbox-box {
+      width: 4mm;
+      height: 4mm;
+      border: 0.5mm solid #1a1a3e;
+      border-radius: 1mm;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    .checkbox-box.checked { background: #c9a84c; border-color: #c9a84c; color: #fff; font-size: 11px; font-weight: 700; }
+
+    .question-row {
+      display: flex;
+      align-items: center;
+      gap: 4mm;
+      margin: 5mm 0;
+      flex-wrap: wrap;
+    }
+    .question { font-weight: 700; font-size: 13px; }
+    .yes-no { display: flex; gap: 6mm; }
+
+    .requirements {
+      margin-top: 6mm;
+      padding: 5mm;
+      background: rgba(201,168,76,0.05);
+      border-radius: 2mm;
+      border: 0.3mm dashed #c9a84c;
+    }
+    .requirements-title {
+      font-size: 12px;
+      font-weight: 700;
+      color: #c9a84c;
+      margin-bottom: 3mm;
+    }
+    .requirements ul { list-style: none; padding: 0; margin: 0; }
+    .requirements li {
+      font-size: 12px;
+      color: #1a1a3e;
+      padding-right: 5mm;
+      margin-bottom: 2mm;
+      position: relative;
+    }
+    .requirements li::before {
+      content: '●';
+      color: #c9a84c;
+      position: absolute;
+      right: 0;
+      top: 0;
+      font-size: 9px;
+    }
+
+    /* ===== STRUCTURED NOTES (page 2) ===== */
+    .notes-section { margin-bottom: 6mm; }
+    .notes-title {
+      display: flex;
+      align-items: center;
+      gap: 3mm;
+      font-weight: 700;
+      color: #1a1a3e;
+      font-size: 13px;
+      margin-bottom: 2mm;
+    }
+    .notes-body {
+      background: rgba(201,168,76,0.04);
+      border-right: 1mm solid #c9a84c;
+      padding: 3mm 4mm;
+      border-radius: 1.5mm;
+      font-size: 13px;
+      color: #333;
+      min-height: 14mm;
+    }
+    .notes-body div { line-height: 1.8; }
+    .notes-body .empty { color: #aaa; font-style: italic; }
+
+    /* ===== FREE-FORM NOTES (page 2) ===== */
+    .free-lines {
+      display: flex;
+      flex-direction: column;
+      gap: 3mm;
+    }
+    .free-line {
+      border-bottom: 0.3mm solid #ddd;
+      min-height: 8mm;
+      font-size: 13px;
+      color: #333;
+      padding: 1mm 0;
+    }
+
+    .report-footer {
+      border-top: 1mm solid #c9a84c;
+      padding: 4mm 18mm;
+      text-align: center;
+      font-size: 11px;
+      color: #c9a84c;
+      font-weight: 600;
+    }
+
+    @media print {
+      html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+      .page { margin: 0; box-shadow: none; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ============ PAGE 1: CLIENT FORM ============ -->
+<div class="page">
+
+  <header class="report-header">
+    <div class="brand">
+      <div class="brand-logo">SB</div>
+      <div class="brand-text">
+        <div class="brand-name">{{company_name}}</div>
+        <div class="brand-subtitle">{{company_subtitle}}</div>
+      </div>
+    </div>
+    <div class="welcome">{{welcome_text}}</div>
+  </header>
+
+  <div class="title-bar">
+    <h2>نـمـوذج بـيـانـات الـعـمـيـل</h2>
+  </div>
+
+  <div class="report-body">
+
+    <div class="form-row">
+      <div class="form-group">
+        <span class="label">الإسم:</span>
+        <span class="value">{{client_name}}</span>
+      </div>
+      <div class="form-group">
+        <span class="label">رقم الجوال:</span>
+        <span class="value">{{mobile_number}}</span>
+      </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <span class="label">التاريخ:</span>
+        <span class="value">{{date}}</span>
+      </div>
+    </div>
+
+    <span class="section-pill">نوع القضية</span>
+    <div class="checkbox-grid">
+      {{#each case_types}}
+      <div class="checkbox-item">
+        <span class="checkbox-box {{#if this.checked}}checked{{/if}}">{{#if this.checked}}✓{{/if}}</span>
+        <span>{{this.label}}</span>
+      </div>
+      {{/each}}
+    </div>
+
+    <div class="question-row">
+      <span class="question">هل تطلب التعامل مع محامي معين من الشركة ؟</span>
+      <div class="yes-no">
+        <div class="checkbox-item">
+          <span class="checkbox-box {{#if lawyer_preference_yes}}checked{{/if}}">{{#if lawyer_preference_yes}}✓{{/if}}</span>
+          <span>نعم</span>
+        </div>
+        <div class="checkbox-item">
+          <span class="checkbox-box {{#if lawyer_preference_no}}checked{{/if}}">{{#if lawyer_preference_no}}✓{{/if}}</span>
+          <span>لا</span>
+        </div>
+      </div>
+    </div>
+
+    <span class="section-pill">إسم المحامي</span>
+    <div class="form-row">
+      <div class="form-group">
+        <span class="value">{{preferred_lawyer_name}}</span>
+      </div>
+    </div>
+
+    <div class="requirements">
+      <div class="requirements-title">*متطلبات مهمة يجب توافرها سواءً بشكل الكتروني أو مطبوع...</div>
+      <ul>
+        {{#each requirements}}
+        <li>{{this}}</li>
+        {{/each}}
+      </ul>
+    </div>
+
+  </div>
+
+  <footer class="report-footer">
+    يرجي إرفاق النموذج مع نموذج الضبط وتسليمه للقسم المسؤول
+  </footer>
+</div>
+
+<!-- ============ PAGE 2: LAWYER FORM ============ -->
+<div class="page">
+
+  <header class="report-header">
+    <div class="brand">
+      <div class="brand-logo">SB</div>
+      <div class="brand-text">
+        <div class="brand-name">{{company_name}}</div>
+        <div class="brand-subtitle">{{company_subtitle}}</div>
+      </div>
+    </div>
+    <div class="form-title-header">نموذج المحامي</div>
+    <div class="welcome">{{welcome_text}}</div>
+  </header>
+
+  <div class="instruction-banner">
+    برجاء التركيز على النقاط التالية أثناء الجلسة ومراجعتها بعناية
+  </div>
+
+  <div class="focus-tags">
+    <span class="focus-tag"><span class="dot dot-weakness"></span>نقاط الضعف</span>
+    <span class="focus-tag"><span class="dot dot-strength"></span>نقاط القوة</span>
+    <span class="focus-tag"><span class="dot dot-gap"></span>الثغرات</span>
+  </div>
+
+  <div class="report-body">
+
+    <div class="form-row">
+      <div class="form-group">
+        <span class="label">إسم مستقبل الجلسة:</span>
+        <span class="value">{{session_receiver}}</span>
+      </div>
+      <div class="form-group">
+        <span class="label">التاريخ:</span>
+        <span class="value">{{session_date}}</span>
+      </div>
+    </div>
+
+    {{#if has_structured_notes}}
+
+      <div class="notes-section">
+        <div class="notes-title"><span class="dot dot-weakness"></span>نقاط الضعف</div>
+        <div class="notes-body">
+          {{#each weaknesses}}
+            <div>- {{this}}</div>
+          {{else}}
+            <div class="empty">—</div>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="notes-section">
+        <div class="notes-title"><span class="dot dot-strength"></span>نقاط القوة</div>
+        <div class="notes-body">
+          {{#each strengths}}
+            <div>- {{this}}</div>
+          {{else}}
+            <div class="empty">—</div>
+          {{/each}}
+        </div>
+      </div>
+
+      <div class="notes-section">
+        <div class="notes-title"><span class="dot dot-gap"></span>الثغرات</div>
+        <div class="notes-body">
+          {{#each gaps}}
+            <div>- {{this}}</div>
+          {{else}}
+            <div class="empty">—</div>
+          {{/each}}
+        </div>
+      </div>
+
+    {{else}}
+
+      <div class="free-lines">
+        {{#each lines}}
+          <div class="free-line">{{this}}</div>
+        {{/each}}
+      </div>
+
+    {{/if}}
+
+  </div>
+
+  <footer class="report-footer">
+    شركة سعد البقمي للمحاماة والاستشارات القانونية
+  </footer>
+</div>
+
+</body>
+</html>
