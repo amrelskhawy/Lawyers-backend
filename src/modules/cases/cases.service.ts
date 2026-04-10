@@ -4,6 +4,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
+import { whapiService } from "../../core/services/whapi/whapi.service.js";
 import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js";
 
 const caseInclude = {
@@ -15,6 +16,7 @@ const caseInclude = {
     createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.CaseInclude;
 
+export type WhatsappSendType = "REPORT" | "MESSAGE";
 export class CasesService {
     async list() {
         return prisma.case.findMany({
@@ -226,6 +228,31 @@ export class CasesService {
         return prisma.case.update({
             where: { id: caseId },
             data: { sentToClientAt: new Date() },
+            include: caseInclude,
+        });
+    }
+
+    async sendToWhatsapp(caseId: string, type: WhatsappSendType = "REPORT") {
+        const c = await prisma.case.findUnique({ where: { id: caseId }, include: caseInclude });
+        if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        if (!c.customer?.phone) throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
+
+        if (type === "REPORT") {
+            const buffer = await renderCaseReportPdf(c);
+            const base64 = buffer.toString("base64");
+            await whapiService.sendDocument(c.customer.phone, {
+                media: base64,
+                filename: `case-report-${c.id.slice(0, 8)}.pdf`,
+                caption: "تقرير القضية - شركة سعد البقمي للمحاماة والاستشارات القانونية",
+            });
+        } else {
+            const body = `مرحباً ${c.customer.fullName}، تم تسجيل قضيتكم لدى شركة سعد البقمي للمحاماة والاستشارات القانونية. سيتواصل معكم فريقنا قريباً.`;
+            await whapiService.sendText(c.customer.phone, body);
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: { whatsappSentAt: new Date() },
             include: caseInclude,
         });
     }
