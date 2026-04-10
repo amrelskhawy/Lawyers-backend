@@ -18,6 +18,10 @@ model User {
   tokens      Token[]
   organizer   Organizer?
 
+  createdCases         Case[]   @relation("CaseCreator")
+  preferredOnCases     Case[]   @relation("CasePreferredLawyer")
+  sessionReceivedCases Case[]   @relation("CaseSessionReceiver")
+
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
 }
@@ -115,7 +119,10 @@ model Customer {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  caseReportsFolderId String?
+
   bookings  Booking[]
+  cases     Case[]
 }
 
 model Organizer {
@@ -125,6 +132,54 @@ model Organizer {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+enum CaseType {
+  CRIMINAL
+  ADMINISTRATIVE
+  LABOR
+  COMMERCIAL
+  PENAL
+  GENERAL
+  PERSONAL_STATUS
+}
+
+model Case {
+  id        String   @id @default(uuid())
+
+  customerId String
+  customer   Customer @relation(fields: [customerId], references: [id])
+
+  caseType  CaseType
+  caseDate  DateTime
+
+  wantsSpecificLawyer Boolean @default(false)
+  preferredLawyerId   String?
+  preferredLawyer     User?   @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
+
+  sessionReceiverId   String?
+  sessionReceiver     User?   @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
+  sessionDate         DateTime?
+
+  hasStructuredNotes  Boolean  @default(true)
+  weaknesses          String[] @default([])
+  strengths           String[] @default([])
+  gaps                String[] @default([])
+  freeNotes           String?
+
+  reportFileId   String?
+  reportUrl      String?
+  sentToClientAt DateTime?
+
+  createdById String
+  createdBy   User   @relation("CaseCreator", fields: [createdById], references: [id])
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
+  @@index([createdById])
 }
 
 enum PaymentStatus {

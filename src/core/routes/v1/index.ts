@@ -11,6 +11,7 @@ import chatbotRoutes from "../../../modules/chatbot/chatbot.routes.js";
 import paymentRoutes from "../../../modules/payment/payment.routes.js";
 import customersRoutes from "../../../modules/customers/customers.routes.js";
 import organizersRoutes from "../../../modules/organizers/organizers.routes.js";
+import casesRoutes from "../../../modules/cases/cases.routes.js";
 
 
 const router = Router();
@@ -27,5 +28,6 @@ router.use("/chat", chatbotRoutes);
 router.use("/payment", paymentRoutes);
 router.use("/customers", customersRoutes);
 router.use("/organizers", organizersRoutes);
+router.use("/cases", casesRoutes);
 
 export default router;
