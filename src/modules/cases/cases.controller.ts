@@ -45,3 +45,9 @@ export const sendCaseToClient = asyncHandler(async (req: AuthRequest, res: Respo
     const data = await cases.sendToClient(req.params.id as string);
     res.status(200).json(new AppResponse(true, "CASE_SENT_TO_CLIENT_SUCCESS", data));
 });
+
+export const sendCaseToWhatsapp = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const type = (req.body.type ?? "REPORT") as WhatsappSendType;
+    const data = await cases.sendToWhatsapp(req.params.id as string, type);
+    res.status(200).json(new AppResponse(true, "CASE_SENT_TO_WHATSAPP_SUCCESS", data));
+});
