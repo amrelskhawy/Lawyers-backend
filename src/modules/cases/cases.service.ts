@@ -252,7 +252,7 @@ export class CasesService {
 
         return prisma.case.update({
             where: { id: caseId },
-            data: { whatsappSentAt: new Date() },
+            data: { sentToClientAt: new Date() },
             include: caseInclude,
         });
     }
