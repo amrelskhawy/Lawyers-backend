@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<title>Session Report Layout Editor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: system-ui, sans-serif; background: #222; color: #eee; display: flex; }
+  aside { width: 320px; padding: 12px; background: #1a1a1a; overflow: auto; height: 100vh; }
+  main { flex: 1; padding: 24px; overflow: auto; height: 100vh; }
+  h2 { font-size: 14px; margin-bottom: 8px; }
+  .field-row { display: flex; align-items: center; gap: 6px; padding: 4px; border-radius: 4px; cursor: pointer; font-size: 12px; }
+  .field-row:hover, .field-row.active { background: #333; }
+  .field-row .sw { width: 12px; height: 12px; border-radius: 2px; border: 1px solid #555; }
+  .field-row input[type=text] { flex: 1; background: transparent; border: 0; color: #eee; font-size: 11px; }
+  button { background: #0a84ff; color: white; border: 0; padding: 8px 14px; border-radius: 6px; cursor: pointer; font-size: 13px; margin-top: 12px; width: 100%; }
+  button.secondary { background: #444; }
+  textarea { width: 100%; height: 180px; background: #0a0a0a; color: #7fffd4; border: 1px solid #333; border-radius: 4px; padding: 6px; font-family: monospace; font-size: 11px; margin-top: 8px; }
+  .stage { position: relative; display: inline-block; background: #fff; box-shadow: 0 4px 30px rgba(0,0,0,.5); }
+  .stage img { display: block; width: 640px; height: auto; user-select: none; pointer-events: none; }
+  .ov { position: absolute; border: 1px dashed rgba(255,40,40,.8); background: rgba(255,40,40,.1); cursor: move; display: flex; font-family: 'Cairo', sans-serif; color: #140C39; overflow: hidden; padding: 0 2px; white-space: nowrap; }
+  .ov.wrap { white-space: normal; }
+  .ov .txt { width: 100%; }
+  .ov.selected { border: 2px solid #0a84ff; background: rgba(10,132,255,.15); z-index: 10; }
+  .ov .handle { position: absolute; width: 10px; height: 10px; background: #0a84ff; border: 1px solid white; }
+  .ov .handle.br { right: -5px; bottom: -5px; cursor: nwse-resize; }
+  .hint { font-size: 10px; color: #888; margin-top: 8px; line-height: 1.4; }
+  .controls { margin-top: 8px; font-size: 11px; display: grid; grid-template-columns: auto 1fr; gap: 4px 6px; align-items: center; }
+  .controls input { background: #0a0a0a; border: 1px solid #333; color: #eee; padding: 2px 4px; border-radius: 3px; font-size: 11px; width: 100%; }
+  .align-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 8px; }
+  .align-grid button { margin: 0; padding: 6px 0; font-size: 10px; background: #333; }
+  .align-grid button:hover { background: #0a84ff; }
+  .toggle { display: flex; align-items: center; gap: 6px; font-size: 11px; margin-top: 8px; }
+  .guide { position: absolute; background: #ff00aa; z-index: 100; pointer-events: none; }
+  .guide.v { width: 1px; top: 0; bottom: 0; }
+  .guide.h { height: 1px; left: 0; right: 0; }
+</style>
+</head>
+<body>
+<aside>
+  <h2>Fields</h2>
+  <div id="field-list"></div>
+  <h2 style="margin-top:14px">Selected field</h2>
+  <div class="controls">
+    <label>top%</label><input id="c-top" type="number" step="0.1">
+    <label>left%</label><input id="c-left" type="number" step="0.1">
+    <label>width%</label><input id="c-width" type="number" step="0.1">
+    <label>height%</label><input id="c-height" type="number" step="0.1">
+    <label>font pt</label><input id="c-fs" type="number" step="0.5">
+    <label>text</label><input id="c-text" type="text">
+  </div>
+  <h2 style="margin-top:14px">Text inside box</h2>
+  <div class="align-grid">
+    <button onclick="setTa('start')">⇥ Start</button>
+    <button onclick="setTa('center')">↔ Center</button>
+    <button onclick="setTa('end')">⇤ End</button>
+    <button onclick="setVa('top')">⤒ Top</button>
+    <button onclick="setVa('center')">↕ Middle</button>
+    <button onclick="setVa('bottom')">⤓ Bottom</button>
+  </div>
+  <h2 style="margin-top:14px">Align to page</h2>
+  <div class="align-grid">
+    <button onclick="alignPage('left')">⇤ Left</button>
+    <button onclick="alignPage('cx')">↔ Center</button>
+    <button onclick="alignPage('right')">⇥ Right</button>
+    <button onclick="alignPage('top')">⤒ Top</button>
+    <button onclick="alignPage('cy')">↕ Middle</button>
+    <button onclick="alignPage('bottom')">⤓ Bottom</button>
+  </div>
+  <h2 style="margin-top:10px">Align to another field</h2>
+  <select id="align-target" style="width:100%;background:#0a0a0a;color:#eee;border:1px solid #333;padding:4px;font-size:11px"></select>
+  <div class="align-grid">
+    <button onclick="alignTo('left')">Same left</button>
+    <button onclick="alignTo('cx')">Same cx</button>
+    <button onclick="alignTo('right')">Same right</button>
+    <button onclick="alignTo('top')">Same top</button>
+    <button onclick="alignTo('cy')">Same cy</button>
+    <button onclick="alignTo('bottom')">Same btm</button>
+    <button onclick="alignTo('width')">Same W</button>
+    <button onclick="alignTo('height')">Same H</button>
+    <button onclick="alignTo('size')">Same WH</button>
+  </div>
+  <div class="toggle">
+    <input type="checkbox" id="snap-toggle" checked>
+    <label for="snap-toggle">Snap to edges/centers while dragging (0.4%)</label>
+  </div>
+  <div class="hint">
+    Drag to move. Blue corner resizes.<br>
+    Arrows = 0.1% nudge. Shift+Arrow = 1%.<br>
+    Delete = remove field. Pink lines appear when snapping.
+  </div>
+  <button onclick="exportJson()">Export JSON</button>
+  <button class="secondary" onclick="importJson()">Import JSON</button>
+  <button class="secondary" onclick="resetAll()">Reset to defaults</button>
+  <textarea id="json-out" placeholder="JSON output..."></textarea>
+</aside>
+<main>
+  <div class="stage" id="stage">
+    <img id="bg" src="../src/views/cases/session-report-bg.png" alt="">
+  </div>
+</main>
+<script>
+const DEFAULTS = [
+  // name, top%, left%, width%, height%, fontSize, sampleText, color
+  // ta = text-align (start|center|end), va = vertical-align (top|center|bottom)
+  { id: 'report_number',  top: 13.9, left: 55.0, width: 9.0,  height: 2.2, fs: 10.5, text: 'DEAD', color: '#ffffff', ta: 'center', va: 'center' },
+  { id: 'gregorian_date', top: 13.9, left: 12.0, width: 22.0, height: 2.2, fs: 10.5, text: '31 / 3 / 2026', color: '#ffffff', ta: 'center', va: 'center' },
+  { id: 'customer_name',  top: 23.5, left: 51.3, width: 22.0, height: 2.9, fs: 10,   text: 'صالح عمر صالح العامري', color: '#140C39', ta: 'center', va: 'center' },
+  { id: 'opponent_name',  top: 23.5, left: 7.0,  width: 21.9, height: 2.9, fs: 9,    text: 'هيئة الرقابة ومكافحة الفساد', color: '#ffffff', ta: 'center', va: 'center' },
+  { id: 'case_charge',    top: 26.5, left: 51.3, width: 22.0, height: 2.9, fs: 8,    text: 'تعزير – مخالفة النظام الجزائي لجرائم التزوير', color: '#ffffff', ta: 'center', va: 'center' },
+  { id: 'court_name',     top: 26.5, left: 7.0,  width: 21.9, height: 2.9, fs: 9,    text: 'المحكمة الجزائية بالرياض', color: '#140C39', ta: 'center', va: 'center' },
+  { id: 'case_number',    top: 29.5, left: 7.0,  width: 21.9, height: 7.3, fs: 11,   text: '4772688750', color: '#140C39', ta: 'center', va: 'center' },
+  { id: 'body_customer',  top: 39.7, left: 65.0, width: 22.0, height: 2.2, fs: 11,   text: 'صالح عمر صالح العامري', color: '#140C39', ta: 'center', va: 'bottom' },
+  { id: 'hijri_date',     top: 44.8, left: 34.0, width: 15.0, height: 2.2, fs: 11,   text: '12 / 10 / 1447', color: '#140C39', ta: 'center', va: 'bottom' },
+  { id: 'session_time',   top: 44.8, left: 5.0,  width: 13.0, height: 2.2, fs: 11,   text: '08 : 00 ص', color: '#140C39', ta: 'center', va: 'bottom' },
+  { id: 'session_ordinal',top: 50.1, left: 44.0, width: 18.0, height: 2.2, fs: 10,   text: 'السابعة عشر بعد المائة', color: '#140C39', ta: 'center', va: 'bottom' },
+  { id: 'court_city',     top: 50.1, left: 22.0, width: 18.0, height: 2.2, fs: 10,   text: 'الرياض', color: '#140C39', ta: 'center', va: 'bottom' },
+  { id: 'session_summary',top: 58.5, left: 9.0,  width: 82.0, height: 20.0,fs: 10,   text: 'تم طلب الإفراج عن المدعى عليه بسبب تدهور حالته الصحية، ورفضت المحكمة الطلب.', color: '#140C39', ta: 'start', va: 'top' },
+];
+
+// Backfill for old saved JSON without ta/va.
+function normalize(f) {
+  if (!f.ta) f.ta = 'center';
+  if (!f.va) f.va = 'center';
+  return f;
+}
+
+let fields = JSON.parse(JSON.stringify(DEFAULTS));
+let selectedId = null;
+
+const stage = document.getElementById('stage');
+const bg = document.getElementById('bg');
+const list = document.getElementById('field-list');
+
+function fieldById(id) { return fields.find(f => f.id === id); }
+
+const SNAP = 0.4; // snap tolerance in %
+
+function snapValue(val, candidates) {
+  for (const c of candidates) {
+    if (Math.abs(val - c) < SNAP) return c;
+  }
+  return val;
+}
+
+function clearGuides() { stage.querySelectorAll('.guide').forEach(n => n.remove()); }
+function drawGuide(type, pct) {
+  const g = document.createElement('div');
+  g.className = 'guide ' + type;
+  if (type === 'v') g.style.left = pct + '%';
+  else g.style.top = pct + '%';
+  stage.appendChild(g);
+}
+
+function snapField(f, key) {
+  // Build x candidates from other fields (left, center, right) and page (0,50,100)
+  const xs = [0, 50, 100];
+  const ys = [0, 50, 100];
+  for (const o of fields) {
+    if (o.id === f.id) continue;
+    xs.push(o.left, o.left + o.width / 2, o.left + o.width);
+    ys.push(o.top, o.top + o.height / 2, o.top + o.height);
+  }
+  clearGuides();
+  if (!document.getElementById('snap-toggle').checked) return;
+  const myLeft = f.left, myCx = f.left + f.width / 2, myRight = f.left + f.width;
+  const myTop = f.top, myCy = f.top + f.height / 2, myBot = f.top + f.height;
+  // Try each of the three x anchors and snap
+  for (const [val, offset] of [[myLeft, 0], [myCx, f.width / 2], [myRight, f.width]]) {
+    const s = snapValue(val, xs);
+    if (s !== val) { f.left = Math.round((s - offset) * 10) / 10; drawGuide('v', s); break; }
+  }
+  for (const [val, offset] of [[myTop, 0], [myCy, f.height / 2], [myBot, f.height]]) {
+    const s = snapValue(val, ys);
+    if (s !== val) { f.top = Math.round((s - offset) * 10) / 10; drawGuide('h', s); break; }
+  }
+}
+
+function setTa(v) { const f = fieldById(selectedId); if (!f) return; f.ta = v; render(); }
+function setVa(v) { const f = fieldById(selectedId); if (!f) return; f.va = v; render(); }
+
+function alignPage(edge) {
+  const f = fieldById(selectedId);
+  if (!f) return;
+  if (edge === 'left') f.left = 0;
+  else if (edge === 'right') f.left = Math.round((100 - f.width) * 10) / 10;
+  else if (edge === 'cx') f.left = Math.round((50 - f.width / 2) * 10) / 10;
+  else if (edge === 'top') f.top = 0;
+  else if (edge === 'bottom') f.top = Math.round((100 - f.height) * 10) / 10;
+  else if (edge === 'cy') f.top = Math.round((50 - f.height / 2) * 10) / 10;
+  render();
+}
+
+function alignTo(prop) {
+  const f = fieldById(selectedId);
+  const tId = document.getElementById('align-target').value;
+  const t = fieldById(tId);
+  if (!f || !t || f.id === t.id) return;
+  if (prop === 'left') f.left = t.left;
+  else if (prop === 'right') f.left = Math.round((t.left + t.width - f.width) * 10) / 10;
+  else if (prop === 'cx') f.left = Math.round((t.left + t.width / 2 - f.width / 2) * 10) / 10;
+  else if (prop === 'top') f.top = t.top;
+  else if (prop === 'bottom') f.top = Math.round((t.top + t.height - f.height) * 10) / 10;
+  else if (prop === 'cy') f.top = Math.round((t.top + t.height / 2 - f.height / 2) * 10) / 10;
+  else if (prop === 'width') f.width = t.width;
+  else if (prop === 'height') f.height = t.height;
+  else if (prop === 'size') { f.width = t.width; f.height = t.height; }
+  render();
+}
+
+function render() {
+  // remove existing overlays (keep img)
+  stage.querySelectorAll('.ov, .guide').forEach(n => n.remove());
+  list.innerHTML = '';
+  // populate align-target dropdown
+  const sel = document.getElementById('align-target');
+  const prev = sel.value;
+  sel.innerHTML = fields.map(f => `<option value="${f.id}">${f.id}</option>`).join('');
+  if (prev) sel.value = prev;
+  for (const f of fields) {
+    normalize(f);
+    const div = document.createElement('div');
+    div.className = 'ov' + (f.id === selectedId ? ' selected' : '');
+    if (f.id === 'session_summary') div.classList.add('wrap');
+    div.dataset.id = f.id;
+    div.style.top = f.top + '%';
+    div.style.left = f.left + '%';
+    div.style.width = f.width + '%';
+    div.style.height = f.height + '%';
+    div.style.fontSize = (f.fs * 640 / 595) + 'px';
+    div.style.color = f.color;
+    // Vertical alignment via flex on the box
+    div.style.alignItems = f.va === 'top' ? 'flex-start' : (f.va === 'bottom' ? 'flex-end' : 'center');
+    // Inner span holds the text so it can pick up its own horizontal alignment
+    const span = document.createElement('span');
+    span.className = 'txt';
+    span.style.textAlign = f.ta;
+    span.textContent = f.text;
+    div.appendChild(span);
+    const h = document.createElement('div');
+    h.className = 'handle br';
+    div.appendChild(h);
+    stage.appendChild(div);
+    attachDrag(div, f);
+
+    const row = document.createElement('div');
+    row.className = 'field-row' + (f.id === selectedId ? ' active' : '');
+    row.innerHTML = `<span class="sw" style="background:${f.color}"></span><span>${f.id}</span>`;
+    row.onclick = () => { selectedId = f.id; render(); updateControls(); };
+    list.appendChild(row);
+  }
+  updateControls();
+}
+
+function updateControls() {
+  const f = fieldById(selectedId);
+  for (const k of ['top','left','width','height','fs','text']) {
+    const el = document.getElementById('c-' + k);
+    el.value = f ? f[k] : '';
+    el.oninput = () => {
+      if (!f) return;
+      f[k] = k === 'text' ? el.value : parseFloat(el.value);
+      render();
+    };
+  }
+}
+
+function attachDrag(div, f) {
+  const handle = div.querySelector('.handle.br');
+  div.onmousedown = (e) => {
+    if (e.target === handle) return;
+    e.preventDefault();
+    selectedId = f.id;
+    render();
+    const rect = stage.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const startLeft = f.left, startTop = f.top;
+    const move = (ev) => {
+      const dx = (ev.clientX - startX) / rect.width * 100;
+      const dy = (ev.clientY - startY) / rect.height * 100;
+      f.left = Math.round((startLeft + dx) * 10) / 10;
+      f.top = Math.round((startTop + dy) * 10) / 10;
+      render();
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  };
+  handle.onmousedown = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    selectedId = f.id;
+    render();
+    const rect = stage.getBoundingClientRect();
+    const startX = e.clientX, startY = e.clientY;
+    const startW = f.width, startH = f.height;
+    const move = (ev) => {
+      const dx = (ev.clientX - startX) / rect.width * 100;
+      const dy = (ev.clientY - startY) / rect.height * 100;
+      f.width = Math.max(1, Math.round((startW + dx) * 10) / 10);
+      f.height = Math.max(1, Math.round((startH + dy) * 10) / 10);
+      render();
+    };
+    const up = () => { document.removeEventListener('mousemove', move); document.removeEventListener('mouseup', up); };
+    document.addEventListener('mousemove', move);
+    document.addEventListener('mouseup', up);
+  };
+}
+
+document.addEventListener('keydown', (e) => {
+  const f = fieldById(selectedId);
+  if (!f) return;
+  if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+  const step = e.shiftKey ? 1 : 0.1;
+  let handled = true;
+  if (e.key === 'ArrowLeft') f.left = Math.round((f.left - step) * 10) / 10;
+  else if (e.key === 'ArrowRight') f.left = Math.round((f.left + step) * 10) / 10;
+  else if (e.key === 'ArrowUp') f.top = Math.round((f.top - step) * 10) / 10;
+  else if (e.key === 'ArrowDown') f.top = Math.round((f.top + step) * 10) / 10;
+  else if (e.key === 'Delete' || e.key === 'Backspace') { fields = fields.filter(x => x.id !== f.id); selectedId = null; }
+  else handled = false;
+  if (handled) { e.preventDefault(); render(); }
+});
+
+function exportJson() {
+  const out = fields.map(f => ({ id: f.id, top: f.top, left: f.left, width: f.width, height: f.height, fs: f.fs, ta: f.ta, va: f.va }));
+  document.getElementById('json-out').value = JSON.stringify(out, null, 2);
+}
+function importJson() {
+  try {
+    const data = JSON.parse(document.getElementById('json-out').value);
+    for (const f of fields) {
+      const m = data.find(d => d.id === f.id);
+      if (m) Object.assign(f, m);
+    }
+    render();
+  } catch (e) { alert('Invalid JSON: ' + e.message); }
+}
+function resetAll() { fields = JSON.parse(JSON.stringify(DEFAULTS)); selectedId = null; render(); }
+
+bg.onload = render;
+if (bg.complete) render();
+</script>
+</body>
+</html>

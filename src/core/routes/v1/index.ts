@@ -12,6 +12,7 @@ import paymentRoutes from "../../../modules/payment/payment.routes.js";
 import customersRoutes from "../../../modules/customers/customers.routes.js";
 import organizersRoutes from "../../../modules/organizers/organizers.routes.js";
 import casesRoutes from "../../../modules/cases/cases.routes.js";
+import sessionReportsRoutes from "../../../modules/session-reports/session-reports.routes.js";
 
 
 const router = Router();
@@ -29,5 +30,6 @@ router.use("/payment", paymentRoutes);
 router.use("/customers", customersRoutes);
 router.use("/organizers", organizersRoutes);
 router.use("/cases", casesRoutes);
+router.use("/session-reports", sessionReportsRoutes);
 
 export default router;
