@@ -239,11 +239,13 @@ export class CasesService {
 
         if (type === "REPORT") {
             const buffer = await renderCaseReportPdf(c);
-            const base64 = buffer.toString("base64");
+            const filename = `case-report-${c.id.slice(0, 8)}.pdf`;
+            const media = `data:application/pdf;name=${filename};base64,${buffer.toString("base64")}`;
+
             await whapiService.sendDocument(c.customer.phone, {
-                media: base64,
-                filename: `case-report-${c.id.slice(0, 8)}.pdf`,
-                caption: "تقرير القضية - شركة سعد البقمي للمحاماة والاستشارات القانونية",
+                media,
+                filename,
+                caption: "اهلا بك من شركة سعد البقمي، إليك تقرير ما بعد الجلسة",
             });
         } else {
             const body = `مرحباً ${c.customer.fullName}، تم تسجيل قضيتكم لدى شركة سعد البقمي للمحاماة والاستشارات القانونية. سيتواصل معكم فريقنا قريباً.`;
