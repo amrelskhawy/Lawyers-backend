@@ -49,7 +49,7 @@ export const driveService = {
                 mimeType: 'application/vnd.google-apps.folder',
                 ...(parentFolderId ? { parents: [parentFolderId] } : {}),
             },
-            fields: 'id, name, webViewLink',
+            fields: 'id, name, webViewLink, webContentLink',
         });
         return response.data;
     },
