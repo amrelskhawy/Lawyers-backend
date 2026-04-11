@@ -4,7 +4,8 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
-import { whapiService } from "../../core/services/whapi/whapi.service.js";
+//import { whapiService } from "../../core/services/whapi/whapi.service.js";
+import { waapiService } from "../../core/services/waapi.pro/waapi.service.js";
 import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js";
 
 const caseInclude = {
@@ -232,24 +233,74 @@ export class CasesService {
         });
     }
 
+    // async sendToWhatsapp(caseId: string, type: WhatsappSendType = "REPORT") {
+    //     const c = await prisma.case.findUnique({ where: { id: caseId }, include: caseInclude });
+    //     if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+    //     if (!c.customer?.phone) throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
+
+    //     if (type === "REPORT") {
+    //         const buffer = await renderCaseReportPdf(c);
+    //         const filename = `case-report-${c.id.slice(0, 8)}.pdf`;
+    //         const media = `data:application/pdf;name=${filename};base64,${buffer.toString("base64")}`;
+
+    //         await whapiService.sendDocument(c.customer.phone, {
+    //             media,
+    //             filename,
+    //             caption: "اهلا بك من شركة سعد البقمي، إليك تقرير ما بعد الجلسة",
+    //         });
+    //     } else {
+    //         const body = `مرحباً ${c.customer.fullName}، تم تسجيل قضيتكم لدى شركة سعد البقمي للمحاماة والاستشارات القانونية. سيتواصل معكم فريقنا قريباً.`;
+    //         await whapiService.sendText(c.customer.phone, body);
+    //     }
+
+    //     return prisma.case.update({
+    //         where: { id: caseId },
+    //         data: { sentToClientAt: new Date() },
+    //         include: caseInclude,
+    //     });
+    // }
+
+
+    // -----------------------------------------------------------------------
+    // WhatsApp delivery via Waapi
+    // -----------------------------------------------------------------------
+
+
+    //Send a WhatsApp message or case-report PDF to the customer via Waapi.
+
+
+
     async sendToWhatsapp(caseId: string, type: WhatsappSendType = "REPORT") {
-        const c = await prisma.case.findUnique({ where: { id: caseId }, include: caseInclude });
-        if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
-        if (!c.customer?.phone) throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
+        const c = await prisma.case.findUnique({
+            where: { id: caseId },
+            include: caseInclude,
+        });
+
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+
+        if (!c.customer?.phone) {
+            throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
+        }
 
         if (type === "REPORT") {
             const buffer = await renderCaseReportPdf(c);
-            const filename = `case-report-${c.id.slice(0, 8)}.pdf`;
-            const media = `data:application/pdf;name=${filename};base64,${buffer.toString("base64")}`;
+            const fileName = `case-report-${c.id.slice(0, 8)}.pdf`;
 
-            await whapiService.sendDocument(c.customer.phone, {
-                media,
-                filename,
-                caption: "اهلا بك من شركة سعد البقمي، إليك تقرير ما بعد الجلسة",
+            await waapiService.sendDocument(c.customer.phone, {
+                buffer,
+                filename: fileName,
+                caption: `اهلا بك في شركه سعد البقمي\nاليك تقرير ما بعد جلستكم`,
             });
+
         } else {
-            const body = `مرحباً ${c.customer.fullName}، تم تسجيل قضيتكم لدى شركة سعد البقمي للمحاماة والاستشارات القانونية. سيتواصل معكم فريقنا قريباً.`;
-            await whapiService.sendText(c.customer.phone, body);
+            const message =
+                `مرحباً ${c.customer.fullName}،\n` +
+                `تم تسجيل قضيتكم لدى شركة سعد البقمي للمحاماة والاستشارات القانونية.\n` +
+                `سيتواصل معكم فريقنا قريباً.`;
+
+            await waapiService.sendText(c.customer.phone, message);
         }
 
         return prisma.case.update({
