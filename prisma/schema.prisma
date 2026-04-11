@@ -21,6 +21,7 @@ model User {
   createdCases         Case[]   @relation("CaseCreator")
   preferredOnCases     Case[]   @relation("CasePreferredLawyer")
   sessionReceivedCases Case[]   @relation("CaseSessionReceiver")
+  createdSessionReports SessionReport[] @relation("SessionReportCreator")
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -178,7 +179,50 @@ model Case {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  sessionReports SessionReport[]
+
   @@index([customerId])
+  @@index([createdById])
+}
+
+model SessionReport {
+  id        String   @id @default(uuid())
+
+  caseId    String
+  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  sessionDate      DateTime?
+  sessionTitle     String?
+  sessionSummary   String?
+  courtDecision    String?
+  lawyerNotes      String?
+  nextSessionDate  DateTime?
+
+  reportNumber     String?
+  courtName        String?
+  courtCircuit     String?
+  caseCharge       String?
+  opponentName     String?
+  caseNumber       String?
+  caseData         String?
+  sessionOrdinal   String?
+  attendanceOrdinal String?
+  sessionTime      String?
+  hijriDate        String?
+  closingNote      String?
+
+  reportFileId   String?
+  reportUrl      String?
+  sentToClientAt DateTime?
+
+  createdById String
+  createdBy   User   @relation("SessionReportCreator", fields: [createdById], references: [id])
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
   @@index([createdById])
 }
 
