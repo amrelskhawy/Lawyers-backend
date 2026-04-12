@@ -95,7 +95,7 @@ export async function renderCaseReportPdf(c: CaseForReport): Promise<Buffer> {
 
     try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: ["networkidle0", "domcontentloaded"] });
+        await page.setContent(html, { waitUntil: ["domcontentloaded"] });
         // Explicitly load every Cairo weight we use before rendering the PDF,
         // otherwise Puppeteer can snapshot the page before the webfont is ready
         // and fall back to Tahoma/Arial.

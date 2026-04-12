@@ -117,4 +117,4 @@
  *     responses:
  *       200: { description: Sent }
  */
-export {};
+export { };
