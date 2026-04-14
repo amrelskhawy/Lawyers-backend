@@ -13,14 +13,12 @@ import {
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const TEMPLATE_PATH = path.resolve(
-    __dirname,
-    "../../views/cases/session-report.hbs",
-);
-const BACKGROUND_PATH = path.resolve(
-    __dirname,
-    "../../views/cases/session-report-bg.png",
-);
+const VIEWS_DIR = fs.existsSync(path.resolve(__dirname, "../../views/cases"))
+    ? path.resolve(__dirname, "../../views/cases")
+    : path.resolve(__dirname, "../../../src/views/cases");
+
+const TEMPLATE_PATH = path.join(VIEWS_DIR, "session-report.hbs");
+const BACKGROUND_PATH = path.join(VIEWS_DIR, "session-report-bg.png");
 
 // Resolved at module load — the image sits next to the template forever,
 // so we reference it via file:// URL (Puppeteer's `page.goto` handles file URLs,
