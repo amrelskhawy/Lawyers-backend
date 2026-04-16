@@ -12,6 +12,7 @@
  *           enum: [CRIMINAL, ADMINISTRATIVE, LABOR, COMMERCIAL, PENAL, GENERAL, PERSONAL_STATUS, OTHER]
  *         otherCaseType: { type: string, nullable: true }
  *         caseDate: { type: string, format: date-time }
+ *         hijriDate: { type: string, nullable: true }
  *         wantsSpecificLawyer: { type: boolean }
  *         preferredLawyerId: { type: string, nullable: true }
  *         sessionReceiverId: { type: string, nullable: true }
@@ -38,6 +39,7 @@
  *           enum: [CRIMINAL, ADMINISTRATIVE, LABOR, COMMERCIAL, PENAL, GENERAL, PERSONAL_STATUS, OTHER]
  *         otherCaseType: { type: string }
  *         caseDate: { type: string, format: date-time }
+ *         hijriDate: { type: string }
  *
  * /cases:
  *   get:

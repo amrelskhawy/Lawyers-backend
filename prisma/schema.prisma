@@ -155,6 +155,7 @@ model Case {
   caseType      CaseType
   otherCaseType String?
   caseDate      DateTime
+  hijriDate     String?
 
   wantsSpecificLawyer Boolean @default(false)
   preferredLawyerId   String?

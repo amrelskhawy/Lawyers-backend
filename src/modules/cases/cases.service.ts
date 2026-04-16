@@ -63,6 +63,7 @@ export class CasesService {
                 caseType: payload.caseType,
                 otherCaseType: payload.caseType === "OTHER" ? payload.otherCaseType : null,
                 caseDate: new Date(payload.caseDate),
+                hijriDate: payload.hijriDate ?? null,
                 createdById,
             },
             include: caseInclude,
@@ -82,6 +83,7 @@ export class CasesService {
         if (payload.caseType !== undefined) data.caseType = payload.caseType;
         if (payload.otherCaseType !== undefined) data.otherCaseType = payload.otherCaseType;
         if (payload.caseDate !== undefined) data.caseDate = new Date(payload.caseDate);
+        if (payload.hijriDate !== undefined) data.hijriDate = payload.hijriDate;
         if (payload.wantsSpecificLawyer !== undefined) {
             data.wantsSpecificLawyer = payload.wantsSpecificLawyer;
         }
