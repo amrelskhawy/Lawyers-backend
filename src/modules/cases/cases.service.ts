@@ -61,6 +61,7 @@ export class CasesService {
             data: {
                 customerId: payload.customerId,
                 caseType: payload.caseType,
+                otherCaseType: payload.caseType === "OTHER" ? payload.otherCaseType : null,
                 caseDate: new Date(payload.caseDate),
                 createdById,
             },
@@ -79,6 +80,7 @@ export class CasesService {
             data.customer = { connect: { id: payload.customerId } };
         }
         if (payload.caseType !== undefined) data.caseType = payload.caseType;
+        if (payload.otherCaseType !== undefined) data.otherCaseType = payload.otherCaseType;
         if (payload.caseDate !== undefined) data.caseDate = new Date(payload.caseDate);
         if (payload.wantsSpecificLawyer !== undefined) {
             data.wantsSpecificLawyer = payload.wantsSpecificLawyer;

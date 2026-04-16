@@ -17,7 +17,7 @@ export const REPORT_REQUIREMENTS: string[] = [
     "رقم جوال أبشر",
     "العنوان الوطني",
     "صورة من المستندات",
-    "تحميل تطبيق توكلنا",
+    "تحميل تطبيق نفاذ",
 ];
 
 /**
@@ -32,4 +32,5 @@ export const CASE_TYPE_LABELS: { value: string; label: string }[] = [
     { value: "PENAL", label: "جزائية" },
     { value: "GENERAL", label: "عامة" },
     { value: "PERSONAL_STATUS", label: "أحوال شخصية" },
+    { value: "OTHER", label: "أخرى" },
 ];

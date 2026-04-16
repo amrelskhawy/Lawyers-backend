@@ -143,6 +143,7 @@ enum CaseType {
   PENAL
   GENERAL
   PERSONAL_STATUS
+  OTHER
 }
 
 model Case {
@@ -151,8 +152,9 @@ model Case {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
 
-  caseType  CaseType
-  caseDate  DateTime
+  caseType      CaseType
+  otherCaseType String?
+  caseDate      DateTime
 
   wantsSpecificLawyer Boolean @default(false)
   preferredLawyerId   String?

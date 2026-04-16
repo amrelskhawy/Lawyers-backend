@@ -10,6 +10,7 @@ const CaseTypeEnum = z.enum([
     "PENAL",
     "GENERAL",
     "PERSONAL_STATUS",
+    "OTHER",
 ]);
 
 const isoDate = z
@@ -19,6 +20,7 @@ const isoDate = z
 export const CreateCaseSchema = z.object({
     customerId: z.string().uuid(),
     caseType: CaseTypeEnum,
+    otherCaseType: z.string().optional(),
     caseDate: isoDate,
 });
 
@@ -26,6 +28,7 @@ export const UpdateCaseSchema = z
     .object({
         customerId: z.string().uuid().optional(),
         caseType: CaseTypeEnum.optional(),
+        otherCaseType: z.string().nullable().optional(),
         caseDate: isoDate.optional(),
 
         wantsSpecificLawyer: z.boolean().optional(),
