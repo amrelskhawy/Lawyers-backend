@@ -93,6 +93,18 @@ export const driveService = {
         return response.data;
     },
 
+    /**
+     * Make a file publicly accessible (anyone with the link can view)
+     * and return the direct download URL suitable for external services.
+     */
+    makePublic: async (fileId: string): Promise<string> => {
+        await drive.permissions.create({
+            fileId,
+            requestBody: { role: 'reader', type: 'anyone' },
+        });
+        return `https://drive.google.com/uc?export=download&id=${fileId}`;
+    },
+
     // 4. Delete
     deleteFile: async (fileId: string) => {
         await drive.files.delete({ fileId });

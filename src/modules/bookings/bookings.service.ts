@@ -279,6 +279,7 @@ export class BookingService {
         }
 
         try {
+            if (!booking.customer.email) throw new Error("No customer email — skipping");
             await sendEmailWithTemplate(
                 booking.customer.email,
                 subject,

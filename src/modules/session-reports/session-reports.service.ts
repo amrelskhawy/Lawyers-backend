@@ -3,6 +3,7 @@ import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
+import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderSessionReportPdf } from "./session-report-pdf.service.js";
 import type { UpdateSessionReportPayload } from "./session-reports.validator.js";
 
@@ -196,29 +197,64 @@ export class SessionReportsService {
         if (!r || r.isDeleted) {
             throw new AppResponse(false, "SESSION_REPORT_NOT_FOUND", null, 404);
         }
-        if (!r.case?.customer?.email) {
-            throw new AppResponse(false, "CUSTOMER_EMAIL_MISSING", null, 400);
+        if (!r.case?.customer?.phone) {
+            throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
         }
 
         const buffer = await renderSessionReportPdf(r);
 
-        await sendEmailWithTemplate(
-            r.case.customer.email,
-            "تقرير الجلسة - شركة سعد البقمي",
-            "sessionReport",
-            { customerName: r.case.customer.fullName },
-            [
-                {
-                    filename: `session-report-${r.id.slice(0, 8)}.pdf`,
-                    content: buffer,
-                    contentType: "application/pdf",
-                },
-            ],
+        // Upload PDF to Drive and get a public download URL for WhatsApp
+        const folderId = await this.ensureCustomerFolder(r.case.customerId);
+        const fileName = `session-report-${r.id.slice(0, 8)}-${Date.now()}.pdf`;
+        const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
+        if (!uploaded.id) {
+            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        }
+        let publicUrl = await driveService.makePublic(uploaded.id);
+        // Append filename so WAAPI can detect the file type from the URL
+        publicUrl += `&filename=${fileName}`;
+
+        const introText = ` السلام عليكم ورحمة الله وبركاته...\n 
+تهديكم شركة سعد البقمي للمحاماة والاستشارات القانونية أطيب التحايا......\n
+ونفيدكم بأنه تم إرفاق تقرير حضور الجلسة ... نرجو منكم الاطلاع عليه ... وتقبلو تحياتنا…`
+        //  `تقرير الجلسة - شركة سعد البقمي\n${r.case.customer.fullName}`;
+
+
+        // WhatsApp is required — send the PDF via WhatsApp
+        await sendWhatsAppFile(
+            r.case.customer.phone,
+            publicUrl,
+            introText,
         );
+
+        // Email is optional — send only if the customer has an email
+        if (r.case.customer.email) {
+            try {
+                await sendEmailWithTemplate(
+                    r.case.customer.email,
+                    "تقرير الجلسة - شركة سعد البقمي",
+                    "sessionReport",
+                    { customerName: r.case.customer.fullName },
+                    [
+                        {
+                            filename: `session-report-${r.id.slice(0, 8)}.pdf`,
+                            content: buffer,
+                            contentType: "application/pdf",
+                        },
+                    ],
+                );
+            } catch (err) {
+                console.error("Email send failed (non-blocking):", err);
+            }
+        }
 
         return prisma.sessionReport.update({
             where: { id },
-            data: { sentToClientAt: new Date() },
+            data: {
+                sentToClientAt: new Date(),
+                reportFileId: uploaded.id,
+                reportUrl: uploaded.webViewLink ?? null,
+            },
             include: sessionReportInclude,
         });
     }

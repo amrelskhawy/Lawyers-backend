@@ -12,7 +12,7 @@ interface BookingNotificationPayload {
     endTime: string;
     status: string;
     meetLink?: string | null;
-    customer?: { fullName: string; email: string } | null;
+    customer?: { fullName: string; email: string | null } | null;
     service?: { name_en: string } | null;
     name?: string;
     clientEmail?: string;

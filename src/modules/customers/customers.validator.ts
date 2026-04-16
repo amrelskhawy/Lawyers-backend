@@ -7,7 +7,7 @@ const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const CustomerBaseObject = z.object({
     fullName: z.string().min(2, "Full name must be at least 2 characters").max(100),
-    email: z.string().regex(emailRegex, "Invalid email format"),
+    email: z.string().regex(emailRegex, "Invalid email format").optional().nullable(),
     phone: z.string().regex(phoneRegex, "Invalid phone number format"),
     location: z.string().max(255).optional(),
 });

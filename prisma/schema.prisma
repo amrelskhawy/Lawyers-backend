@@ -113,7 +113,7 @@ model Service {
 model Customer {
   id        String   @id @default(uuid())
   fullName  String
-  email     String
+  email     String?
   phone     String
   location  String?
   isDeleted Boolean  @default(false)

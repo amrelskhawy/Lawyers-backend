@@ -3,6 +3,7 @@ import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
+import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
 import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js";
 
@@ -192,8 +193,8 @@ export class CasesService {
     }
 
     /**
-     * Send the case report to the customer by email as a PDF attachment.
-     * Generates a fresh PDF on the fly so the email always reflects the latest data.
+     * Send the case report to the customer via WhatsApp (required) and email (optional).
+     * Generates a fresh PDF on the fly so it always reflects the latest data.
      */
     async sendToClient(caseId: string) {
         const c = await prisma.case.findUnique({
@@ -203,29 +204,56 @@ export class CasesService {
         if (!c || c.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (!c.customer?.email) {
-            throw new AppResponse(false, "CUSTOMER_EMAIL_MISSING", null, 400);
+        if (!c.customer?.phone) {
+            throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
         }
 
         const buffer = await renderCaseReportPdf(c);
 
-        await sendEmailWithTemplate(
-            c.customer.email,
-            "تقرير القضية - شركة سعد البقمي",
-            "caseReport",
-            { customerName: c.customer.fullName },
-            [
-                {
-                    filename: `case-report-${c.id.slice(0, 8)}.pdf`,
-                    content: buffer,
-                    contentType: "application/pdf",
-                },
-            ],
+        // Upload PDF to Drive and get a public download URL for WhatsApp
+        const folderId = await this.ensureCustomerFolder(c.customerId);
+        const fileName = `case-report-${c.id.slice(0, 8)}-${Date.now()}.pdf`;
+        const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
+        if (!uploaded.id) {
+            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        }
+        const publicUrl = await driveService.makePublic(uploaded.id);
+
+        // WhatsApp is required — send the PDF via WhatsApp
+        await sendWhatsAppFile(
+            c.customer.phone,
+            publicUrl,
+            `تقرير القضية - شركة سعد البقمي\n${c.customer.fullName}`,
         );
+
+        // Email is optional — send only if the customer has an email
+        if (c.customer.email) {
+            try {
+                await sendEmailWithTemplate(
+                    c.customer.email,
+                    "تقرير القضية - شركة سعد البقمي",
+                    "caseReport",
+                    { customerName: c.customer.fullName },
+                    [
+                        {
+                            filename: `case-report-${c.id.slice(0, 8)}.pdf`,
+                            content: buffer,
+                            contentType: "application/pdf",
+                        },
+                    ],
+                );
+            } catch (err) {
+                console.error("Email send failed (non-blocking):", err);
+            }
+        }
 
         return prisma.case.update({
             where: { id: caseId },
-            data: { sentToClientAt: new Date() },
+            data: {
+                sentToClientAt: new Date(),
+                reportFileId: uploaded.id,
+                reportUrl: uploaded.webViewLink ?? null,
+            },
             include: caseInclude,
         });
     }
