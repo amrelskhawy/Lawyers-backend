@@ -172,9 +172,10 @@ model Case {
   gaps                String[] @default([])
   freeNotes           String?
 
-  reportFileId   String?
-  reportUrl      String?
-  sentToClientAt DateTime?
+  reportFileId      String?
+  reportUrl         String?
+  reportGeneratedAt DateTime?
+  sentToClientAt    DateTime?
 
   createdById String
   createdBy   User   @relation("CaseCreator", fields: [createdById], references: [id])
@@ -215,9 +216,10 @@ model SessionReport {
   hijriDate        String?
   closingNote      String?
 
-  reportFileId   String?
-  reportUrl      String?
-  sentToClientAt DateTime?
+  reportFileId      String?
+  reportUrl         String?
+  reportGeneratedAt DateTime?
+  sentToClientAt    DateTime?
 
   createdById String
   createdBy   User   @relation("SessionReportCreator", fields: [createdById], references: [id])
