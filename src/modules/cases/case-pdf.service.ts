@@ -45,8 +45,12 @@ export function buildReportContext(c: CaseForReport) {
         client_name: c.customer?.fullName ?? "",
         mobile_number: c.customer?.phone ?? "",
         date: formatDate(c.caseDate),
+        hijri_date: c.hijriDate ?? "",
+        agency_number: c.agencyNumber ?? "",
         case_types: CASE_TYPE_LABELS.map((t) => ({
-            label: t.label,
+            label: t.value === "OTHER" && c.otherCaseType
+                ? `أخرى: ${c.otherCaseType}`
+                : t.label,
             checked: t.value === c.caseType,
         })),
         // legacy split rows used by combined template
@@ -55,7 +59,9 @@ export function buildReportContext(c: CaseForReport) {
             checked: t.value === c.caseType,
         })),
         case_types_row2: CASE_TYPE_LABELS.slice(4).map((t) => ({
-            label: t.label,
+            label: t.value === "OTHER" && c.otherCaseType
+                ? `أخرى: ${c.otherCaseType}`
+                : t.label,
             checked: t.value === c.caseType,
         })),
         lawyer_preference_yes: c.wantsSpecificLawyer === true,
