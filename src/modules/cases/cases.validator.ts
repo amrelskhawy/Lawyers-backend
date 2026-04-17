@@ -23,6 +23,7 @@ export const CreateCaseSchema = z.object({
     otherCaseType: z.string().optional(),
     caseDate: isoDate,
     hijriDate: z.string().optional(),
+    agencyNumber: z.string().optional(),
 });
 
 export const UpdateCaseSchema = z
@@ -32,6 +33,7 @@ export const UpdateCaseSchema = z
         otherCaseType: z.string().nullable().optional(),
         caseDate: isoDate.optional(),
         hijriDate: z.string().nullable().optional(),
+        agencyNumber: z.string().nullable().optional(),
 
         wantsSpecificLawyer: z.boolean().optional(),
         preferredLawyerId: z.string().uuid().nullable().optional(),

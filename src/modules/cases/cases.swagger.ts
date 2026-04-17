@@ -13,6 +13,7 @@
  *         otherCaseType: { type: string, nullable: true }
  *         caseDate: { type: string, format: date-time }
  *         hijriDate: { type: string, nullable: true }
+ *         agencyNumber: { type: string, nullable: true }
  *         wantsSpecificLawyer: { type: boolean }
  *         preferredLawyerId: { type: string, nullable: true }
  *         sessionReceiverId: { type: string, nullable: true }
@@ -40,6 +41,7 @@
  *         otherCaseType: { type: string }
  *         caseDate: { type: string, format: date-time }
  *         hijriDate: { type: string }
+ *         agencyNumber: { type: string }
  *
  * /cases:
  *   get:

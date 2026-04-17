@@ -46,6 +46,7 @@ export function buildReportContext(c: CaseForReport) {
         mobile_number: c.customer?.phone ?? "",
         date: formatDate(c.caseDate),
         hijri_date: c.hijriDate ?? "",
+        agency_number: c.agencyNumber ?? "",
         case_types: CASE_TYPE_LABELS.map((t) => ({
             label: t.value === "OTHER" && c.otherCaseType
                 ? `أخرى: ${c.otherCaseType}`
