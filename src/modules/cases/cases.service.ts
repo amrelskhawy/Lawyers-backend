@@ -9,7 +9,7 @@ import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js"
 
 const caseInclude = {
     customer: {
-        select: { id: true, fullName: true, email: true, phone: true },
+        select: { id: true, fullName: true, email: true, phone: true, caseReportsFolderId: true },
     },
     preferredLawyer: { select: { id: true, name: true } },
     sessionReceiver: { select: { id: true, name: true } },
