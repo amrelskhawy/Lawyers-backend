@@ -166,8 +166,33 @@ export class CasesService {
     }
 
     /**
+     * A report is "fresh" when a Drive file already exists for it AND the case
+     * hasn't been updated since that file was generated. In that case we can
+     * skip the expensive render+upload and reuse the existing file.
+     */
+    private isReportFresh(c: { reportFileId: string | null; reportGeneratedAt: Date | null; updatedAt: Date }): boolean {
+        return !!c.reportFileId && !!c.reportGeneratedAt && c.updatedAt <= c.reportGeneratedAt;
+    }
+
+    private async deleteOldReportFile(fileId: string | null) {
+        if (!fileId) return;
+        try {
+            await driveService.deleteFile(fileId);
+        } catch (err) {
+            console.error("Old report Drive delete failed (non-blocking):", err);
+        }
+    }
+
+    /**
      * Generate the case report PDF, upload it to the customer's Drive folder,
      * and persist the resulting file id + URL on the case row.
+     *
+     * If a report file already exists and the case hasn't changed since it
+     * was generated, this is a no-op: we return the existing case row with
+     * `regenerated: false` so the caller can tell the user nothing changed.
+     *
+     * Otherwise the stale Drive file (if any) is deleted before the new one
+     * is uploaded, so we never accumulate orphaned duplicates.
      */
     async generateAndUploadPdf(caseId: string) {
         const c = await prisma.case.findUnique({
@@ -177,6 +202,12 @@ export class CasesService {
         if (!c || c.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
+
+        if (this.isReportFresh(c)) {
+            return { data: c, regenerated: false };
+        }
+
+        await this.deleteOldReportFile(c.reportFileId);
 
         const folderId = await this.ensureCustomerFolder(c.customerId);
         const buffer = await renderCaseReportPdf(c);
@@ -188,19 +219,25 @@ export class CasesService {
             throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
         }
 
-        return prisma.case.update({
+        const updated = await prisma.case.update({
             where: { id: caseId },
             data: {
                 reportFileId: uploaded.id,
                 reportUrl: uploaded.webViewLink ?? null,
+                reportGeneratedAt: new Date(),
             },
             include: caseInclude,
         });
+        return { data: updated, regenerated: true };
     }
 
     /**
      * Send the case report to the customer via WhatsApp (required) and email (optional).
-     * Generates a fresh PDF on the fly so it always reflects the latest data.
+     *
+     * Mirrors the freshness logic of `generateAndUploadPdf`: if the case hasn't
+     * changed since the last render we reuse the existing Drive file (downloading
+     * the buffer for the email attachment) instead of regenerating. Otherwise
+     * we delete the old file, render a new PDF, upload it, and send.
      */
     async sendToClient(caseId: string) {
         const c = await prisma.case.findUnique({
@@ -214,16 +251,33 @@ export class CasesService {
             throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
         }
 
-        const buffer = await renderCaseReportPdf(c);
+        let fileId: string;
+        let webViewLink: string | null;
+        let buffer: Buffer;
+        let regenerated: boolean;
 
-        // Upload PDF to Drive and get a public download URL for WhatsApp
-        const folderId = await this.ensureCustomerFolder(c.customerId);
-        const fileName = `case-report-${c.id.slice(0, 8)}-${Date.now()}.pdf`;
-        const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
-        if (!uploaded.id) {
-            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        if (this.isReportFresh(c)) {
+            fileId = c.reportFileId!;
+            webViewLink = c.reportUrl;
+            buffer = await driveService.downloadFile(fileId);
+            regenerated = false;
+        } else {
+            await this.deleteOldReportFile(c.reportFileId);
+
+            const folderId = await this.ensureCustomerFolder(c.customerId);
+            buffer = await renderCaseReportPdf(c);
+
+            const fileName = `case-report-${c.id.slice(0, 8)}-${Date.now()}.pdf`;
+            const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
+            if (!uploaded.id) {
+                throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+            }
+            fileId = uploaded.id;
+            webViewLink = uploaded.webViewLink ?? null;
+            regenerated = true;
         }
-        const publicUrl = await driveService.makePublic(uploaded.id);
+
+        const publicUrl = await driveService.makePublic(fileId);
 
         // WhatsApp is required — send the PDF via WhatsApp
         await sendWhatsAppFile(
@@ -253,14 +307,18 @@ export class CasesService {
             }
         }
 
-        return prisma.case.update({
+        const updateData: Prisma.CaseUpdateInput = { sentToClientAt: new Date() };
+        if (regenerated) {
+            updateData.reportFileId = fileId;
+            updateData.reportUrl = webViewLink;
+            updateData.reportGeneratedAt = new Date();
+        }
+
+        const updated = await prisma.case.update({
             where: { id: caseId },
-            data: {
-                sentToClientAt: new Date(),
-                reportFileId: uploaded.id,
-                reportUrl: uploaded.webViewLink ?? null,
-            },
+            data: updateData,
             include: caseInclude,
         });
+        return { data: updated, regenerated };
     }
 }

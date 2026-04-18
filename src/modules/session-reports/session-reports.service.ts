@@ -157,6 +157,32 @@ export class SessionReportsService {
         return folder.id;
     }
 
+    /**
+     * A report is "fresh" when a Drive file already exists for it AND the
+     * session report hasn't been updated since that file was generated. In
+     * that case we can skip the render+upload and reuse the existing file.
+     */
+    private isReportFresh(r: { reportFileId: string | null; reportGeneratedAt: Date | null; updatedAt: Date }): boolean {
+        return !!r.reportFileId && !!r.reportGeneratedAt && r.updatedAt <= r.reportGeneratedAt;
+    }
+
+    private async deleteOldReportFile(fileId: string | null) {
+        if (!fileId) return;
+        try {
+            await driveService.deleteFile(fileId);
+        } catch (err) {
+            console.error("Old report Drive delete failed (non-blocking):", err);
+        }
+    }
+
+    /**
+     * Generate the session-report PDF and upload it to the customer's Drive folder.
+     *
+     * Freshness shortcut: if a Drive file already exists and nothing has
+     * changed since it was generated, return the existing row untouched with
+     * `regenerated: false`. Otherwise delete the stale file first so Drive
+     * doesn't accumulate duplicates.
+     */
     async generateAndUploadPdf(id: string) {
         const r = await prisma.sessionReport.findUnique({
             where: { id },
@@ -169,6 +195,12 @@ export class SessionReportsService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
 
+        if (this.isReportFresh(r)) {
+            return { data: r, regenerated: false };
+        }
+
+        await this.deleteOldReportFile(r.reportFileId);
+
         const folderId = await this.ensureCustomerFolder(r.case.customerId);
         const buffer = await renderSessionReportPdf(r);
 
@@ -179,14 +211,16 @@ export class SessionReportsService {
             throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
         }
 
-        return prisma.sessionReport.update({
+        const updated = await prisma.sessionReport.update({
             where: { id },
             data: {
                 reportFileId: uploaded.id,
                 reportUrl: uploaded.webViewLink ?? null,
+                reportGeneratedAt: new Date(),
             },
             include: sessionReportInclude,
         });
+        return { data: updated, regenerated: true };
     }
 
     async sendToClient(id: string) {
@@ -201,24 +235,41 @@ export class SessionReportsService {
             throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
         }
 
-        const buffer = await renderSessionReportPdf(r);
+        let fileId: string;
+        let webViewLink: string | null;
+        let buffer: Buffer;
+        let fileName: string;
+        let regenerated: boolean;
 
-        // Upload PDF to Drive and get a public download URL for WhatsApp
-        const folderId = await this.ensureCustomerFolder(r.case.customerId);
-        const fileName = `session-report-${r.id.slice(0, 8)}-${Date.now()}.pdf`;
-        const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
-        if (!uploaded.id) {
-            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        if (this.isReportFresh(r)) {
+            fileId = r.reportFileId!;
+            webViewLink = r.reportUrl;
+            buffer = await driveService.downloadFile(fileId);
+            fileName = `session-report-${r.id.slice(0, 8)}.pdf`;
+            regenerated = false;
+        } else {
+            await this.deleteOldReportFile(r.reportFileId);
+
+            const folderId = await this.ensureCustomerFolder(r.case.customerId);
+            buffer = await renderSessionReportPdf(r);
+
+            fileName = `session-report-${r.id.slice(0, 8)}-${Date.now()}.pdf`;
+            const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
+            if (!uploaded.id) {
+                throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+            }
+            fileId = uploaded.id;
+            webViewLink = uploaded.webViewLink ?? null;
+            regenerated = true;
         }
-        let publicUrl = await driveService.makePublic(uploaded.id);
+
+        let publicUrl = await driveService.makePublic(fileId);
         // Append filename so WAAPI can detect the file type from the URL
         publicUrl += `&filename=${fileName}`;
 
-        const introText = ` السلام عليكم ورحمة الله وبركاته...\n 
+        const introText = ` السلام عليكم ورحمة الله وبركاته...\n
 تهديكم شركة سعد البقمي للمحاماة والاستشارات القانونية أطيب التحايا......\n
-ونفيدكم بأنه تم إرفاق تقرير حضور الجلسة ... نرجو منكم الاطلاع عليه ... وتقبلو تحياتنا…`
-        //  `تقرير الجلسة - شركة سعد البقمي\n${r.case.customer.fullName}`;
-
+ونفيدكم بأنه تم إرفاق تقرير حضور الجلسة ... نرجو منكم الاطلاع عليه ... وتقبلو تحياتنا…`;
 
         // WhatsApp is required — send the PDF via WhatsApp
         await sendWhatsAppFile(
@@ -248,14 +299,18 @@ export class SessionReportsService {
             }
         }
 
-        return prisma.sessionReport.update({
+        const updateData: Prisma.SessionReportUpdateInput = { sentToClientAt: new Date() };
+        if (regenerated) {
+            updateData.reportFileId = fileId;
+            updateData.reportUrl = webViewLink;
+            updateData.reportGeneratedAt = new Date();
+        }
+
+        const updated = await prisma.sessionReport.update({
             where: { id },
-            data: {
-                sentToClientAt: new Date(),
-                reportFileId: uploaded.id,
-                reportUrl: uploaded.webViewLink ?? null,
-            },
+            data: updateData,
             include: sessionReportInclude,
         });
+        return { data: updated, regenerated };
     }
 }

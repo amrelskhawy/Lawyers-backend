@@ -37,11 +37,14 @@ export const deleteCase = asyncHandler(async (req: AuthRequest, res: Response) =
 });
 
 export const generateCasePdf = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.generateAndUploadPdf(req.params.id as string);
-    res.status(200).json(new AppResponse(true, "CASE_PDF_GENERATED_SUCCESS", data));
+    const { data, regenerated } = await cases.generateAndUploadPdf(req.params.id as string);
+    const messageKey = regenerated
+        ? "CASE_PDF_GENERATED_SUCCESS"
+        : "CASE_PDF_UNCHANGED_USING_EXISTING";
+    res.status(200).json(new AppResponse(true, messageKey, data));
 });
 
 export const sendCaseToClient = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.sendToClient(req.params.id as string);
+    const { data } = await cases.sendToClient(req.params.id as string);
     res.status(200).json(new AppResponse(true, "CASE_SENT_TO_CLIENT_SUCCESS", data));
 });

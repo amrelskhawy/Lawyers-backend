@@ -64,6 +64,19 @@ export const driveService = {
     },
 
     /**
+     * Download the raw bytes of a file from Drive as a Buffer.
+     * Used when we want to reuse an existing PDF (e.g. for an email attachment)
+     * without regenerating it.
+     */
+    downloadFile: async (fileId: string): Promise<Buffer> => {
+        const response = await drive.files.get(
+            { fileId, alt: 'media' },
+            { responseType: 'arraybuffer' },
+        );
+        return Buffer.from(response.data as ArrayBuffer);
+    },
+
+    /**
      * Lists files inside a specific folder
      * @param folderId The ID of the parent folder
      */

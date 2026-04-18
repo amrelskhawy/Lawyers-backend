@@ -51,16 +51,17 @@ export const deleteSessionReport = asyncHandler(
 
 export const generateSessionReportPdf = asyncHandler(
     async (req: AuthRequest, res: Response) => {
-        const data = await reports.generateAndUploadPdf(req.params.id as string);
-        res.status(200).json(
-            new AppResponse(true, "SESSION_REPORT_PDF_GENERATED_SUCCESS", data),
-        );
+        const { data, regenerated } = await reports.generateAndUploadPdf(req.params.id as string);
+        const messageKey = regenerated
+            ? "SESSION_REPORT_PDF_GENERATED_SUCCESS"
+            : "SESSION_REPORT_PDF_UNCHANGED_USING_EXISTING";
+        res.status(200).json(new AppResponse(true, messageKey, data));
     },
 );
 
 export const sendSessionReportToClient = asyncHandler(
     async (req: AuthRequest, res: Response) => {
-        const data = await reports.sendToClient(req.params.id as string);
+        const { data } = await reports.sendToClient(req.params.id as string);
         res.status(200).json(
             new AppResponse(true, "SESSION_REPORT_SENT_TO_CLIENT_SUCCESS", data),
         );

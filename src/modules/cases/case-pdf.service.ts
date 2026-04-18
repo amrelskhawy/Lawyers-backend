@@ -4,12 +4,17 @@ import { fileURLToPath } from "node:url";
 import Handlebars from "handlebars";
 import puppeteer from "puppeteer";
 import type { Case, Customer, User } from "@prisma/client";
-import { REPORT_BRANDING, REPORT_REQUIREMENTS, CASE_TYPE_LABELS } from "./cases.constants.js";
+import { REPORT_BRANDING } from "./cases.constants.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TEMPLATE_PATH = path.resolve(__dirname, "../../views/cases/combined-forms.hbs");
+const CLIENT_FORM_BG = path.resolve(__dirname, "../../views/cases/client-form-bg.jpg");
+const LAWYER_FORM_BG = path.resolve(__dirname, "../../views/cases/lawyer-form-bg.jpg");
+
+const CLIENT_FORM_BG_URL = `file://${CLIENT_FORM_BG}`;
+const LAWYER_FORM_BG_URL = `file://${LAWYER_FORM_BG}`;
 
 function getTemplate(): HandlebarsTemplateDelegate {
     // Read + compile on every call. Cheap relative to Puppeteer launch and
@@ -38,48 +43,37 @@ type CaseForReport = Case & {
  * back-to-back, so this context merges everything both pages need.
  */
 export function buildReportContext(c: CaseForReport) {
+    const isOther = c.caseType === "OTHER";
+
     return {
         ...REPORT_BRANDING,
+        client_form_bg_url: CLIENT_FORM_BG_URL,
+        lawyer_form_bg_url: LAWYER_FORM_BG_URL,
 
         // Client-form (page 1)
         client_name: c.customer?.fullName ?? "",
         mobile_number: c.customer?.phone ?? "",
         date: formatDate(c.caseDate),
-        hijri_date: c.hijriDate ?? "",
         agency_number: c.agencyNumber ?? "",
-        case_types: CASE_TYPE_LABELS.map((t) => ({
-            label: t.value === "OTHER" && c.otherCaseType
-                ? `أخرى: ${c.otherCaseType}`
-                : t.label,
-            checked: t.value === c.caseType,
-        })),
-        // legacy split rows used by combined template
-        case_types_row1: CASE_TYPE_LABELS.slice(0, 4).map((t) => ({
-            label: t.label,
-            checked: t.value === c.caseType,
-        })),
-        case_types_row2: CASE_TYPE_LABELS.slice(4).map((t) => ({
-            label: t.value === "OTHER" && c.otherCaseType
-                ? `أخرى: ${c.otherCaseType}`
-                : t.label,
-            checked: t.value === c.caseType,
-        })),
-        lawyer_preference_yes: c.wantsSpecificLawyer === true,
-        lawyer_preference_no: c.wantsSpecificLawyer === false,
+
+        // Case-type checkboxes — one boolean per option
+        ct_criminal: c.caseType === "CRIMINAL",
+        ct_administrative: c.caseType === "ADMINISTRATIVE",
+        ct_labor: c.caseType === "LABOR",
+        ct_commercial: c.caseType === "COMMERCIAL",
+        ct_penal: c.caseType === "PENAL",
+        ct_general: c.caseType === "GENERAL",
+        ct_personal_status: c.caseType === "PERSONAL_STATUS",
+        ct_other: isOther,
+        other_case_type: isOther ? (c.otherCaseType ?? "") : "",
+
         lawyer_yes: c.wantsSpecificLawyer === true,
         lawyer_no: c.wantsSpecificLawyer === false,
         preferred_lawyer_name: c.preferredLawyer?.name ?? "",
-        preferred_lawyer: c.preferredLawyer?.name ?? "",
-        requirements: REPORT_REQUIREMENTS,
 
-        // Lawyer-form (page 2)
+        // Lawyer-form (page 2) — free notes only (15-line fallback)
         session_receiver: c.sessionReceiver?.name ?? "",
         session_date: formatDate(c.sessionDate),
-        has_structured_notes: c.hasStructuredNotes,
-        weaknesses: c.weaknesses ?? [],
-        strengths: c.strengths ?? [],
-        gaps: c.gaps ?? [],
-        // Free-form fallback: 15 blank lines, prefilled from freeNotes split by newlines.
         lines: (c.freeNotes ?? "")
             .split("\n")
             .concat(Array(15).fill(""))
@@ -94,6 +88,14 @@ export function buildReportContext(c: CaseForReport) {
 export async function renderCaseReportPdf(c: CaseForReport): Promise<Buffer> {
     const html = getTemplate()(buildReportContext(c));
 
+    // Puppeteer's `page.setContent` uses about:blank as the base URL, which
+    // blocks file:// image loads. Navigating to a temp HTML file instead lets
+    // the background JPGs resolve.
+    const os = await import("node:os");
+    const crypto = await import("node:crypto");
+    const tmpHtml = path.join(os.tmpdir(), `case-report-${crypto.randomUUID()}.html`);
+    fs.writeFileSync(tmpHtml, html, "utf-8");
+
     const browser = await puppeteer.launch({
         headless: true,
         args: ["--no-sandbox", "--disable-setuid-sandbox", "--disable-dev-shm-usage"],
@@ -101,7 +103,9 @@ export async function renderCaseReportPdf(c: CaseForReport): Promise<Buffer> {
 
     try {
         const page = await browser.newPage();
-        await page.setContent(html, { waitUntil: ["networkidle0", "domcontentloaded"] });
+        await page.goto(`file://${tmpHtml}`, {
+            waitUntil: ["networkidle0", "domcontentloaded"],
+        });
         // Explicitly load every Cairo weight we use before rendering the PDF,
         // otherwise Puppeteer can snapshot the page before the webfont is ready
         // and fall back to Tahoma/Arial.
@@ -123,5 +127,6 @@ export async function renderCaseReportPdf(c: CaseForReport): Promise<Buffer> {
         return Buffer.from(pdf);
     } finally {
         await browser.close();
+        try { fs.unlinkSync(tmpHtml); } catch { /* ignore */ }
     }
 }
