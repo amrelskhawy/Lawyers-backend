@@ -9,7 +9,7 @@ import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js"
 
 const caseInclude = {
     customer: {
-        select: { id: true, fullName: true, email: true, phone: true },
+        select: { id: true, fullName: true, email: true, phone: true, caseReportsFolderId: true },
     },
     preferredLawyer: { select: { id: true, name: true } },
     sessionReceiver: { select: { id: true, name: true } },
@@ -93,6 +93,9 @@ export class CasesService {
             data.preferredLawyer = payload.preferredLawyerId
                 ? { connect: { id: payload.preferredLawyerId } }
                 : { disconnect: true };
+        }
+        if (payload.preferredLawyerName !== undefined) {
+            data.preferredLawyerName = payload.preferredLawyerName;
         }
         if (payload.sessionReceiverId !== undefined) {
             data.sessionReceiver = payload.sessionReceiverId

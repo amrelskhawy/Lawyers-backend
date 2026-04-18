@@ -12,24 +12,16 @@
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
-    @page {
-      size: A4;
-      margin: 0;
-    }
+    @page { size: A4; margin: 0; }
 
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
 
-    html,
-    body {
+    html, body {
       width: 210mm;
       height: 297mm;
       direction: rtl;
       font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
-      color: #140C39;
+      color: #000;
       background: #fff;
       -webkit-print-color-adjust: exact !important;
       print-color-adjust: exact !important;
@@ -38,11 +30,10 @@
     .sr-shell {
       font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
       direction: rtl;
-      color: #140C39;
-      display: flex;
-      justify-content: center;
     }
 
+    /* Page container — percentages authored against 1200×1600 canvas.
+       background-size: 100% 100% ensures the image fills A4 exactly. */
     .sr-page {
       position: relative;
       width: 210mm;
@@ -57,7 +48,7 @@
 
     .ov {
       position: absolute;
-      color: #140C39;
+      color: #000000;
       font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
       font-weight: 700;
       line-height: 1.2;
@@ -69,230 +60,119 @@
       padding: 0 0.4%;
     }
 
-    .ov[dir="ltr"] {
-      unicode-bidi: bidi-override;
-    }
+    .ov[dir="ltr"] { unicode-bidi: bidi-override; }
 
     /* ============ TITLE STRIP ============ */
-    .f-report-number {
-      top: 15%;
-      left: 63.4%;
-      width: 9%;
-      height: 2.2%;
-      font-size: 1.448cqw;
-      color: #ffffff;
-      font-weight: 800;
-    }
+    .f-report-number  { top: 15.3%; left: 63.4%; width: 9%;    height: 2.2%; font-size: 1.448cqw; color: #ffffff; font-weight: 800; }
+    .f-gregorian-date { top: 15.3%; left: 29.9%; width: 15.6%; height: 2.2%; font-size: 1.637cqw; color: #ffffff; font-weight: 800; }
 
-    .f-gregorian-date {
-      top: 15.1%;
-      left: 31.9%;
-      width: 15.6%;
-      height: 2.2%;
-      font-size: 1.637cqw;
-      color: #ffffff;
-      font-weight: 800;
-    }
+    /* ============ ROW 1: إسم العميل | إسم الخصم | الدائرة ============ */
+    .f-client-name    { top: 25.06%;  left: 68.17%; width: 25.17%; height: 3%; font-size: 1.667cqw; }
+    .f-agent-name     { top: 25.25%;  left: 37.58%; width: 25.17%; height: 3%; font-size: 1.667cqw; }
+    .f-circle         { top: 25.25%;  left: 6.5%;   width: 25.17%; height: 3%; font-size: 1.667cqw; }
 
-    /* ============ INFO TABLE ============ */
+    /* ============ ROW 2: جهة الاختصاص | بيانات القضية | رقم القضية ============ */
+    .f-specialist-place { top: 33.38%; left: 67.92%; width: 25.17%; height: 3%; font-size: 1.667cqw; }
+    .f-case-info        { top: 33.69%; left: 37.42%; width: 25.17%; height: 3%; font-size: 1.667cqw; }
+    .f-case-num         { top: 33.5%;  left: 6.58%;  width: 25.17%; height: 3%; font-size: 1.667cqw; }
+
+    /* ============ BODY: السيد/ة ============ */
     .f-customer-name {
-      top: 23.5%;
-      left: 51.3%;
-      width: 22%;
-      height: 2.9%;
-      font-size: 1.259cqw;
-      color: #140C39;
+      top: 40.06%; left: 47%; width: 36.17%; height: 3%;
+      font-size: 1.667cqw;
     }
 
-    .f-opponent-name {
-      top: 23.5%;
-      left: 7%;
-      width: 21.9%;
-      height: 2.9%;
-      font-size: 1.322cqw;
-      color: #ffffff;
-    }
+    /* ============ BODY: بتاريخ + الساعة ============ */
+    .f-higri-date { top: 50.85%;  left: 39.58%; width: 16.17%; height: 3%; font-size: 2cqw; }
+    .f-time       { top: 50.875%; left: 4.75%;  width: 13%;    height: 3%; font-size: 2cqw; }
 
-    /* Row 2 right-inner ("جهة الاختصاص") → court name */
-    .f-court-name {
-      top: 26.5%;
-      left: 51.3%;
-      width: 22%;
-      height: 2.9%;
-      font-size: 1.259cqw;
-      color: #ffffff;
-    }
+    /* ============ BODY: لدى الدائرة + بمحكمة ============ */
+    .f-circle-info  { top: 56.19%; left: 57.33%; width: 22.83%; height: 3%; font-size: 2.2cqw; }
+    .f-circle-place { top: 56.22%; left: 25.25%; width: 20.58%; height: 3%; font-size: 2cqw; }
 
-    /* Row 2 left-outer ("الدائرة") → case charge / circuit */
-    .f-case-charge {
-      top: 26.5%;
-      left: 7%;
-      width: 21.9%;
-      height: 2.9%;
-      font-size: 1.259cqw;
-      color: #140C39;
-    }
-
-    .f-case-number {
-      top: 29.6%;
-      left: 7%;
-      width: 21.9%;
-      height: 7.3%;
-      font-size: 1.637cqw;
-      color: #140C39;
-    }
-
-    /* Row 3 right-inner ("بيانات القضية") → case data */
-    .f-case-data {
-      top: 29.6%;
-      left: 51.3%;
-      width: 22%;
-      height: 7.3%;
-      font-size: 1.511cqw;
-      color: #140C39;
-      padding: 0.6% 0.8%;
-      line-height: 1.5;
-      text-align: center;
-      display: block;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      justify-content: flex-start;
-      align-items: flex-start;
-    }
-
-    /* ============ BODY NARRATIVE ============ */
-    .f-body-customer {
-      top: 39%;
-      left: 42.7%;
-      width: 41%;
-      height: 3.3%;
-      font-size: 2.141cqw;
-      color: #140C39;
-      align-items: flex-end;
-    }
-
-    .f-hijri-date {
-      top: 50.3%;
-      left: 41.9%;
-      width: 17.5%;
-      height: 2.7%;
-      font-size: 1.889cqw;
-      color: #140C39;
-      align-items: flex-end;
-    }
-
-    .f-session-time {
-      top: 50%;
-      left: 9%;
-      width: 13%;
-      height: 2.7%;
-      font-size: 1.637cqw;
-      color: #140C39;
-      align-items: flex-end;
-    }
-
-    .f-session-ordinal {
-      top: 56.2%;
-      left: 57.7%;
-      width: 20%;
-      height: 2.7%;
-      font-size: 1.637cqw;
-      color: #140C39;
-      align-items: flex-start;
-      text-align: center;
-    }
-
-    .f-court-city {
-      top: 55%;
-      left: 25.5%;
-      width: 20.8%;
-      height: 3.1%;
-      font-size: 2.015cqw;
-      color: #140C39;
-      align-items: flex-end;
-    }
-
-    .f-session-summary {
-      top: 60.9%;
-      left: 6.7%;
-      width: 76.9%;
-      height: 16.5%;
-      font-size: 1.826cqw;
-      line-height: 1.7;
-      text-align: start;
-      color: #140C39;
-      display: block;
-      padding: 0;
-      white-space: normal;
-      overflow-wrap: anywhere;
-      word-break: break-word;
-      overflow: hidden;
-    }
-
-    .f-closing-note {
-      top: 79%;
-      left: 6.7%;
-      width: 83.9%;
-      height: 13%;
-      font-size: 1.826cqw;
-      line-height: 1.7;
+    /* ============ DETAILS — وتم خلال الجلسة مايلي ============ */
+    .f-details {
+      top: 60.75%; left: 5.42%; width: 87.17%; height: 16.75%;
+      font-size: 1.667cqw;
       text-align: justify;
-      color: #140C39;
       display: block;
-      padding: 0;
-      white-space: normal;
+      line-height: 2.75;
+      padding: 0 0.8%;
+      white-space: pre-wrap;
       overflow-wrap: anywhere;
       word-break: break-word;
       overflow: hidden;
-      font-weight: 400;
     }
-
-    .f-closing-note::before {
+    .f-details::before {
       content: '';
       float: right;
-      width: 33%;
-      height: calc(1.826cqw * 1.7 * 1.5);
+      width: 10%;
+      height: calc(1.667cqw * 1.7);
+    }
+
+    /* ============ REQUIREMENTS — المتطلبات والتوجيهات القادمة ============ */
+    .f-requirements {
+      top: 78.375%; left: 5.42%; width: 87%; height: 11.44%;
+      font-size: 1.667cqw;
+      text-align: justify;
+      display: block;
+      line-height: 2.75;
+      padding: 0 0.8%;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
+      overflow: hidden;
+    }
+    .f-requirements::before {
+      content: '';
+      float: right;
+      width: 37%;
+      height: calc(1.667cqw * 1.7);
     }
 
     @media print {
-
-      html,
-      body {
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
+      html, body { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
     }
   </style>
 </head>
 
 <body>
-
   <div class="sr-shell" dir="rtl">
     <div class="sr-page">
+
+      <!-- Title strip -->
       <div class="ov f-report-number">{{report_number}}</div>
       <div class="ov f-gregorian-date" dir="ltr">{{gregorian_date}}</div>
 
+      <!-- Row 1 -->
+      <div class="ov f-client-name">{{customer_name}}</div>
+      <div class="ov f-agent-name">{{opponent_name}}</div>
+      <div class="ov f-circle">{{court_circuit}}</div>
+
+      <!-- Row 2 -->
+      <div class="ov f-specialist-place">{{court_name}}</div>
+      <div class="ov f-case-info">{{case_data}}</div>
+      <div class="ov f-case-num" dir="ltr">{{case_number}}</div>
+
+      <!-- Body: السيد/ة -->
       <div class="ov f-customer-name">{{customer_name}}</div>
 
-      <div class="ov f-court-name">{{court_name}}</div>
-      <div class="ov f-case-charge">{{case_charge}}</div>
-      <div class="ov f-opponent-name">{{opponent_name}}</div>
-      <div class="ov f-case-number" dir="ltr">{{case_number}}</div>
-      <div class="ov f-case-data">{{case_data}}</div>
-      <div class="ov f-court-city">{{court_circuit}}</div>
+      <!-- Body: date + time -->
+      <div class="ov f-higri-date" dir="ltr">{{hijri_date}}</div>
+      <div class="ov f-time" dir="ltr">{{session_time}}</div>
 
-      <div class="ov f-body-customer">{{customer_name}}</div>
-      <div class="ov f-session-ordinal">{{session_ordinal}}</div>
-      <div class="ov f-session-time" dir="ltr">{{session_time}}</div>
-      <div class="ov f-hijri-date" dir="ltr">{{hijri_date}}</div>
+      <!-- Body: court circuit + court name -->
+      <div class="ov f-circle-info">{{court_circuit}}</div>
+      <div class="ov f-circle-place">{{court_name}}</div>
 
-      <div class="ov f-session-summary">{{session_summary}}</div>
+      <!-- Session details -->
+      <div class="ov f-details">{{session_summary}}</div>
 
-      <div class="ov f-closing-note">{{closing_note}}</div>
+      <!-- Requirements -->
+      <div class="ov f-requirements">{{closing_note}}</div>
+
     </div>
   </div>
-
 </body>
 
 </html>

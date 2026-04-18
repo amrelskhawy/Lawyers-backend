@@ -7,7 +7,7 @@
     "dev": "tsx watch src/server.ts",
     "build": "tsc && tsc-alias && cp -r src/views dist/views",
     "postinstall": "prisma generate",
-    "db:push": "prisma generate && prisma db push && prisma db seed",
+    "db:push": "prisma generate && prisma db push",
     "stripe:listener": "stripe listen --forward-to localhost:3000/api/v1/payment/webhook/stripe",
     "db:push-seed": "prisma db push && prisma db seed",
     "test": "vitest run",
