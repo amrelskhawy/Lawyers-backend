@@ -22,6 +22,7 @@ model User {
   preferredOnCases     Case[]   @relation("CasePreferredLawyer")
   sessionReceivedCases Case[]   @relation("CaseSessionReceiver")
   createdSessionReports SessionReport[] @relation("SessionReportCreator")
+  createdFieldVisitReports FieldVisitReport[] @relation("FieldVisitReportCreator")
 
   createdAt  DateTime @default(now())
   updatedAt  DateTime @updatedAt
@@ -184,7 +185,8 @@ model Case {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessionReports SessionReport[]
+  sessionReports    SessionReport[]
+  fieldVisitReports FieldVisitReport[]
 
   @@index([customerId])
   @@index([createdById])
@@ -223,6 +225,36 @@ model SessionReport {
 
   createdById String
   createdBy   User   @relation("SessionReportCreator", fields: [createdById], references: [id])
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([createdById])
+}
+
+model FieldVisitReport {
+  id     String @id @default(uuid())
+
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  reviewLawyer  String?
+  reviewPlace   String?
+  agencyNumber  String?
+  clientName    String?
+  caseNumber    String?
+  reviewDate    DateTime?
+  reportSummary String?
+
+  reportFileId      String?
+  reportUrl         String?
+  reportGeneratedAt DateTime?
+  sentToClientAt    DateTime?
+
+  createdById String
+  createdBy   User   @relation("FieldVisitReportCreator", fields: [createdById], references: [id])
 
   isDeleted Boolean  @default(false)
   createdAt DateTime @default(now())

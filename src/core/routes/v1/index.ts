@@ -13,6 +13,7 @@ import customersRoutes from "../../../modules/customers/customers.routes.js";
 import organizersRoutes from "../../../modules/organizers/organizers.routes.js";
 import casesRoutes from "../../../modules/cases/cases.routes.js";
 import sessionReportsRoutes from "../../../modules/session-reports/session-reports.routes.js";
+import fieldVisitReportsRoutes from "../../../modules/field-visit-reports/field-visit-reports.routes.js";
 
 
 const router = Router();
@@ -31,5 +32,6 @@ router.use("/customers", customersRoutes);
 router.use("/organizers", organizersRoutes);
 router.use("/cases", casesRoutes);
 router.use("/session-reports", sessionReportsRoutes);
+router.use("/field-visit-reports", fieldVisitReportsRoutes);
 
 export default router;
