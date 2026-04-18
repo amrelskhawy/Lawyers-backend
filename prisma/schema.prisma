@@ -159,9 +159,10 @@ model Case {
   hijriDate     String?
   agencyNumber  String?
 
-  wantsSpecificLawyer Boolean @default(false)
-  preferredLawyerId   String?
-  preferredLawyer     User?   @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
+  wantsSpecificLawyer  Boolean @default(false)
+  preferredLawyerId    String?
+  preferredLawyer      User?   @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
+  preferredLawyerName  String?
 
   sessionReceiverId   String?
   sessionReceiver     User?   @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])

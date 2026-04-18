@@ -94,6 +94,9 @@ export class CasesService {
                 ? { connect: { id: payload.preferredLawyerId } }
                 : { disconnect: true };
         }
+        if (payload.preferredLawyerName !== undefined) {
+            data.preferredLawyerName = payload.preferredLawyerName;
+        }
         if (payload.sessionReceiverId !== undefined) {
             data.sessionReceiver = payload.sessionReceiverId
                 ? { connect: { id: payload.sessionReceiverId } }
