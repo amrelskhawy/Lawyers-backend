@@ -40,6 +40,7 @@ export const UpdateCaseSchema = z
         preferredLawyerName: z.string().nullable().optional(),
 
         sessionReceiverId: z.string().uuid().nullable().optional(),
+        sessionReceiverName: z.string().nullable().optional(),
         sessionDate: isoDate.nullable().optional(),
 
         hasStructuredNotes: z.boolean().optional(),

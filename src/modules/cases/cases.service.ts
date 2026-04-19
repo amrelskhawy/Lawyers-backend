@@ -102,6 +102,9 @@ export class CasesService {
                 ? { connect: { id: payload.sessionReceiverId } }
                 : { disconnect: true };
         }
+        if (payload.sessionReceiverName !== undefined) {
+            data.sessionReceiverName = payload.sessionReceiverName;
+        }
         if (payload.sessionDate !== undefined) {
             data.sessionDate = payload.sessionDate ? new Date(payload.sessionDate) : null;
         }

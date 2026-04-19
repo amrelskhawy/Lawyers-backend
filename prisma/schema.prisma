@@ -166,6 +166,7 @@ model Case {
 
   sessionReceiverId   String?
   sessionReceiver     User?   @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
+  sessionReceiverName String?
   sessionDate         DateTime?
 
   hasStructuredNotes  Boolean  @default(true)
