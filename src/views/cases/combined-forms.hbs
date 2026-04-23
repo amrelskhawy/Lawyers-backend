@@ -21,7 +21,7 @@
     @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
 
     @page {
-      size: A4;
+      size: 210mm 280mm;
       margin: 0;
     }
 
@@ -45,7 +45,7 @@
     .cf2-page {
       position: relative;
       width: 210mm;
-      height: 297mm;
+      height: 280mm;
       page-break-after: always;
       background-size: 100% 100%;
       background-repeat: no-repeat;
@@ -64,6 +64,15 @@
 
     .cf2-page {
       background-image: url('{{{lawyer_form_bg_url}}}');
+    }
+
+    .cf2-add-page {
+      background-image: url('{{{notes_add_bg_url}}}');
+    }
+
+    .cf2-page .cf2-notes-add {
+      top: 3.5%;
+      height: 84%;
     }
 
     .cf-page .ov,
@@ -105,34 +114,142 @@
     }
 
     /* ============ PAGE 1 (client form) ============ */
-    .cf-name            { top: 25.5%;  left: 53.58%; width: 35.83%; height: 2.5%;  font-size: 1.917cqw; }
-    .cf-phone           { top: 25.5%;  left: 5.33%;  width: 35.83%; height: 2.5%;  font-size: 1.917cqw; }
-    .cf-date            { top: 31.4%;  left: 53.58%; width: 35.83%; height: 2.5%;  font-size: 1.917cqw; }
-    .cf-agency-number   { top: 31.4%;  left: 4.92%;  width: 35.83%; height: 2.5%;  font-size: 1.917cqw; }
-    .cf-other-case-type { top: 50%;    left: 30%;    width: 40.5%;  height: 2.65%; font-size: 1.917cqw; }
-    .cf-lawyer-name     { top: 60%;    left: 8.5%;   width: 72.58%; height: 2.75%; font-size: 2.5cqw; font-weight: 800; }
+    .cf-name {
+      top: 25.5%;
+      left: 53.58%;
+      width: 35.83%;
+      height: 2.5%;
+      font-size: 1.917cqw;
+    }
 
-    .cf-ct-criminal        { top: 38.3%; left: 70.8%;  width: 2.6%; height: 1.8%; }
-    .cf-ct-administrative  { top: 38.3%; left: 53.1%;  width: 2.5%; height: 1.8%; }
-    .cf-ct-labor           { top: 38.3%; left: 25.8%;  width: 2.5%; height: 1.8%; }
-    .cf-ct-commercial      { top: 38.3%; left: 7.5%;   width: 2.5%; height: 1.8%; }
-    .cf-ct-penal           { top: 44%;   left: 70.53%; width: 2.5%; height: 1.8%; }
-    .cf-ct-general         { top: 44%;   left: 53.2%;  width: 2.5%; height: 1.8%; }
-    .cf-ct-personal-status { top: 44%;   left: 26%;    width: 2.5%; height: 1.8%; }
-    .cf-ct-other           { top: 44%;   left: 7.5%;   width: 2.5%; height: 1.8%; }
+    .cf-phone {
+      top: 25.5%;
+      left: 5.33%;
+      width: 35.83%;
+      height: 2.5%;
+      font-size: 1.917cqw;
+    }
 
-    .cf-sl-yes { top: 56%; left: 21.5%; width: 2.5%; height: 1.9%; }
-    .cf-sl-no  { top: 56%; left: 10.5%; width: 2.5%; height: 1.8%; }
+    .cf-date {
+      top: 31.4%;
+      left: 53.58%;
+      width: 35.83%;
+      height: 2.5%;
+      font-size: 1.917cqw;
+    }
+
+    .cf-agency-number {
+      top: 31.4%;
+      left: 4.92%;
+      width: 35.83%;
+      height: 2.5%;
+      font-size: 1.917cqw;
+    }
+
+    .cf-other-case-type {
+      top: 50%;
+      left: 30%;
+      width: 40.5%;
+      height: 2.65%;
+      font-size: 1.917cqw;
+    }
+
+    .cf-lawyer-name {
+      top: 60%;
+      left: 8.5%;
+      width: 72.58%;
+      height: 2.75%;
+      font-size: 2.5cqw;
+      font-weight: 800;
+    }
+
+    .cf-ct-criminal {
+      top: 38.3%;
+      left: 70.8%;
+      width: 2.6%;
+      height: 1.8%;
+    }
+
+    .cf-ct-administrative {
+      top: 38.3%;
+      left: 53.1%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-labor {
+      top: 38.3%;
+      left: 25.8%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-commercial {
+      top: 38.3%;
+      left: 7.5%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-penal {
+      top: 44%;
+      left: 70.53%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-general {
+      top: 44%;
+      left: 53.2%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-personal-status {
+      top: 44%;
+      left: 26%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-ct-other {
+      top: 44%;
+      left: 7.5%;
+      width: 2.5%;
+      height: 1.8%;
+    }
+
+    .cf-sl-yes {
+      top: 56%;
+      left: 21.5%;
+      width: 2.5%;
+      height: 1.9%;
+    }
+
+    .cf-sl-no {
+      top: 56%;
+      left: 10.5%;
+      width: 2.5%;
+      height: 1.8%;
+    }
 
     /* ============ PAGE 2 (lawyer form) ============ */
     .cf2-receiver {
-      top: 31.2%; left: 42%; width: 32%; height: 2.5%;
-      font-size: 2.2cqw; font-weight: bold;
+      top: 31.2%;
+      left: 42%;
+      width: 32%;
+      height: 2.5%;
+      font-size: 2.2cqw;
+      font-weight: bold;
     }
 
     .cf2-date {
-      top: 31.2%; left: 5%; width: 25%; height: 2.5%;
-      font-size: 1.917cqw; font-weight: bold;
+      top: 31.2%;
+      left: 5%;
+      width: 25%;
+      height: 2.5%;
+      font-size: 1.917cqw;
+      font-weight: bold;
       text-align: center;
     }
 
@@ -142,27 +259,27 @@
       left: 5.5%;
       width: 91.5%;
       height: 55%;
-      display: flex;
-      flex-direction: column;
-      justify-content: flex-start;
-      align-items: stretch;
-      text-align: right;
+      text-align: justify;
       direction: rtl;
       padding: 0;
-      font-size: 2cqw;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      font-size: 1.7cqw;
+      font-weight: 500;
+      line-height: 4.5cqw;
       color: #140c39;
+      white-space: pre-wrap;
+      overflow-wrap: anywhere;
+      word-break: break-word;
       overflow: hidden;
+      box-sizing: border-box;
     }
 
-    .cf2-page .cf2-notes .nl {
-      display: flex;
-      align-items: center;
-      gap: 0.5cqw;
-      height: 5cqw;
-      flex: 0 0 5.1cqw;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    .cf-measure-host {
+      position: absolute;
+      left: -99999px;
+      top: 0;
+      visibility: hidden;
+      pointer-events: none;
     }
   </style>
 </head>
@@ -177,12 +294,14 @@
     <div class="ov cf-agency-number" dir="ltr">{{agency_number}}</div>
 
     <div class="ov cb cf-ct-criminal {{#if ct_criminal}}checked{{/if}}">{{#if ct_criminal}}✓{{/if}}</div>
-    <div class="ov cb cf-ct-administrative {{#if ct_administrative}}checked{{/if}}">{{#if ct_administrative}}✓{{/if}}</div>
+    <div class="ov cb cf-ct-administrative {{#if ct_administrative}}checked{{/if}}">{{#if ct_administrative}}✓{{/if}}
+    </div>
     <div class="ov cb cf-ct-labor {{#if ct_labor}}checked{{/if}}">{{#if ct_labor}}✓{{/if}}</div>
     <div class="ov cb cf-ct-commercial {{#if ct_commercial}}checked{{/if}}">{{#if ct_commercial}}✓{{/if}}</div>
     <div class="ov cb cf-ct-penal {{#if ct_penal}}checked{{/if}}">{{#if ct_penal}}✓{{/if}}</div>
     <div class="ov cb cf-ct-general {{#if ct_general}}checked{{/if}}">{{#if ct_general}}✓{{/if}}</div>
-    <div class="ov cb cf-ct-personal-status {{#if ct_personal_status}}checked{{/if}}">{{#if ct_personal_status}}✓{{/if}}</div>
+    <div class="ov cb cf-ct-personal-status {{#if ct_personal_status}}checked{{/if}}">{{#if ct_personal_status}}✓{{/if}}
+    </div>
     <div class="ov cb cf-ct-other {{#if ct_other}}checked{{/if}}">{{#if ct_other}}✓{{/if}}</div>
 
     {{#if ct_other}}
@@ -196,16 +315,115 @@
   </section>
 
   <!-- ============ PAGE 2: LAWYER FORM ============ -->
-  <section class="cf2-page">
+  <section class="cf2-page" id="cf2-shell">
     <div class="ov cf2-receiver">{{session_receiver}}</div>
     <div class="ov cf2-date" dir="ltr">{{session_date}}</div>
 
-    <div class="cf2-notes">
-      {{#each lines}}
-      <div class="nl">{{this}}</div>
-      {{/each}}
-    </div>
+    <div class="cf2-notes" id="cf2-notes-first"></div>
   </section>
+
+  <!-- Hidden measurement host (off-screen) -->
+  <div class="cf-measure-host" aria-hidden="true">
+    <div class="cf2-page">
+      <div class="cf2-notes" id="cf2-measure-first"></div>
+    </div>
+    <div class="cf2-page cf2-add-page">
+      <div class="cf2-notes cf2-notes-add" id="cf2-measure-add"></div>
+    </div>
+  </div>
+
+  <template id="cf2-notes-source">{{free_notes}}</template>
+
+  <script>
+    (function () {
+      function fits(el, s) {
+        el.textContent = s;
+        return el.scrollHeight <= el.clientHeight + 1;
+      }
+      function splitOne(el, str) {
+        if (fits(el, str)) return [str, ''];
+        var tokens = str.split(/(\s+)/);
+        var lo = 0, hi = tokens.length;
+        while (lo < hi) {
+          var mid = Math.floor((lo + hi + 1) / 2);
+          if (fits(el, tokens.slice(0, mid).join(''))) lo = mid;
+          else hi = mid - 1;
+        }
+        if (lo <= 0) {
+          var cLo = 0, cHi = str.length;
+          while (cLo < cHi) {
+            var m = Math.floor((cLo + cHi + 1) / 2);
+            if (fits(el, str.slice(0, m))) cLo = m;
+            else cHi = m - 1;
+          }
+          if (cLo === 0) cLo = 1;
+          return [str.slice(0, cLo), str.slice(cLo)];
+        }
+        var head = tokens.slice(0, lo).join('');
+        var tail = tokens.slice(lo).join('').replace(/^\s+/, '');
+        return [head, tail];
+      }
+
+      window.__cf2Paginate = async function () {
+        if (document.fonts && document.fonts.ready) {
+          try { await document.fonts.ready; } catch (e) { }
+        }
+        var src = document.getElementById('cf2-notes-source');
+        var raw = src ? src.innerHTML : '';
+        var dec = document.createElement('textarea');
+        dec.innerHTML = raw;
+        var text = dec.value;
+
+        var measureFirst = document.getElementById('cf2-measure-first');
+        var measureAdd = document.getElementById('cf2-measure-add');
+        var firstOut = document.getElementById('cf2-notes-first');
+        var shell = document.getElementById('cf2-shell');
+
+        if (!text) { firstOut.textContent = ''; window.__cf2PaginationDone = true; return; }
+
+        var pages = [];
+        var remaining = text;
+        var res = splitOne(measureFirst, remaining);
+        pages.push(res[0]);
+        remaining = res[1];
+        var safety = 200;
+        while (remaining && safety-- > 0) {
+          var r = splitOne(measureAdd, remaining);
+          if (!r[0]) break;
+          pages.push(r[0]);
+          remaining = r[1];
+        }
+
+        firstOut.textContent = pages[0] || '';
+        for (var i = 1; i < pages.length; i++) {
+          var page = document.createElement('section');
+          page.className = 'cf2-page cf2-add-page';
+          var body = document.createElement('div');
+          body.className = 'cf2-notes cf2-notes-add';
+          body.textContent = pages[i];
+          page.appendChild(body);
+          shell.parentNode.insertBefore(page, shell.nextSibling);
+          shell = page;
+        }
+
+        // Drop the off-screen measurement host so its hidden .cf2-page
+        // descendants don't win the `.cf2-page:last-child` selector below —
+        // that mis-match was leaving `page-break-after: always` on the real
+        // last page and producing a trailing blank page in the PDF.
+        var host = document.querySelector('.cf-measure-host');
+        if (host && host.parentNode) host.parentNode.removeChild(host);
+
+        // Belt-and-suspenders: force `page-break-after: avoid` on the truly
+        // last content page in DOM order. The CSS `:last-child` selector
+        // can't catch it because <template> and <script> are siblings too.
+        var realPages = document.querySelectorAll('section.cf-page, section.cf2-page');
+        var lastReal = realPages[realPages.length - 1];
+        if (lastReal) lastReal.style.pageBreakAfter = 'avoid';
+
+        window.__cf2PaginationDone = true;
+      };
+    })();
+  </script>
 
 </body>
 

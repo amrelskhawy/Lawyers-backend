@@ -12,9 +12,11 @@ const __dirname = path.dirname(__filename);
 const TEMPLATE_PATH = path.resolve(__dirname, "../../views/cases/combined-forms.hbs");
 const CLIENT_FORM_BG = path.resolve(__dirname, "../../views/cases/client-form-bg.jpg");
 const LAWYER_FORM_BG = path.resolve(__dirname, "../../views/cases/lawyer-form-bg.jpg");
+const NOTES_ADD_BG = path.resolve(__dirname, "../../views/cases/notes-add-bg.png");
 
 const CLIENT_FORM_BG_URL = `file://${CLIENT_FORM_BG}`;
 const LAWYER_FORM_BG_URL = `file://${LAWYER_FORM_BG}`;
+const NOTES_ADD_BG_URL = `file://${NOTES_ADD_BG}`;
 
 function getTemplate(): HandlebarsTemplateDelegate {
     // Read + compile on every call. Cheap relative to Puppeteer launch and
@@ -35,6 +37,9 @@ type CaseForReport = Case & {
     customer: Pick<Customer, "fullName" | "phone"> | null;
     preferredLawyer: Pick<User, "name"> | null;
     sessionReceiver: Pick<User, "name"> | null;
+    // Free-text fallback used when the receiver isn't a system User
+    // (e.g. a TEAM_MEMBER picked from the frontend dropdown).
+    sessionReceiverName?: string | null;
 };
 
 /**
@@ -49,6 +54,7 @@ export function buildReportContext(c: CaseForReport) {
         ...REPORT_BRANDING,
         client_form_bg_url: CLIENT_FORM_BG_URL,
         lawyer_form_bg_url: LAWYER_FORM_BG_URL,
+        notes_add_bg_url: NOTES_ADD_BG_URL,
 
         // Client-form (page 1)
         client_name: c.customer?.fullName ?? "",
@@ -71,13 +77,12 @@ export function buildReportContext(c: CaseForReport) {
         lawyer_no: c.wantsSpecificLawyer === false,
         preferred_lawyer_name: c.preferredLawyer?.name ?? "",
 
-        // Lawyer-form (page 2) — free notes only (15-line fallback)
-        session_receiver: c.sessionReceiver?.name ?? "",
+        // Lawyer-form (page 2) — free notes flow as wrapped text;
+        // an in-page script (`__cf2Paginate`) measures overflow at render
+        // time and spawns continuation pages.
+        session_receiver: c.sessionReceiver?.name ?? c.sessionReceiverName ?? "",
         session_date: formatDate(c.sessionDate),
-        lines: (c.freeNotes ?? "")
-            .split("\n")
-            .concat(Array(15).fill(""))
-            .slice(0, 15),
+        free_notes: c.freeNotes ?? "",
     };
 }
 
@@ -117,8 +122,21 @@ export async function renderCaseReportPdf(c: CaseForReport): Promise<Buffer> {
             await (document as any).fonts.ready;
         });
 
+        // Measure free-notes overflow inside the actual rendered page
+        // and inject continuation pages before printing.
+        await page.evaluate(async () => {
+            const w = window as any;
+            if (typeof w.__cf2Paginate === "function") {
+                await w.__cf2Paginate();
+            }
+        });
+        await page.waitForFunction(() => (window as any).__cf2PaginationDone === true, {
+            timeout: 10000,
+        });
+
         const pdf = await page.pdf({
-            format: "A4",
+            width: "210mm",
+            height: "280mm",
             printBackground: true,
             preferCSSPageSize: true,
             margin: { top: "0", right: "0", bottom: "0", left: "0" },
