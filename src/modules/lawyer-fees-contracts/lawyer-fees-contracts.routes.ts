@@ -9,6 +9,7 @@ import {
     deleteLawyerFeesContract,
     generateLawyerFeesContractPdf,
     createLawyerFeesContractSigningLink,
+    sendLawyerFeesContractSigningLinkWhatsapp,
     verifySigningIdentity,
     submitSignedContract,
 } from "./lawyer-fees-contracts.controller.js";
@@ -31,6 +32,12 @@ router.delete("/:id",  protect, moderatorMiddleware, deleteLawyerFeesContract);
 
 router.post("/:id/generate-pdf", protect, moderatorMiddleware, generateLawyerFeesContractPdf);
 router.post("/:id/signing-link", protect, moderatorMiddleware, createLawyerFeesContractSigningLink);
+router.post(
+    "/:id/signing-link/send-whatsapp",
+    protect,
+    moderatorMiddleware,
+    sendLawyerFeesContractSigningLinkWhatsapp,
+);
 
 export default router;
 

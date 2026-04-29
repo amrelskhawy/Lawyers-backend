@@ -3,6 +3,7 @@ import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
+import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { renderLawyerFeesContractPdf } from "./lawyer-fees-pdf.service.js";
 import type { UpdateLawyerFeesContractPayload } from "./lawyer-fees-contracts.validator.js";
 
@@ -254,9 +255,75 @@ export class LawyerFeesContractsService {
             },
         });
 
-        const base = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
-        const url = `${base}/sign-contract/${token}`;
+        const url = this.buildSigningUrl(token);
         return { url, token, expiresAt };
+    }
+
+    private buildSigningUrl(token: string): string {
+        const base = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
+        return `${base}/sign-contract/${token}`;
+    }
+
+    /**
+     * Reuse the contract's current token if still valid (not used, not expired);
+     * otherwise issue a fresh one. Used by the "send via WhatsApp" action so
+     * that clicking it after a recently-generated link doesn't invalidate the
+     * URL the moderator just copied.
+     */
+    private async ensureValidSigningLink(id: string) {
+        const c = await prisma.lawyerFeesContract.findUnique({ where: { id } });
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "LAWYER_FEES_CONTRACT_NOT_FOUND", null, 404);
+        }
+        if (!c.clientIdNumber) {
+            throw new AppResponse(false, "CLIENT_ID_NUMBER_REQUIRED_FOR_SIGNING", null, 400);
+        }
+
+        const stillValid =
+            !!c.signingToken &&
+            !c.signingUsedAt &&
+            !!c.signingTokenExpiresAt &&
+            c.signingTokenExpiresAt > new Date();
+
+        if (stillValid) {
+            return {
+                url: this.buildSigningUrl(c.signingToken!),
+                token: c.signingToken!,
+                expiresAt: c.signingTokenExpiresAt!,
+            };
+        }
+        return this.createSigningLink(id);
+    }
+
+    async sendSigningLinkOnWhatsapp(id: string) {
+        const c = await prisma.lawyerFeesContract.findUnique({
+            where: { id },
+            include: contractInclude,
+        });
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "LAWYER_FEES_CONTRACT_NOT_FOUND", null, 404);
+        }
+        const phone = c.clientPhone || c.customer?.phone;
+        if (!phone) {
+            throw new AppResponse(false, "CUSTOMER_PHONE_MISSING", null, 400);
+        }
+
+        const link = await this.ensureValidSigningLink(id);
+
+        const greeting = c.clientName ? `الأستاذ/ ${c.clientName}` : "حضرتكم الكريمة";
+        const message =
+`السلام عليكم ورحمة الله وبركاته
+${greeting}،
+
+تهديكم شركة سعد البقمي للمحاماة والاستشارات القانونية أطيب التحايا.
+نرجو منكم توقيع عقد أتعاب المحاماة عبر الرابط التالي خلال 30 دقيقة:
+
+${link.url}
+
+ولأي استفسار يسرنا تواصلكم معنا.`;
+
+        await sendWhatsAppMessage(phone, message);
+        return { url: link.url, expiresAt: link.expiresAt, sentTo: phone };
     }
 
     private async loadByValidToken(token: string) {

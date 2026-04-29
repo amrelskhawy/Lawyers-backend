@@ -72,6 +72,13 @@ export const createLawyerFeesContractSigningLink = asyncHandler(
     },
 );
 
+export const sendLawyerFeesContractSigningLinkWhatsapp = asyncHandler(
+    async (req: AuthRequest, res: Response) => {
+        const data = await service.sendSigningLinkOnWhatsapp(req.params.id as string);
+        res.status(200).json(new AppResponse(true, "SIGNING_LINK_WHATSAPP_SENT_SUCCESS", data));
+    },
+);
+
 // ============ Public (no-auth) signing endpoints ============
 
 export const verifySigningIdentity = asyncHandler(
