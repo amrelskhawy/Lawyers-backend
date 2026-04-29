@@ -14,6 +14,7 @@ import organizersRoutes from "../../../modules/organizers/organizers.routes.js";
 import casesRoutes from "../../../modules/cases/cases.routes.js";
 import sessionReportsRoutes from "../../../modules/session-reports/session-reports.routes.js";
 import fieldVisitReportsRoutes from "../../../modules/field-visit-reports/field-visit-reports.routes.js";
+import lawyerFeesContractsRoutes from "../../../modules/lawyer-fees-contracts/lawyer-fees-contracts.routes.js";
 
 
 const router = Router();
@@ -33,5 +34,6 @@ router.use("/organizers", organizersRoutes);
 router.use("/cases", casesRoutes);
 router.use("/session-reports", sessionReportsRoutes);
 router.use("/field-visit-reports", fieldVisitReportsRoutes);
+router.use("/lawyer-fees-contracts", lawyerFeesContractsRoutes);
 
 export default router;
