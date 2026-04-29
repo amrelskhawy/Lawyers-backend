@@ -83,6 +83,19 @@ export async function renderLawyerFeesContractPdf(c: LawyerFeesContract): Promis
                 weights.map((w) => (document as any).fonts.load(`${w} 13px "Cairo"`)),
             );
             await (document as any).fonts.ready;
+
+            // Wait for every <img> (including data: URLs for signatures) to finish decoding.
+            const imgs = Array.from(document.images);
+            await Promise.all(
+                imgs.map((img) =>
+                    img.complete && img.naturalWidth > 0
+                        ? Promise.resolve()
+                        : new Promise<void>((resolve) => {
+                              img.addEventListener("load",  () => resolve(), { once: true });
+                              img.addEventListener("error", () => resolve(), { once: true });
+                          }),
+                ),
+            );
         });
 
         const pdf = await page.pdf({

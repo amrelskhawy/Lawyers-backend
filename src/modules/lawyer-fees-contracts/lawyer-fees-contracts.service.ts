@@ -281,20 +281,33 @@ export class LawyerFeesContractsService {
         if (!c.clientIdNumber || c.clientIdNumber.trim() !== idNumber.trim()) {
             throw new AppResponse(false, "IDENTITY_MISMATCH", null, 401);
         }
-        // Return only what the signing UI needs to render a summary
+        // Return enough fields to render the live 3-page visual preview on the signing page
         return {
             id: c.id,
+
             contractNumber: c.contractNumber,
-            contractDate: c.contractDate,
-            hijriDate: c.hijriDate,
-            clientName: c.clientName,
+            contractDay:    c.contractDay,
+            contractDate:   c.contractDate,
+            hijriDate:      c.hijriDate,
+
+            clientName:     c.clientName,
+            clientIdNumber: c.clientIdNumber,
+            clientPhone:    c.clientPhone,
+
             serviceDescription: c.serviceDescription,
-            totalFees: c.totalFees,
-            firstInstallment: c.firstInstallment,
+
+            totalFees:         c.totalFees,
+            firstInstallment:  c.firstInstallment,
             secondInstallment: c.secondInstallment,
-            currency: c.currency,
-            firmName: "شركة سعد البقمي للمحاماة",
-            expiresAt: c.signingTokenExpiresAt,
+            currency:          c.currency,
+
+            firstPartySignature:  c.firstPartySignature,
+            secondPartySignature: c.secondPartySignature,
+            secondPartySignedAt:  c.secondPartySignedAt,
+
+            existingPdfUrl: c.reportUrl,
+            firmName:       "شركة سعد البقمي للمحاماة",
+            expiresAt:      c.signingTokenExpiresAt,
         };
     }
 
