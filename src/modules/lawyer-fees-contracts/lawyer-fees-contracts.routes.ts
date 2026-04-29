@@ -8,6 +8,9 @@ import {
     updateLawyerFeesContract,
     deleteLawyerFeesContract,
     generateLawyerFeesContractPdf,
+    createLawyerFeesContractSigningLink,
+    verifySigningIdentity,
+    submitSignedContract,
 } from "./lawyer-fees-contracts.controller.js";
 import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
 import {
@@ -27,5 +30,12 @@ router.patch("/:id",   protect, moderatorMiddleware, validateUpdateLawyerFeesCon
 router.delete("/:id",  protect, moderatorMiddleware, deleteLawyerFeesContract);
 
 router.post("/:id/generate-pdf", protect, moderatorMiddleware, generateLawyerFeesContractPdf);
+router.post("/:id/signing-link", protect, moderatorMiddleware, createLawyerFeesContractSigningLink);
 
 export default router;
+
+// Public (no-auth) router for the signing flow — mounted separately in v1
+const publicRouter = express.Router();
+publicRouter.post("/:token/verify", verifySigningIdentity);
+publicRouter.post("/:token/submit", submitSignedContract);
+export { publicRouter as lawyerFeesContractSigningPublicRouter };

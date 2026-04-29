@@ -54,6 +54,10 @@ export function buildLawyerFeesContractContext(c: LawyerFeesContract) {
         first_installment:  formatAmount(c.firstInstallment),
         second_installment: formatAmount(c.secondInstallment),
         currency:           c.currency ?? "SAR",
+
+        first_party_signature_url:  c.firstPartySignature  ?? "",
+        second_party_signature_url: c.secondPartySignature ?? "",
+        second_party_signed_at:     c.secondPartySignedAt ? formatDate(c.secondPartySignedAt) : "",
     };
 }
 

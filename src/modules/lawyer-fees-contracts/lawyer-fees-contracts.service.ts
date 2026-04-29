@@ -1,9 +1,12 @@
+import crypto from "node:crypto";
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { renderLawyerFeesContractPdf } from "./lawyer-fees-pdf.service.js";
 import type { UpdateLawyerFeesContractPayload } from "./lawyer-fees-contracts.validator.js";
+
+const SIGNING_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 const contractInclude = {
     customer: {
@@ -195,6 +198,131 @@ export class LawyerFeesContractsService {
         try { await driveService.deleteFile(fileId); } catch (err) {
             console.error("Old lawyer-fees Drive delete failed (non-blocking):", err);
         }
+    }
+
+    private async regenerateAndUploadPdfForce(id: string) {
+        // Drop fresh-check; always regenerate (used after signature submit)
+        const c = await prisma.lawyerFeesContract.findUnique({
+            where: { id },
+            include: contractInclude,
+        });
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "LAWYER_FEES_CONTRACT_NOT_FOUND", null, 404);
+        }
+
+        await this.deleteOldReportFile(c.reportFileId);
+        const folderId = await this.ensureCustomerFolder(c.customerId);
+        const buffer = await renderLawyerFeesContractPdf(c);
+
+        const fileName = `lawyer-fees-${c.id.slice(0, 8)}-${Date.now()}.pdf`;
+        const uploaded = await driveService.uploadBuffer(fileName, buffer, folderId);
+        if (!uploaded.id) {
+            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        }
+
+        const publicUrl = await driveService.makePublic(uploaded.id);
+
+        return prisma.lawyerFeesContract.update({
+            where: { id },
+            data: {
+                reportFileId: uploaded.id,
+                reportUrl: publicUrl ?? uploaded.webViewLink ?? null,
+                reportGeneratedAt: new Date(),
+            },
+            include: contractInclude,
+        });
+    }
+
+    async createSigningLink(id: string) {
+        const c = await prisma.lawyerFeesContract.findUnique({ where: { id } });
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "LAWYER_FEES_CONTRACT_NOT_FOUND", null, 404);
+        }
+        if (!c.clientIdNumber) {
+            throw new AppResponse(false, "CLIENT_ID_NUMBER_REQUIRED_FOR_SIGNING", null, 400);
+        }
+
+        const token = crypto.randomBytes(32).toString("hex");
+        const expiresAt = new Date(Date.now() + SIGNING_TOKEN_TTL_MS);
+
+        await prisma.lawyerFeesContract.update({
+            where: { id },
+            data: {
+                signingToken: token,
+                signingTokenExpiresAt: expiresAt,
+                signingUsedAt: null,
+            },
+        });
+
+        const base = (process.env.FRONTEND_URL || "").replace(/\/+$/, "");
+        const url = `${base}/sign-contract/${token}`;
+        return { url, token, expiresAt };
+    }
+
+    private async loadByValidToken(token: string) {
+        const c = await prisma.lawyerFeesContract.findUnique({
+            where: { signingToken: token },
+            include: contractInclude,
+        });
+        if (!c || c.isDeleted) {
+            throw new AppResponse(false, "SIGNING_TOKEN_INVALID", null, 404);
+        }
+        if (c.signingUsedAt) {
+            throw new AppResponse(false, "SIGNING_TOKEN_ALREADY_USED", null, 410);
+        }
+        if (!c.signingTokenExpiresAt || c.signingTokenExpiresAt < new Date()) {
+            throw new AppResponse(false, "SIGNING_TOKEN_EXPIRED", null, 410);
+        }
+        return c;
+    }
+
+    async verifyTokenAndIdentity(token: string, idNumber: string) {
+        const c = await this.loadByValidToken(token);
+        if (!c.clientIdNumber || c.clientIdNumber.trim() !== idNumber.trim()) {
+            throw new AppResponse(false, "IDENTITY_MISMATCH", null, 401);
+        }
+        // Return only what the signing UI needs to render a summary
+        return {
+            id: c.id,
+            contractNumber: c.contractNumber,
+            contractDate: c.contractDate,
+            hijriDate: c.hijriDate,
+            clientName: c.clientName,
+            serviceDescription: c.serviceDescription,
+            totalFees: c.totalFees,
+            firstInstallment: c.firstInstallment,
+            secondInstallment: c.secondInstallment,
+            currency: c.currency,
+            firmName: "شركة سعد البقمي للمحاماة",
+            expiresAt: c.signingTokenExpiresAt,
+        };
+    }
+
+    async submitSignature(token: string, idNumber: string, signatureDataUrl: string) {
+        const c = await this.loadByValidToken(token);
+        if (!c.clientIdNumber || c.clientIdNumber.trim() !== idNumber.trim()) {
+            throw new AppResponse(false, "IDENTITY_MISMATCH", null, 401);
+        }
+        if (!signatureDataUrl?.startsWith("data:image/")) {
+            throw new AppResponse(false, "INVALID_SIGNATURE_PAYLOAD", null, 400);
+        }
+
+        const now = new Date();
+        await prisma.lawyerFeesContract.update({
+            where: { id: c.id },
+            data: {
+                secondPartySignature: signatureDataUrl,
+                secondPartySignedAt: now,
+                signingUsedAt: now,
+            },
+        });
+
+        const updated = await this.regenerateAndUploadPdfForce(c.id);
+        return {
+            id: updated.id,
+            reportUrl: updated.reportUrl,
+            secondPartySignedAt: updated.secondPartySignedAt,
+        };
     }
 
     async generateAndUploadPdf(id: string) {

@@ -299,11 +299,16 @@ model LawyerFeesContract {
   secondInstallment Decimal? @db.Decimal(12, 2)
   currency          String?  @default("SAR")
 
-  // Online signatures (to be implemented next phase — base64 PNG or Drive file id/url)
+  // Online signatures
   firstPartySignature  String?
   firstPartySignedAt   DateTime?
   secondPartySignature String?
   secondPartySignedAt  DateTime?
+
+  // Time-bound signing link (one-time use, 30-min TTL by default)
+  signingToken          String?   @unique
+  signingTokenExpiresAt DateTime?
+  signingUsedAt         DateTime?
 
   // PDF artifact
   reportFileId      String?
