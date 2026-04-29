@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+  <meta charset="UTF-8">
+  <title>عقد أتعاب محاماة - شركة سعد البقمي</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap');
+
+    @page {
+      size: 210mm 297mm;
+      margin: 0;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      width: 210mm;
+      direction: rtl;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      color: #000;
+      background: #fff;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
+    .lfc-page {
+      position: relative;
+      width: 210mm;
+      height: 297mm;
+      background-size: 100% 100%;
+      background-repeat: no-repeat;
+      background-position: top center;
+      overflow: hidden;
+      container-type: inline-size;
+      page-break-after: always;
+    }
+
+    .lfc-page:last-of-type {
+      page-break-after: auto;
+    }
+
+    .page-1 {
+      background-image: url('{{{bg_url_1}}}');
+    }
+
+    .page-2 {
+      background-image: url('{{{bg_url_2}}}');
+    }
+
+    .page-3 {
+      background-image: url('{{{bg_url_3}}}');
+    }
+
+    .ov {
+      position: absolute;
+      color: #000;
+      font-family: 'Cairo', 'Segoe UI', Tahoma, Arial, sans-serif;
+      font-weight: 700;
+      line-height: 1.2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      overflow: hidden;
+      padding: 0 0.4%;
+      font-size: 1.55cqw;
+    }
+
+    .ov[dir='ltr'] {
+      unicode-bidi: bidi-override;
+    }
+
+    /* ============ PAGE 1 ============ */
+    .f-contract-number {
+      top: 18.22%;
+      left: 5.7%;
+      width: 6%;
+      height: 2%;
+      font-size: 1.4cqw;
+    }
+
+    .f-contract-day {
+      top: 24.5%;
+      left: 75%;
+      width: 9%;
+      height: 1.9%;
+    }
+
+    .f-contract-date {
+      top: 24.5%;
+      left: 52.5%;
+      width: 15%;
+      height: 1.9%;
+    }
+
+    .f-hijri-date {
+      top: 24.5%;
+      left: 26.6%;
+      width: 14.5%;
+      height: 1.9%;
+    }
+
+    .f-client-name {
+      top: 33%;
+      left: 63%;
+      width: 21%;
+      height: 2.1%;
+    }
+
+    .f-client-id {
+      top: 33%;
+      left: 35%;
+      width: 16%;
+      height: 2.1%;
+    }
+
+    .f-client-phone {
+      top: 33%;
+      left: 6%;
+      width: 14.5%;
+      height: 2.1%;
+    }
+
+    .f-service-description {
+      top: 72%;
+      left: 4.5%;
+      width: 92%;
+      height: 2.1%;
+      font-size: 13px;
+      font-weight: 800;
+      text-align: center;
+      white-space: pre-wrap;
+      display: block;
+      padding: 0.4% 1%;
+      align-items: flex-start;
+      justify-content: flex-start;
+    }
+
+    /* ============ PAGE 2 — fees ============ */
+    .f-total-fees {
+      top: 24.6%;
+      left: 22%;
+      width: 18%;
+      height: 2.6%;
+      font-size: 12px;
+    }
+
+    .f-first-installment {
+      top: 28.1%;
+      left: 58%;
+      width: 18%;
+      height: 2.1%;
+      font-size: 12px;
+    }
+
+    .f-second-installment {
+      top: 31.4%;
+      left: 58%;
+      width: 18%;
+      height: 2.1%;
+      font-size: 12px;
+    }
+
+    /* ============ PAGE 3 — signatures ============ */
+    .f-second-party-signature {
+      position: absolute;
+      top: 78%;
+      left: 8%;
+      width: 24%;
+      height: 10%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .f-second-party-signature img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+    .f-second-party-signed-at {
+      top: 89%;
+      left: 8%;
+      width: 24%;
+      height: 1.6%;
+      font-size: 10px;
+      font-weight: 600;
+      color: #444;
+    }
+    .f-first-party-signature {
+      position: absolute;
+      top: 78%;
+      left: 68%;
+      width: 24%;
+      height: 10%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+    }
+    .f-first-party-signature img {
+      max-width: 100%;
+      max-height: 100%;
+      object-fit: contain;
+    }
+
+    @media print {
+
+      html,
+      body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="lfc-page page-1">
+    <div class="ov f-contract-number">{{contract_number}}</div>
+
+    <div class="ov f-contract-day">{{contract_day}}</div>
+    <div class="ov f-contract-date" dir="ltr">{{contract_date}}</div>
+    <div class="ov f-hijri-date">{{hijri_date}}</div>
+
+    <div class="ov f-client-name">{{client_name}}</div>
+    <div class="ov f-client-id">{{client_id_number}}</div>
+    <div class="ov f-client-phone" dir="ltr">{{client_phone}}</div>
+
+    <div class="ov f-service-description">{{service_description}}</div>
+  </div>
+
+  <div class="lfc-page page-2">
+    <div class="ov f-total-fees" dir="ltr">{{total_fees}}</div>
+    <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
+    <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
+  </div>
+
+  <div class="lfc-page page-3">
+    {{#if first_party_signature_url}}
+      <div class="f-first-party-signature">
+        <img src="{{{first_party_signature_url}}}" alt="first party signature" />
+      </div>
+    {{/if}}
+
+    {{#if second_party_signature_url}}
+      <div class="f-second-party-signature">
+        <img src="{{{second_party_signature_url}}}" alt="second party signature" />
+      </div>
+      <div class="ov f-second-party-signed-at" dir="ltr">{{second_party_signed_at}}</div>
+    {{/if}}
+  </div>
+</body>
+
+</html>

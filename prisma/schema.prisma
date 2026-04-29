@@ -8,24 +8,25 @@ datasource db {
 }
 
 model User {
-  id          String   @id @default(uuid())
-  name        String
-  email       String   @unique
-  password    String
-  role        Role     @default(MODERATOR)
-  isVerified  Boolean  @default(false)
+  id         String  @id @default(uuid())
+  name       String
+  email      String  @unique
+  password   String
+  role       Role    @default(MODERATOR)
+  isVerified Boolean @default(false)
 
-  tokens      Token[]
-  organizer   Organizer?
+  tokens    Token[]
+  organizer Organizer?
 
-  createdCases         Case[]   @relation("CaseCreator")
-  preferredOnCases     Case[]   @relation("CasePreferredLawyer")
-  sessionReceivedCases Case[]   @relation("CaseSessionReceiver")
-  createdSessionReports SessionReport[] @relation("SessionReportCreator")
-  createdFieldVisitReports FieldVisitReport[] @relation("FieldVisitReportCreator")
+  createdCases               Case[]               @relation("CaseCreator")
+  preferredOnCases           Case[]               @relation("CasePreferredLawyer")
+  sessionReceivedCases       Case[]               @relation("CaseSessionReceiver")
+  createdSessionReports      SessionReport[]      @relation("SessionReportCreator")
+  createdFieldVisitReports   FieldVisitReport[]   @relation("FieldVisitReportCreator")
+  createdLawyerFeesContracts LawyerFeesContract[] @relation("LawyerFeesContractCreator")
 
-  createdAt  DateTime @default(now())
-  updatedAt  DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 enum BookingStatus {
@@ -36,43 +37,43 @@ enum BookingStatus {
 }
 
 model Booking {
-  id           String        @id @default(uuid())
-  customerId   String
-  customer     Customer      @relation(fields: [customerId], references: [id])
-  serviceId    String
-  service      Service       @relation(fields: [serviceId], references: [id])
-  date         DateTime
-  startTime    String
-  endTime      String
-  status       BookingStatus @default(PENDING)
-  meetLink     String?
-  calendarUrl  String?
+  id          String        @id @default(uuid())
+  customerId  String
+  customer    Customer      @relation(fields: [customerId], references: [id])
+  serviceId   String
+  service     Service       @relation(fields: [serviceId], references: [id])
+  date        DateTime
+  startTime   String
+  endTime     String
+  status      BookingStatus @default(PENDING)
+  meetLink    String?
+  calendarUrl String?
 
-  paymentIntentId  String?
-  stripeSessionId  String?
-  totalAmount      Decimal       @default(0) @db.Decimal(10, 2)
-  paymentStatus    PaymentStatus @default(UNPAID)
+  paymentIntentId String?
+  stripeSessionId String?
+  totalAmount     Decimal       @default(0) @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(UNPAID)
 
-  tabbyPaymentId   String?
-  createdByRole    String?   // 'ADMIN' | 'MODERATOR' — set only for manual bookings
+  tabbyPaymentId String?
+  createdByRole  String? // 'ADMIN' | 'MODERATOR' — set only for manual bookings
 
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model WorkingDay {
-  id        String   @id @default(uuid())
-  day       String   @unique
-  isOpen    Boolean  @default(true)
-  startTime String   @default("09:00")
-  endTime   String   @default("17:00")
+  id        String  @id @default(uuid())
+  day       String  @unique
+  isOpen    Boolean @default(true)
+  startTime String  @default("09:00")
+  endTime   String  @default("17:00")
 }
 
 model Holiday {
   id        String   @id @default(uuid())
   date      DateTime
-  startTime String?  // Optional: "HH:mm"
-  endTime   String?  // Optional: "HH:mm"
+  startTime String? // Optional: "HH:mm"
+  endTime   String? // Optional: "HH:mm"
   name      String
   isFullDay Boolean  @default(false)
 
@@ -85,28 +86,28 @@ enum Role {
 }
 
 model Token {
-  id                  String   @id @default(uuid())
-  verificationToken   String?
-  passwordResetToken  String?
+  id                 String  @id @default(uuid())
+  verificationToken  String?
+  passwordResetToken String?
 
-  userId     String
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  createdAt  DateTime @default(now())
-  expiresAt  DateTime
+  createdAt DateTime @default(now())
+  expiresAt DateTime
 }
 
 model Service {
-  id          String   @id @default(uuid())
+  id             String   @id @default(uuid())
   name_ar        String   @default("")
   name_en        String   @default("")
   description_ar String?
   description_en String?
-  price       Decimal? @db.Decimal(10, 2)
-  isActive    Boolean  @default(true)
-  isFree      Boolean  @default(false)
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  price          Decimal? @db.Decimal(10, 2)
+  isActive       Boolean  @default(true)
+  isFree         Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
 
   Booking Booking[]
 }
@@ -123,8 +124,9 @@ model Customer {
 
   caseReportsFolderId String?
 
-  bookings  Booking[]
-  cases     Case[]
+  bookings            Booking[]
+  cases               Case[]
+  lawyerFeesContracts LawyerFeesContract[]
 }
 
 model Organizer {
@@ -148,7 +150,7 @@ enum CaseType {
 }
 
 model Case {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
@@ -159,21 +161,21 @@ model Case {
   hijriDate     String?
   agencyNumber  String?
 
-  wantsSpecificLawyer  Boolean @default(false)
-  preferredLawyerId    String?
-  preferredLawyer      User?   @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
-  preferredLawyerName  String?
+  wantsSpecificLawyer Boolean @default(false)
+  preferredLawyerId   String?
+  preferredLawyer     User?   @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
+  preferredLawyerName String?
 
   sessionReceiverId   String?
-  sessionReceiver     User?   @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
+  sessionReceiver     User?     @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
   sessionReceiverName String?
   sessionDate         DateTime?
 
-  hasStructuredNotes  Boolean  @default(true)
-  weaknesses          String[] @default([])
-  strengths           String[] @default([])
-  gaps                String[] @default([])
-  freeNotes           String?
+  hasStructuredNotes Boolean  @default(true)
+  weaknesses         String[] @default([])
+  strengths          String[] @default([])
+  gaps               String[] @default([])
+  freeNotes          String?
 
   reportFileId      String?
   reportUrl         String?
@@ -187,38 +189,39 @@ model Case {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  sessionReports    SessionReport[]
-  fieldVisitReports FieldVisitReport[]
+  sessionReports      SessionReport[]
+  fieldVisitReports   FieldVisitReport[]
+  lawyerFeesContracts LawyerFeesContract[]
 
   @@index([customerId])
   @@index([createdById])
 }
 
 model SessionReport {
-  id        String   @id @default(uuid())
+  id String @id @default(uuid())
 
-  caseId    String
-  case      Case     @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
 
-  sessionDate      DateTime?
-  sessionTitle     String?
-  sessionSummary   String?
-  courtDecision    String?
-  lawyerNotes      String?
-  nextSessionDate  DateTime?
+  sessionDate     DateTime?
+  sessionTitle    String?
+  sessionSummary  String?
+  courtDecision   String?
+  lawyerNotes     String?
+  nextSessionDate DateTime?
 
-  reportNumber     String?
-  courtName        String?
-  courtCircuit     String?
-  caseCharge       String?
-  opponentName     String?
-  caseNumber       String?
-  caseData         String?
-  sessionOrdinal   String?
+  reportNumber      String?
+  courtName         String?
+  courtCircuit      String?
+  caseCharge        String?
+  opponentName      String?
+  caseNumber        String?
+  caseData          String?
+  sessionOrdinal    String?
   attendanceOrdinal String?
-  sessionTime      String?
-  hijriDate        String?
-  closingNote      String?
+  sessionTime       String?
+  hijriDate         String?
+  closingNote       String?
 
   reportFileId      String?
   reportUrl         String?
@@ -237,7 +240,7 @@ model SessionReport {
 }
 
 model FieldVisitReport {
-  id     String @id @default(uuid())
+  id String @id @default(uuid())
 
   caseId String
   case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
@@ -262,6 +265,65 @@ model FieldVisitReport {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  @@index([caseId])
+  @@index([createdById])
+}
+
+model LawyerFeesContract {
+  id String @id @default(uuid())
+
+  // Optional links — a fees contract may stand alone, attach to a customer, or attach to a case
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+
+  caseId String?
+  case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
+
+  // Contract metadata (variable inputs from the printed template)
+  contractNumber String?
+  contractDay    String? // اليوم — e.g. الأحد
+  contractDate   DateTime? // التاريخ الميلادي
+  hijriDate      String? // التاريخ الهجري
+
+  // Second Party (client) info as printed on the contract
+  clientName     String?
+  clientIdNumber String? // رقم الهوية
+  clientPhone    String?
+
+  // Subject / scope of service this contract covers (free text printed under preamble)
+  serviceDescription String?
+
+  // Fees breakdown (البند الثاني)
+  totalFees         Decimal? @db.Decimal(12, 2)
+  firstInstallment  Decimal? @db.Decimal(12, 2) // tُدفع عند توقيع العقد
+  secondInstallment Decimal? @db.Decimal(12, 2)
+  currency          String?  @default("SAR")
+
+  // Online signatures
+  firstPartySignature  String?
+  firstPartySignedAt   DateTime?
+  secondPartySignature String?
+  secondPartySignedAt  DateTime?
+
+  // Time-bound signing link (one-time use, 30-min TTL by default)
+  signingToken          String?   @unique
+  signingTokenExpiresAt DateTime?
+  signingUsedAt         DateTime?
+
+  // PDF artifact
+  reportFileId      String?
+  reportUrl         String?
+  reportGeneratedAt DateTime?
+  sentToClientAt    DateTime?
+
+  createdById String
+  createdBy   User   @relation("LawyerFeesContractCreator", fields: [createdById], references: [id])
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([customerId])
   @@index([caseId])
   @@index([createdById])
 }
