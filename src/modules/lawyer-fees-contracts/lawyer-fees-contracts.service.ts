@@ -366,6 +366,7 @@ ${link.url}
             totalFees:         c.totalFees,
             firstInstallment:  c.firstInstallment,
             secondInstallment: c.secondInstallment,
+            otherFees:         c.otherFees,
             currency:          c.currency,
 
             firstPartySignature:  c.firstPartySignature,

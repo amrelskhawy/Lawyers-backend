@@ -55,6 +55,7 @@ model Booking {
   paymentStatus   PaymentStatus @default(UNPAID)
 
   tabbyPaymentId String?
+  tamaraOrderId  String?
   createdByRole  String? // 'ADMIN' | 'MODERATOR' — set only for manual bookings
 
   createdAt DateTime @default(now())
@@ -297,6 +298,7 @@ model LawyerFeesContract {
   totalFees         Decimal? @db.Decimal(12, 2)
   firstInstallment  Decimal? @db.Decimal(12, 2) // tُدفع عند توقيع العقد
   secondInstallment Decimal? @db.Decimal(12, 2)
+  otherFees         String?
   currency          String?  @default("SAR")
 
   // Online signatures

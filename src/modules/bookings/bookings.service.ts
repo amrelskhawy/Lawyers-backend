@@ -227,6 +227,13 @@ export class BookingService {
             try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
+        if ((booking as any).tamaraOrderId) {
+            // Tamara booking
+            const result = await this.paymentService.cancel(id, "TAMARA");
+            await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
+            return result;
+        }
 
         const result = await prisma.booking.update({
             where: { id },
@@ -251,7 +258,9 @@ export class BookingService {
             ? "STRIPE"
             : (booking as any).tabbyPaymentId
                 ? "TABBY"
-                : "TAMARA";
+                : (booking as any).tamaraOrderId
+                    ? "TAMARA"
+                    : "MANUAL";
 
         const serviceName = booking.service?.name_en || "";
         const subject = `Your booking has been cancelled — ${serviceName}`;

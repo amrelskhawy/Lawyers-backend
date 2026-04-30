@@ -137,7 +137,7 @@
       left: 4.5%;
       width: 92%;
       height: 2.1%;
-      font-size: 13px;
+      font-size: 1.65cqw;
       font-weight: 800;
       text-align: center;
       white-space: pre-wrap;
@@ -153,7 +153,7 @@
       left: 22%;
       width: 18%;
       height: 2.6%;
-      font-size: 12px;
+      font-size: 1.5cqw;
     }
 
     .f-first-installment {
@@ -161,7 +161,7 @@
       left: 58%;
       width: 18%;
       height: 2.1%;
-      font-size: 12px;
+      font-size: 1.5cqw;
     }
 
     .f-second-installment {
@@ -169,14 +169,28 @@
       left: 58%;
       width: 18%;
       height: 2.1%;
-      font-size: 12px;
+      font-size: 1.5cqw;
+    }
+
+    .f-other-fees {
+      top: 31.4%;
+      left: 5%;
+      width: 36%;
+      height: 2%;
+      font-size: 1.5cqw;
+      text-align: right;
+      white-space: pre-wrap;
+      display: block;
+      padding: 0.4% 1%;
+      align-items: flex-start;
+      justify-content: flex-start;
     }
 
     /* ============ PAGE 3 — signatures ============ */
     .f-second-party-signature {
       position: absolute;
-      top: 78%;
-      left: 8%;
+      top: 80%;
+      left: 2%;
       width: 24%;
       height: 10%;
       display: flex;
@@ -191,10 +205,10 @@
     }
     .f-second-party-signed-at {
       top: 89%;
-      left: 8%;
+      left: 6%;
       width: 24%;
       height: 1.6%;
-      font-size: 10px;
+      font-size: 1.25cqw;
       font-weight: 600;
       color: #444;
     }
@@ -245,6 +259,7 @@
     <div class="ov f-total-fees" dir="ltr">{{total_fees}}</div>
     <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
+    <div class="ov f-other-fees">{{other_fees}}</div>
   </div>
 
   <div class="lfc-page page-3">
