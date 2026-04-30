@@ -37,6 +37,7 @@ export const UpdateLawyerFeesContractSchema = z
         totalFees:         decimalLike.nullable().optional(),
         firstInstallment:  decimalLike.nullable().optional(),
         secondInstallment: decimalLike.nullable().optional(),
+        otherFees:         z.string().nullable().optional(),
         currency:          z.string().nullable().optional(),
 
         // Signature fields are accepted now but only meaningful once the
