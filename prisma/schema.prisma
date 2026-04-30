@@ -55,6 +55,7 @@ model Booking {
   paymentStatus   PaymentStatus @default(UNPAID)
 
   tabbyPaymentId String?
+  tamaraOrderId  String?
   createdByRole  String? // 'ADMIN' | 'MODERATOR' — set only for manual bookings
 
   createdAt DateTime @default(now())
