@@ -27,6 +27,7 @@ const SCALAR_KEYS = [
     "clientIdNumber",
     "clientPhone",
     "serviceDescription",
+    "otherFees",
     "currency",
     "firstPartySignature",
     "secondPartySignature",
