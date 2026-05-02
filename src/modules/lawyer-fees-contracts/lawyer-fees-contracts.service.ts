@@ -116,7 +116,7 @@ export class LawyerFeesContractsService {
         });
         const maxN = rows.reduce((acc, r) => {
             const n = parseInt((r.contractNumber ?? "").replace(/\D/g, ""), 10);
-            return Number.isFinite(n) && n > acc ? n : acc;
+            return Number.isFinite(n) && n > acc && n < 99999 ? n : acc;
         }, 0);
         return String(maxN + 1).padStart(5, "0");
     }
