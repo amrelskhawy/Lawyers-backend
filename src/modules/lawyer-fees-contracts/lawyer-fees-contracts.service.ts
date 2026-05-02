@@ -96,8 +96,11 @@ export class LawyerFeesContractsService {
             }
         }
 
+        const contractNumber = await this.generateNextContractNumber();
+
         return prisma.lawyerFeesContract.create({
             data: {
+                contractNumber,
                 customerId: payload.customerId ?? null,
                 caseId:     payload.caseId ?? null,
                 createdById,
@@ -106,10 +109,25 @@ export class LawyerFeesContractsService {
         });
     }
 
+    private async generateNextContractNumber(): Promise<string> {
+        const rows = await prisma.lawyerFeesContract.findMany({
+            where: { contractNumber: { not: null } },
+            select: { contractNumber: true },
+        });
+        const maxN = rows.reduce((acc, r) => {
+            const n = parseInt((r.contractNumber ?? "").replace(/\D/g, ""), 10);
+            return Number.isFinite(n) && n > acc ? n : acc;
+        }, 0);
+        return String(maxN + 1).padStart(5, "0");
+    }
+
     async update(id: string, payload: UpdateLawyerFeesContractPayload) {
         const existing = await prisma.lawyerFeesContract.findUnique({ where: { id } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "LAWYER_FEES_CONTRACT_NOT_FOUND", null, 404);
+        }
+        if (existing.secondPartySignedAt) {
+            throw new AppResponse(false, "LAWYER_FEES_CONTRACT_ALREADY_SIGNED", null, 409);
         }
 
         const data: Prisma.LawyerFeesContractUpdateInput = {};
