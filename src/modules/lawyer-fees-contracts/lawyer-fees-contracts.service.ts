@@ -110,15 +110,14 @@ export class LawyerFeesContractsService {
     }
 
     private async generateNextContractNumber(): Promise<string> {
-        const rows = await prisma.lawyerFeesContract.findMany({
+        const last = await prisma.lawyerFeesContract.findFirst({
             where: { contractNumber: { not: null } },
+            orderBy: { createdAt: "desc" },
             select: { contractNumber: true },
         });
-        const maxN = rows.reduce((acc, r) => {
-            const n = parseInt((r.contractNumber ?? "").replace(/\D/g, ""), 10);
-            return Number.isFinite(n) && n > acc && n < 99999 ? n : acc;
-        }, 1006);
-        return String(maxN + 1);
+        if (!last) return "1000000";
+        const n = parseInt((last.contractNumber ?? "").replace(/\D/g, ""), 10);
+        return String((Number.isFinite(n) ? n : 1000000) + 1);
     }
 
     async update(id: string, payload: UpdateLawyerFeesContractPayload) {
