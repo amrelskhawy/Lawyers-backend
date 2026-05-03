@@ -102,7 +102,7 @@ export class LawyerFeesContractsService {
             data: {
                 contractNumber,
                 customerId: payload.customerId ?? null,
-                caseId:     payload.caseId ?? null,
+                caseId: payload.caseId ?? null,
                 createdById,
             },
             include: contractInclude,
@@ -117,8 +117,8 @@ export class LawyerFeesContractsService {
         const maxN = rows.reduce((acc, r) => {
             const n = parseInt((r.contractNumber ?? "").replace(/\D/g, ""), 10);
             return Number.isFinite(n) && n > acc && n < 99999 ? n : acc;
-        }, 0);
-        return String(maxN + 1).padStart(5, "0");
+        }, 1006);
+        return String(maxN + 1);
     }
 
     async update(id: string, payload: UpdateLawyerFeesContractPayload) {
@@ -331,7 +331,7 @@ export class LawyerFeesContractsService {
 
         const greeting = c.clientName ? `الأستاذ/ ${c.clientName}` : "حضرتكم الكريمة";
         const message =
-`السلام عليكم ورحمة الله وبركاته
+            `السلام عليكم ورحمة الله وبركاته
 ${greeting}،
 
 تهديكم شركة سعد البقمي للمحاماة والاستشارات القانونية أطيب التحايا.
@@ -372,29 +372,29 @@ ${link.url}
             id: c.id,
 
             contractNumber: c.contractNumber,
-            contractDay:    c.contractDay,
-            contractDate:   c.contractDate,
-            hijriDate:      c.hijriDate,
+            contractDay: c.contractDay,
+            contractDate: c.contractDate,
+            hijriDate: c.hijriDate,
 
-            clientName:     c.clientName,
+            clientName: c.clientName,
             clientIdNumber: c.clientIdNumber,
-            clientPhone:    c.clientPhone,
+            clientPhone: c.clientPhone,
 
             serviceDescription: c.serviceDescription,
 
-            totalFees:         c.totalFees,
-            firstInstallment:  c.firstInstallment,
+            totalFees: c.totalFees,
+            firstInstallment: c.firstInstallment,
             secondInstallment: c.secondInstallment,
-            otherFees:         c.otherFees,
-            currency:          c.currency,
+            otherFees: c.otherFees,
+            currency: c.currency,
 
-            firstPartySignature:  c.firstPartySignature,
+            firstPartySignature: c.firstPartySignature,
             secondPartySignature: c.secondPartySignature,
-            secondPartySignedAt:  c.secondPartySignedAt,
+            secondPartySignedAt: c.secondPartySignedAt,
 
             existingPdfUrl: c.reportUrl,
-            firmName:       "شركة سعد البقمي للمحاماة",
-            expiresAt:      c.signingTokenExpiresAt,
+            firmName: "شركة سعد البقمي للمحاماة",
+            expiresAt: c.signingTokenExpiresAt,
         };
     }
 
