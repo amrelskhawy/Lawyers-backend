@@ -11,7 +11,7 @@ const SIGNING_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
 const contractInclude = {
     customer: {
-        select: { id: true, fullName: true, email: true, phone: true },
+        select: { id: true, fullName: true, email: true, phone: true, caseReportsFolderId: true },
     },
     case: {
         select: { id: true, caseType: true, caseDate: true, agencyNumber: true, customerId: true },
