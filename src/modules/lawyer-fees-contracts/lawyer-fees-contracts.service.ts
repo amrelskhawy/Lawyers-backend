@@ -328,7 +328,7 @@ export class LawyerFeesContractsService {
 
         const link = await this.ensureValidSigningLink(id);
 
-        const greeting = c.clientName ? `الأستاذ/ ${c.clientName}` : "حضرتكم الكريمة";
+        const greeting = c.clientName ? `الأستاذ/ة ${c.clientName}` : "حضرتكم الكريمة";
         const message =
             `السلام عليكم ورحمة الله وبركاته
 ${greeting}،
