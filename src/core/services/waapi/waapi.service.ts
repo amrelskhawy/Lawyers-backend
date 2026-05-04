@@ -3,9 +3,6 @@
  * Docs: https://waapi.octopusteam.net/docs
  */
 
-import logger from "@app/core/utils/logger.js";
-
-
 const WAAPI_BASE_URL = "https://waapi.octopusteam.net/api";
 
 interface WaapiSendResult {
@@ -22,7 +19,6 @@ function getKeys() {
     const appkey = process.env.WAAPI_APP_KEY;
     const authkey = process.env.WAAPI_AUTH_KEY;
 
-    logger.info("WAAPI_APP_KEY:", appkey, "WAAPI_AUTH_KEY:", authkey);
     if (!appkey || !authkey) {
         throw new Error("WAAPI_APP_KEY and WAAPI_AUTH_KEY must be set");
     }
