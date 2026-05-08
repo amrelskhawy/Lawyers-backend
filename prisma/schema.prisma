@@ -99,16 +99,17 @@ model Token {
 }
 
 model Service {
-  id             String   @id @default(uuid())
-  name_ar        String   @default("")
-  name_en        String   @default("")
-  description_ar String?
-  description_en String?
-  price          Decimal? @db.Decimal(10, 2)
-  isActive       Boolean  @default(true)
-  isFree         Boolean  @default(false)
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  id                  String   @id @default(uuid())
+  name_ar             String   @default("")
+  name_en             String   @default("")
+  description_ar      String?
+  description_en      String?
+  price               Decimal? @db.Decimal(10, 2)
+  isActive            Boolean  @default(true)
+  isFree              Boolean  @default(false)
+  isInstallmentPlans  Boolean  @default(false)
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
 
   Booking Booking[]
 }

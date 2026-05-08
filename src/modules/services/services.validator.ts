@@ -12,6 +12,7 @@ const ServiceBaseObject = z.object({
     price: z.number().min(0, "Price must be a non-negative number").optional(),
     isActive: z.boolean().optional(),
     isFree: z.boolean().optional(),
+    isInstallmentPlans: z.boolean().optional(),
 });
 
 const priceRefinement = (data: any, ctx: z.RefinementCtx) => {
