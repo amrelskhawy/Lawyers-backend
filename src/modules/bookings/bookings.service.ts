@@ -156,8 +156,10 @@ export class BookingService {
             await this.paymentService.capture(id, "STRIPE");
         } else if ((booking as any).tabbyPaymentId) {
             await this.paymentService.capture(id, "TABBY");
+        } else if ((booking as any).paymobOrderId) {
+            await this.paymentService.capture(id, "PAYMOB");
         }
-        // If neither field is set, no capture needed (booking was created without payment)
+        // If no payment ID is set, no capture needed (booking was created without payment)
         // if (!this.calendar) {
         //     console.error("Google Calendar integration is not initialized.");
         //     throw new AppResponse(false, "CALENDAR_INTEGRATION_DISABLED", null, 503);
@@ -234,6 +236,13 @@ export class BookingService {
             try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
             return result;
         }
+        if ((booking as any).paymobOrderId) {
+            // Paymob booking
+            const result = await this.paymentService.cancel(id, "PAYMOB");
+            await this.sendCancellationEmail(booking, result);
+            try { await this.organizerService.notifyOrganizers("cancelled", booking); } catch (err: any) { console.error("[Organizer] Notification failed:", err?.message); }
+            return result;
+        }
 
         const result = await prisma.booking.update({
             where: { id },
@@ -260,7 +269,9 @@ export class BookingService {
                 ? "TABBY"
                 : (booking as any).tamaraOrderId
                     ? "TAMARA"
-                    : "MANUAL";
+                    : (booking as any).paymobOrderId
+                        ? "PAYMOB"
+                        : "MANUAL";
 
         const serviceName = booking.service?.name_en || "";
         const subject = `Your booking has been cancelled — ${serviceName}`;
