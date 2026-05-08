@@ -44,7 +44,7 @@ export class PaymobProvider implements IPaymentProvider {
         const apiKey = process.env.PAYMOB_API_KEY;
         const integrationId = process.env.PAYMOB_INTEGRATION_ID;
         const iframeId = process.env.PAYMOB_IFRAME_ID;
-        const currency = process.env.PAYMOB_CURRENCY || "EGP";
+        const currency = process.env.PAYMOB_CURRENCY || "SAR";
         const successUrl = process.env.PAYMOB_SUCCESS_URL || "";
         const cancelUrl = process.env.PAYMOB_CANCEL_URL || "";
 
@@ -110,7 +110,7 @@ export class PaymobProvider implements IPaymentProvider {
                 shipping_method: "NA",
                 postal_code: "NA",
                 city: "NA",
-                country: "EG",
+                country: "SA",
                 state: "NA",
             },
             redirection_url: successUrl,
