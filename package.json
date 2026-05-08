@@ -9,12 +9,11 @@
     "postinstall": "prisma generate",
     "db:push": "prisma generate && prisma db push",
     "stripe:listener": "stripe listen --forward-to localhost:3000/api/v1/payment/webhook/stripe",
-    "db:push-seed": "prisma db push && prisma db seed",
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
-  "author": "salma",
+  "author": "Amr Elskhawy",
   "license": "ISC",
   "description": "",
   "dependencies": {
