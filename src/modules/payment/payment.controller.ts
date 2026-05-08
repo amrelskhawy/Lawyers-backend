@@ -10,9 +10,13 @@ const bookingService = new BookingService();
 
 export const handleWebhook = asyncHandler(async (req: Request, res: Response) => {
     const providerStr = req.params.provider as string;
+    // Paymob sends HMAC as a query param (?hmac=...) on the callback and as a
+    // header on server-to-server transaction notifications.
+    const paymobHmac = (req.query.hmac ?? req.headers["x-paymob-hmac"]) as string | undefined;
     const signature = (req.headers["stripe-signature"]
         || req.headers["x-tamara-signature"]
-        || req.headers[process.env.TABBY_WEBHOOK_SIGNATURE!]) as string;
+        || req.headers[process.env.TABBY_WEBHOOK_SIGNATURE!]
+        || paymobHmac) as string;
 
     const provider = PaymentFactory.resolveProvider(providerStr);
     const result = await paymentService.handleWebhook(req.body, signature, provider);
