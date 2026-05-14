@@ -8,7 +8,8 @@ import {
     generateFieldVisitReportPdf,
     sendFieldVisitReportToClient,
 } from "./field-visit-reports.controller.js";
-import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
+import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
+import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
 import {
     validateCreateFieldVisitReport,
     validateUpdateFieldVisitReport,
@@ -16,13 +17,13 @@ import {
 
 const router = express.Router();
 
-router.get("/by-case/:caseId", protect, moderatorMiddleware, listFieldVisitReportsByCase);
-router.get("/:id", protect, moderatorMiddleware, getFieldVisitReport);
-router.post("/", protect, moderatorMiddleware, validateCreateFieldVisitReport, createFieldVisitReport);
-router.patch("/:id", protect, moderatorMiddleware, validateUpdateFieldVisitReport, updateFieldVisitReport);
-router.delete("/:id", protect, moderatorMiddleware, deleteFieldVisitReport);
+router.get("/by-case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listFieldVisitReportsByCase);
+router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getFieldVisitReport);
+router.post("/", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateCreateFieldVisitReport, logActivity("CREATE", "FieldVisitReport"), createFieldVisitReport);
+router.patch("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateUpdateFieldVisitReport, logActivity("UPDATE", "FieldVisitReport"), updateFieldVisitReport);
+router.delete("/:id", protect, requireRole("ADMIN", "MODERATOR"), logActivity("DELETE", "FieldVisitReport"), deleteFieldVisitReport);
 
-router.post("/:id/generate-pdf", protect, moderatorMiddleware, generateFieldVisitReportPdf);
-router.post("/:id/send-to-client", protect, moderatorMiddleware, sendFieldVisitReportToClient);
+router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("GENERATE_PDF", "FieldVisitReport"), generateFieldVisitReportPdf);
+router.post("/:id/send-to-client", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("SEND_TO_CLIENT", "FieldVisitReport"), sendFieldVisitReportToClient);
 
 export default router;

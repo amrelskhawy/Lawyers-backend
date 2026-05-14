@@ -13,7 +13,8 @@ import {
     verifySigningIdentity,
     submitSignedContract,
 } from "./lawyer-fees-contracts.controller.js";
-import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
+import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
+import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
 import {
     validateCreateLawyerFeesContract,
     validateUpdateLawyerFeesContract,
@@ -21,21 +22,22 @@ import {
 
 const router = express.Router();
 
-router.get("/",                       protect, moderatorMiddleware, listLawyerFeesContracts);
-router.get("/by-case/:caseId",        protect, moderatorMiddleware, listLawyerFeesContractsByCase);
-router.get("/by-customer/:customerId", protect, moderatorMiddleware, listLawyerFeesContractsByCustomer);
-router.get("/:id",                    protect, moderatorMiddleware, getLawyerFeesContract);
+router.get("/",                        protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContracts);
+router.get("/by-case/:caseId",         protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContractsByCase);
+router.get("/by-customer/:customerId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContractsByCustomer);
+router.get("/:id",                     protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getLawyerFeesContract);
 
-router.post("/",       protect, moderatorMiddleware, validateCreateLawyerFeesContract, createLawyerFeesContract);
-router.patch("/:id",   protect, moderatorMiddleware, validateUpdateLawyerFeesContract, updateLawyerFeesContract);
-router.delete("/:id",  protect, moderatorMiddleware, deleteLawyerFeesContract);
+router.post("/",       protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateCreateLawyerFeesContract, logActivity("CREATE", "LawyerFeesContract"), createLawyerFeesContract);
+router.patch("/:id",   protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateUpdateLawyerFeesContract, logActivity("UPDATE", "LawyerFeesContract"), updateLawyerFeesContract);
+router.delete("/:id",  protect, requireRole("ADMIN", "MODERATOR"), logActivity("DELETE", "LawyerFeesContract"), deleteLawyerFeesContract);
 
-router.post("/:id/generate-pdf", protect, moderatorMiddleware, generateLawyerFeesContractPdf);
-router.post("/:id/signing-link", protect, moderatorMiddleware, createLawyerFeesContractSigningLink);
+router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("GENERATE_PDF", "LawyerFeesContract"), generateLawyerFeesContractPdf);
+router.post("/:id/signing-link", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("CREATE_SIGNING_LINK", "LawyerFeesContract"), createLawyerFeesContractSigningLink);
 router.post(
     "/:id/signing-link/send-whatsapp",
     protect,
-    moderatorMiddleware,
+    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    logActivity("SEND_SIGNING_LINK", "LawyerFeesContract"),
     sendLawyerFeesContractSigningLinkWhatsapp,
 );
 
