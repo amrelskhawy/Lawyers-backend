@@ -5,7 +5,7 @@ import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
-import type { CreateCasePayload, UpdateCasePayload } from "./cases.validator.js";
+import type { CreateCasePayload, UpdateCasePayload, AssignCasePayload } from "./cases.validator.js";
 
 const caseInclude = {
     customer: {
@@ -16,34 +16,39 @@ const caseInclude = {
     createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.CaseInclude;
 
+type RequestingUser = { id: string; role: string };
+
 export class CasesService {
-    async list() {
+    async list(requestingUser: RequestingUser) {
+        const where: Prisma.CaseWhereInput = { isDeleted: false };
+        if (requestingUser.role === "LAWYER") {
+            where.preferredLawyerId = requestingUser.id;
+        }
         return prisma.case.findMany({
-            where: { isDeleted: false },
+            where,
             include: caseInclude,
             orderBy: { createdAt: "desc" },
         });
     }
 
-    /**
-     * List staff (admins + moderators) eligible to be picked as the preferred lawyer
-     * or the session receiver. Returns minimal fields for a dropdown.
-     */
     async listLawyers() {
         return prisma.user.findMany({
-            where: { role: { in: ["ADMIN", "MODERATOR"] } },
+            where: { role: "LAWYER" },
             select: { id: true, name: true, email: true },
             orderBy: { name: "asc" },
         });
     }
 
-    async getById(id: string) {
+    async getById(id: string, requestingUser: RequestingUser) {
         const c = await prisma.case.findUnique({
             where: { id },
             include: caseInclude,
         });
         if (!c || c.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (requestingUser.role === "LAWYER" && c.preferredLawyerId !== requestingUser.id) {
+            throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
         }
         return c;
     }
@@ -70,11 +75,20 @@ export class CasesService {
             include: caseInclude,
         });
     }
-    // TODO: improve it to be senior Level
-    async update(id: string, payload: UpdateCasePayload) {
+    async update(id: string, payload: UpdateCasePayload, updatedById: string, updaterRole: string) {
         const existing = await prisma.case.findUnique({ where: { id } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+
+        // Lawyers can only edit cases they have accepted
+        if (updaterRole === "LAWYER") {
+            if (existing.preferredLawyerId !== updatedById) {
+                throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+            }
+            if (existing.assignmentStatus !== "ACCEPTED") {
+                throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_ACCEPTED", null, 403);
+            }
         }
 
         const data: Prisma.CaseUpdateInput = {};
@@ -86,17 +100,6 @@ export class CasesService {
         if (payload.caseDate !== undefined) data.caseDate = new Date(payload.caseDate);
         if (payload.hijriDate !== undefined) data.hijriDate = payload.hijriDate;
         if (payload.agencyNumber !== undefined) data.agencyNumber = payload.agencyNumber;
-        if (payload.wantsSpecificLawyer !== undefined) {
-            data.wantsSpecificLawyer = payload.wantsSpecificLawyer;
-        }
-        if (payload.preferredLawyerId !== undefined) {
-            data.preferredLawyer = payload.preferredLawyerId
-                ? { connect: { id: payload.preferredLawyerId } }
-                : { disconnect: true };
-        }
-        if (payload.preferredLawyerName !== undefined) {
-            data.preferredLawyerName = payload.preferredLawyerName;
-        }
         if (payload.sessionReceiverId !== undefined) {
             data.sessionReceiver = payload.sessionReceiverId
                 ? { connect: { id: payload.sessionReceiverId } }
@@ -114,9 +117,84 @@ export class CasesService {
         if (payload.gaps !== undefined) data.gaps = payload.gaps;
         if (payload.freeNotes !== undefined) data.freeNotes = payload.freeNotes;
 
+        data.updatedBy = { connect: { id: updatedById } };
+
         return prisma.case.update({
             where: { id },
             data,
+            include: caseInclude,
+        });
+    }
+
+    async assign(caseId: string, payload: AssignCasePayload, assignedById: string) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+
+        const lawyer = await prisma.user.findUnique({ where: { id: payload.lawyerId } });
+        if (!lawyer || lawyer.role !== "LAWYER") {
+            throw new AppResponse(false, "CASE_ASSIGN_INVALID_LAWYER", null, 400);
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                wantsSpecificLawyer: true,
+                preferredLawyer: { connect: { id: payload.lawyerId } },
+                preferredLawyerName: payload.lawyerName ?? lawyer.name,
+                assignmentStatus: "PENDING",
+                assignmentRejectedAt: null,
+                updatedBy: { connect: { id: assignedById } },
+            },
+            include: caseInclude,
+        });
+    }
+
+    async acceptAssignment(caseId: string, lawyerId: string) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (existing.preferredLawyerId !== lawyerId) {
+            throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+        }
+        if (existing.assignmentStatus !== "PENDING") {
+            throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_PENDING", null, 400);
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                assignmentStatus: "ACCEPTED",
+                updatedBy: { connect: { id: lawyerId } },
+            },
+            include: caseInclude,
+        });
+    }
+
+    async rejectAssignment(caseId: string, lawyerId: string) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (existing.preferredLawyerId !== lawyerId) {
+            throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+        }
+        if (existing.assignmentStatus !== "PENDING") {
+            throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_PENDING", null, 400);
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                assignmentStatus: "REJECTED",
+                assignmentRejectedAt: new Date(),
+                preferredLawyer: { disconnect: true },
+                preferredLawyerName: null,
+                wantsSpecificLawyer: false,
+                updatedBy: { connect: { id: lawyerId } },
+            },
             include: caseInclude,
         });
     }

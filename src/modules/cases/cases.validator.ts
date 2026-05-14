@@ -26,6 +26,7 @@ export const CreateCaseSchema = z.object({
     agencyNumber: z.string().optional(),
 });
 
+// General case update — assignment fields are excluded (use /assign endpoint)
 export const UpdateCaseSchema = z
     .object({
         customerId: z.string().uuid().optional(),
@@ -34,10 +35,6 @@ export const UpdateCaseSchema = z
         caseDate: isoDate.optional(),
         hijriDate: z.string().nullable().optional(),
         agencyNumber: z.string().nullable().optional(),
-
-        wantsSpecificLawyer: z.boolean().optional(),
-        preferredLawyerId: z.string().uuid().nullable().optional(),
-        preferredLawyerName: z.string().nullable().optional(),
 
         sessionReceiverId: z.string().uuid().nullable().optional(),
         sessionReceiverName: z.string().nullable().optional(),
@@ -51,8 +48,15 @@ export const UpdateCaseSchema = z
     })
     .strict();
 
+// Assignment — only staff (admin/moderator/receptionist) can send this
+export const AssignCaseSchema = z.object({
+    lawyerId: z.string().uuid(),
+    lawyerName: z.string().optional(),
+}).strict();
+
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
+export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
 
 export const validateCreateCase = (req: Request, res: Response, next: NextFunction) => {
     const result = CreateCaseSchema.safeParse(req.body);
@@ -67,6 +71,17 @@ export const validateCreateCase = (req: Request, res: Response, next: NextFuncti
 
 export const validateUpdateCase = (req: Request, res: Response, next: NextFunction) => {
     const result = UpdateCaseSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateAssignCase = (req: Request, res: Response, next: NextFunction) => {
+    const result = AssignCaseSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)
