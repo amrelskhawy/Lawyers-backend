@@ -1,19 +1,24 @@
 import express from "express";
-import { deleteUser, deleteMultipleUsers, getAllUsers } from "./users.controller.js";
+import { getAllUsers, getUserById, createUser, updateUser, deleteUser, deleteMultipleUsers } from "./users.controller.js";
 import { adminMiddleware, protect } from "../../core/middlewares/authMiddleware.js";
 import { validateRequest } from "../../core/middlewares/validateRequest.js";
+import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
 import { BulkDeleteSchema } from "../../core/types/common.types.js";
+import { CreateUserSchema, UpdateUserSchema } from "./users.types.js";
 
 const router = express.Router();
 
-// User Management (Admin)
-router.route("/users")
-    .get(protect, getAllUsers);
+router.use(protect, adminMiddleware);
 
-router.route("/users/many")
-    .delete(protect, adminMiddleware, validateRequest(BulkDeleteSchema as any), deleteMultipleUsers);
+router.route("/users")
+    .get(getAllUsers)
+    .post(validateRequest(CreateUserSchema as any), logActivity("CREATE", "User"), createUser);
+
+router.delete("/users/many", validateRequest(BulkDeleteSchema as any), logActivity("DELETE", "User"), deleteMultipleUsers);
 
 router.route("/users/:id")
-    .delete(protect, adminMiddleware, deleteUser);
+    .get(getUserById)
+    .patch(validateRequest(UpdateUserSchema as any), logActivity("UPDATE", "User"), updateUser)
+    .delete(logActivity("DELETE", "User"), deleteUser);
 
 export default router;
