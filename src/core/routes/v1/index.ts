@@ -17,7 +17,7 @@ import fieldVisitReportsRoutes from "../../../modules/field-visit-reports/field-
 import lawyerFeesContractsRoutes, {
     lawyerFeesContractSigningPublicRouter,
 } from "../../../modules/lawyer-fees-contracts/lawyer-fees-contracts.routes.js";
-
+import activityLogsRoutes from "../../../modules/activity-logs/activity-logs.routes.js";
 
 const router = Router();
 
@@ -38,5 +38,6 @@ router.use("/session-reports", sessionReportsRoutes);
 router.use("/field-visit-reports", fieldVisitReportsRoutes);
 router.use("/lawyer-fees-contracts", lawyerFeesContractsRoutes);
 router.use("/public/sign-contract", lawyerFeesContractSigningPublicRouter);
+router.use("/activity-logs", activityLogsRoutes);
 
 export default router;
