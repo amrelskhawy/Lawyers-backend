@@ -11,6 +11,7 @@
             "PASSWORD_CHANGED_SUCCESS": "Password changed successfully"
         },
         "error": {
+            "AUTH_UNAUTHORIZED": "You do not have permission to perform this action",
             "EMAIL_REQUIRED": "Email is required",
             "PASSWORD_REQUIRED": "Password is required",
             "INVALID_VERIFICATION_TOKEN": "Invalid verification token",
