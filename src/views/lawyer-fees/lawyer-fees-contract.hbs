@@ -147,9 +147,9 @@
       justify-content: flex-start;
     }
 
-    /* ============ PAGE 2 — fees overlays (unchanged) ============ */
+    /* ============ PAGE 2 — fees overlays ============ */
     .f-total-fees {
-      top: 24.6%;
+      top: 25.6%;
       left: 22%;
       width: 18%;
       height: 2.6%;
@@ -157,7 +157,7 @@
     }
 
     .f-first-installment {
-      top: 28.1%;
+      top: 29.1%;
       left: 58%;
       width: 18%;
       height: 2.1%;
@@ -165,7 +165,7 @@
     }
 
     .f-second-installment {
-      top: 31.4%;
+      top: 32.4%;
       left: 58%;
       width: 18%;
       height: 2.1%;
@@ -173,23 +173,25 @@
     }
 
     .f-other-fees {
-      top: 31.4%;
+      top: 32%;
       left: 5%;
-      width: 36%;
-      height: 2%;
+      width: 90%;
+      height: 5.5%;
       font-size: 1.75cqw;
-      text-align: right;
+      text-align: justify;
+      direction: rtl;
       white-space: pre-wrap;
+      word-break: break-word;
       display: block;
-      padding: 0.4% 1%;
-      align-items: flex-start;
-      justify-content: flex-start;
+      text-indent: 61%;
+      overflow: hidden;
+      line-height: 2.33;
     }
 
     /* Free-form body below fees section on page 2 */
     .f-page2-body {
       position: absolute;
-      top: 36%;
+      top: 38%;
       right: 4.5%;
       left: 4.5%;
       bottom: 13%;
@@ -206,7 +208,7 @@
     /* ============ PAGE 3 — free text + signatures ============ */
     .p3-body {
       position: absolute;
-      top: 13%;
+      top: 20.5%;
       right: 4.5%;
       left: 4.5%;
       bottom: 28%;
@@ -293,16 +295,12 @@
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
     <div class="ov f-other-fees">{{other_fees}}</div>
 
-    {{#if page2_content}}
     <div class="f-page2-body">{{page2_content}}</div>
-    {{/if}}
   </div>
 
   <!-- ============ PAGE 3 — free text + signatures ============ -->
   <div class="lfc-page page-3">
-    {{#if page3_content}}
     <div class="p3-body">{{page3_content}}</div>
-    {{/if}}
 
     <div class="p3-sig-section">
       <div class="p3-sig-party">
