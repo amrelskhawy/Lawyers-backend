@@ -72,8 +72,9 @@ export function buildLawyerFeesContractContext(c: LawyerFeesContract) {
         service_description: c.serviceDescription ?? "",
 
         total_fees:         formatAmount(c.totalFees),
-        first_installment:  formatAmount(c.firstInstallment),
-        second_installment: formatAmount(c.secondInstallment),
+        first_installment:       formatAmount(c.firstInstallment),
+        first_installment_note:  c.firstInstallmentNote ?? "",
+        second_installment:      formatAmount(c.secondInstallment),
         other_fees:         c.otherFees ?? "",
         currency:           c.currency ?? "SAR",
 

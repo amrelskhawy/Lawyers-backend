@@ -164,6 +164,20 @@
       font-size: 2.2cqw;
     }
 
+    .f-first-installment-note {
+      top: 29.4%;
+      left: 5%;
+      width: 47%;
+      height: 2.1%;
+      font-size: 1.8cqw;
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: right;
+      direction: rtl;
+    }
+
     .f-second-installment {
       top: 32.4%;
       left: 58%;
@@ -292,6 +306,7 @@
   <div class="lfc-page page-2">
     <div class="ov f-total-fees" dir="ltr">{{total_fees}}</div>
     <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
+    <div class="ov f-first-installment-note">{{first_installment_note}}</div>
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
     <div class="ov f-other-fees">{{other_fees}}</div>
 
@@ -304,14 +319,12 @@
 
     <div class="p3-sig-section">
       <div class="p3-sig-party">
-        <div class="p3-sig-title">الطرف الأول</div>
         {{#if first_party_signature_url}}
         <img class="p3-sig-img" src="{{{first_party_signature_url}}}" alt="first party signature" />
         {{/if}}
       </div>
 
       <div class="p3-sig-party">
-        <div class="p3-sig-title">الطرف الثاني</div>
         {{#if second_party_signature_url}}
         <img class="p3-sig-img" src="{{{second_party_signature_url}}}" alt="second party signature" />
         {{/if}}

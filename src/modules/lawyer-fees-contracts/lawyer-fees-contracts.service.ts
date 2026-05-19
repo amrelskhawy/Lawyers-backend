@@ -28,6 +28,7 @@ const SCALAR_KEYS = [
     "clientPhone",
     "serviceDescription",
     "otherFees",
+    "firstInstallmentNote",
     "currency",
     "firstPartySignature",
     "secondPartySignature",
@@ -382,8 +383,9 @@ ${link.url}
             serviceDescription: c.serviceDescription,
 
             totalFees: c.totalFees,
-            firstInstallment: c.firstInstallment,
-            secondInstallment: c.secondInstallment,
+            firstInstallment:      c.firstInstallment,
+            firstInstallmentNote:  c.firstInstallmentNote,
+            secondInstallment:     c.secondInstallment,
             otherFees: c.otherFees,
             currency: c.currency,
 
