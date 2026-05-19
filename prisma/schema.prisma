@@ -298,10 +298,12 @@ model LawyerFeesContract {
 
   // Fees breakdown (البند الثاني)
   totalFees         Decimal? @db.Decimal(12, 2)
-  firstInstallment  Decimal? @db.Decimal(12, 2) // tُدفع عند توقيع العقد
+  firstInstallment  Decimal? @db.Decimal(12, 2)
   secondInstallment Decimal? @db.Decimal(12, 2)
   otherFees         String?
   currency          String?  @default("SAR")
+  page2Content      String?  // free-form body text below the fees table on page 2
+  page3Content      String?  // free-form body text on page 3 (blank-background page)
 
   // Online signatures
   firstPartySignature  String?

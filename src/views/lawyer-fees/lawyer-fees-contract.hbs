@@ -147,7 +147,7 @@
       justify-content: flex-start;
     }
 
-    /* ============ PAGE 2 — fees ============ */
+    /* ============ PAGE 2 — fees overlays (unchanged) ============ */
     .f-total-fees {
       top: 24.6%;
       left: 22%;
@@ -186,55 +186,81 @@
       justify-content: flex-start;
     }
 
-    /* ============ PAGE 3 — signatures ============ */
-    .f-second-party-signature {
+    /* Free-form body below fees section on page 2 */
+    .f-page2-body {
       position: absolute;
-      top: 80%;
-      left: 2%;
-      width: 24%;
-      height: 10%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      top: 36%;
+      right: 4.5%;
+      left: 4.5%;
+      bottom: 13%;
+      font-size: 1.9cqw;
+      font-weight: 600;
+      color: #1A113A;
+      white-space: pre-wrap;
+      text-align: right;
+      direction: rtl;
+      line-height: 1.7;
       overflow: hidden;
     }
 
-    .f-second-party-signature img {
+    /* ============ PAGE 3 — free text + signatures ============ */
+    .p3-body {
+      position: absolute;
+      top: 13%;
+      right: 4.5%;
+      left: 4.5%;
+      bottom: 28%;
+      font-size: 2cqw;
+      font-weight: 600;
+      color: #1A113A;
+      white-space: pre-wrap;
+      text-align: right;
+      direction: rtl;
+      line-height: 1.7;
+      overflow: hidden;
+    }
+
+    .p3-sig-section {
+      position: absolute;
+      bottom: 10%;
+      right: 4.5%;
+      left: 4.5%;
+      height: 18%;
+      display: flex;
+      direction: rtl;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+    .p3-sig-party {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 36%;
+    }
+
+    .p3-sig-title {
+      font-weight: 800;
+      font-size: 2.3cqw;
+      color: #1A113A;
+      margin-bottom: 3%;
+    }
+
+    .p3-sig-img {
       max-width: 100%;
-      max-height: 100%;
+      max-height: 65%;
       object-fit: contain;
     }
 
-    .f-second-party-signed-at {
-      top: 89%;
-      left: 6%;
-      width: 24%;
-      height: 1.6%;
+    .p3-sig-date {
       font-size: 1.5cqw;
       font-weight: 600;
-      color: #444;
-    }
-
-    .f-first-party-signature {
-      position: absolute;
-      top: 78%;
-      left: 68%;
-      width: 24%;
-      height: 10%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .f-first-party-signature img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
+      color: #555;
+      direction: ltr;
+      margin-top: 2%;
     }
 
     @media print {
-
       html,
       body {
         -webkit-print-color-adjust: exact !important;
@@ -245,6 +271,7 @@
 </head>
 
 <body>
+  <!-- ============ PAGE 1 ============ -->
   <div class="lfc-page page-1">
     <div class="ov f-contract-number">{{contract_number}}</div>
 
@@ -259,26 +286,42 @@
     <div class="ov f-service-description">{{service_description}}</div>
   </div>
 
+  <!-- ============ PAGE 2 — fees overlays + optional free body ============ -->
   <div class="lfc-page page-2">
     <div class="ov f-total-fees" dir="ltr">{{total_fees}}</div>
     <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
     <div class="ov f-other-fees">{{other_fees}}</div>
+
+    {{#if page2_content}}
+    <div class="f-page2-body">{{page2_content}}</div>
+    {{/if}}
   </div>
 
+  <!-- ============ PAGE 3 — free text + signatures ============ -->
   <div class="lfc-page page-3">
-    {{#if first_party_signature_url}}
-    <div class="f-first-party-signature">
-      <img src="{{{first_party_signature_url}}}" alt="first party signature" />
-    </div>
+    {{#if page3_content}}
+    <div class="p3-body">{{page3_content}}</div>
     {{/if}}
 
-    {{#if second_party_signature_url}}
-    <div class="f-second-party-signature">
-      <img src="{{{second_party_signature_url}}}" alt="second party signature" />
+    <div class="p3-sig-section">
+      <div class="p3-sig-party">
+        <div class="p3-sig-title">الطرف الأول</div>
+        {{#if first_party_signature_url}}
+        <img class="p3-sig-img" src="{{{first_party_signature_url}}}" alt="first party signature" />
+        {{/if}}
+      </div>
+
+      <div class="p3-sig-party">
+        <div class="p3-sig-title">الطرف الثاني</div>
+        {{#if second_party_signature_url}}
+        <img class="p3-sig-img" src="{{{second_party_signature_url}}}" alt="second party signature" />
+        {{/if}}
+        {{#if second_party_signed_at}}
+        <div class="p3-sig-date" dir="ltr">{{second_party_signed_at}}</div>
+        {{/if}}
+      </div>
     </div>
-    <div class="ov f-second-party-signed-at" dir="ltr">{{second_party_signed_at}}</div>
-    {{/if}}
   </div>
 </body>
 
