@@ -84,67 +84,69 @@
     /* ============ PAGE 1 ============ */
     .f-contract-number {
       top: 18.22%;
-      left: 5.7%;
-      width: 6%;
+      left: 5.2%;
+      width: 7%;
       height: 2%;
       font-size: 1.65cqw;
     }
 
     .f-contract-day {
-      top: 24.5%;
-      left: 75%;
-      width: 9%;
+      top: 24%;
+      left: 66.5%;
+      width: 17%;
       height: 1.9%;
     }
 
     .f-contract-date {
-      top: 24.5%;
-      left: 26.6%;
-      width: 14.5%;
+      top: 24%;
+      left: 8%;
+      width: 17.5%;
       height: 1.9%;
     }
 
     .f-hijri-date {
-      top: 24.5%;
-      left: 52.5%;
-      width: 15%;
+      top: 24%;
+      left: 40%;
+      width: 17.3%;
       height: 1.9%;
     }
 
     .f-client-name {
-      top: 33%;
-      left: 63%;
+      top: 33.4%;
+      left: 38%;
       font-size: 1.6cqw;
-      width: 21%;
+      width: 45%;
       height: 2.1%;
     }
 
     .f-client-id {
-      top: 33%;
-      left: 35%;
-      width: 16%;
+      top: 33.5%;
+      left: 5.5%;
+      width: 21%;
       height: 2.1%;
     }
 
     .f-client-phone {
-      top: 33%;
-      left: 6%;
-      width: 14.5%;
+      top: 36.7%;
+      left: 60%;
+      width: 23%;
       height: 2.1%;
     }
 
     .f-service-description {
-      top: 72%;
-      left: 4.5%;
-      width: 92%;
+      top: 72.8%;
+      left: 5.5%;
+      width: 90%;
+      max-height: 5.5%;
       font-size: 1.9cqw;
       font-weight: 800;
       text-align: center;
-      white-space: pre-wrap;
+      word-break: break-word;
       display: block;
-      padding: 0.4% 1%;
+      overflow: hidden;
       align-items: flex-start;
       justify-content: flex-start;
+      line-height: 2.35;
     }
 
     /* ============ PAGE 2 — fees overlays ============ */
@@ -189,7 +191,7 @@
     .f-other-fees {
       top: 32%;
       left: 5%;
-      width: 90%;
+      width: 89%;
       height: 5.5%;
       font-size: 1.75cqw;
       text-align: justify;
@@ -197,9 +199,9 @@
       white-space: pre-wrap;
       word-break: break-word;
       display: block;
-      text-indent: 61%;
+      text-indent: 60.5%;
       overflow: hidden;
-      line-height: 2.33;
+      line-height: 2.45;
     }
 
     /* Free-form body below fees section on page 2 */
@@ -211,11 +213,11 @@
       bottom: 13%;
       font-size: 1.9cqw;
       font-weight: 600;
-      color: #1A113A;
-      white-space: pre-wrap;
-      text-align: right;
+      color: #160C3B;
+      white-space: normal;
+      text-align: justify;
       direction: rtl;
-      line-height: 1.7;
+      line-height: 2;
       overflow: hidden;
     }
 
@@ -228,11 +230,11 @@
       bottom: 28%;
       font-size: 2cqw;
       font-weight: 600;
-      color: #1A113A;
-      white-space: pre-wrap;
-      text-align: right;
+      color: #160C3B;
+      white-space: normal;
+      text-align: justify;
       direction: rtl;
-      line-height: 1.7;
+      line-height: 2;
       overflow: hidden;
     }
 
@@ -299,7 +301,7 @@
     <div class="ov f-client-id">{{client_id_number}}</div>
     <div class="ov f-client-phone" dir="ltr">{{client_phone}}</div>
 
-    <div class="ov f-service-description">{{service_description}}</div>
+    <div class="ov f-service-description">{{{service_description}}}</div>
   </div>
 
   <!-- ============ PAGE 2 — fees overlays + optional free body ============ -->
@@ -308,14 +310,14 @@
     <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
     <div class="ov f-first-installment-note">{{first_installment_note}}</div>
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
-    <div class="ov f-other-fees">{{other_fees}}</div>
+    <div class="ov f-other-fees">{{{other_fees}}}</div>
 
-    <div class="f-page2-body">{{page2_content}}</div>
+    <div class="f-page2-body">{{{page2_content}}}</div>
   </div>
 
   <!-- ============ PAGE 3 — free text + signatures ============ -->
   <div class="lfc-page page-3">
-    <div class="p3-body">{{page3_content}}</div>
+    <div class="p3-body">{{{page3_content}}}</div>
 
     <div class="p3-sig-section">
       <div class="p3-sig-party">
