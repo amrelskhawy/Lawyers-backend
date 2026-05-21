@@ -39,15 +39,27 @@ function escapeHtml(s: string): string {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
 }
 
+function isEffectivelyEmptyHtml(html: string): boolean {
+    const stripped = html
+        .replace(/<\s*br\s*\/?\s*>/gi, "")
+        .replace(/<[^>]+>/g, "")
+        .replace(/&nbsp;/gi, "")
+        .replace(/\s+/g, "");
+    return stripped.length === 0;
+}
+
 function ensureHtml(value: string | null | undefined, fallback: string): string {
     if (!value) return fallback;
-    if (/<[a-z][\s\S]*>/i.test(value)) return value;
-    return value
+    if (/<[a-z][\s\S]*>/i.test(value)) {
+        return isEffectivelyEmptyHtml(value) ? fallback : value;
+    }
+    const paragraphs = value
         .split(/\n+/)
         .map((line) => line.trim())
         .filter((line) => line.length > 0)
         .map((line) => `<p>${escapeHtml(line)}</p>`)
         .join("");
+    return paragraphs.length > 0 ? paragraphs : fallback;
 }
 
 function getTemplate(): HandlebarsTemplateDelegate {
