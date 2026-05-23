@@ -63,30 +63,27 @@ export class PaymobProvider implements IPaymentProvider {
     amount: number,
     payload: BookingPayload,
   ) {
-    const apiKey = process.env.PAYMOB_API_KEY;
+    const secretKey = process.env.PAYMOB_SECRET_KEY;
+    const publicKey = process.env.PAYMOB_PUBLIC_KEY;
     const integrationId = process.env.PAYMOB_INTEGRATION_ID;
-    const iframeId = process.env.PAYMOB_IFRAME_ID;
     const currency = process.env.PAYMOB_CURRENCY || "SAR";
     const successUrl = process.env.PAYMOB_SUCCESS_URL || "";
-    const cancelUrl = process.env.PAYMOB_CANCEL_URL || "";
+    const notificationUrl = process.env.PAYMOB_NOTIFICATION_URL || "";
 
-    if (!apiKey)
-      throw new AppResponse(false, "PAYMOB_API_KEY_MISSING", null, 500);
+    if (!secretKey)
+      throw new AppResponse(false, "PAYMOB_SECRET_KEY_MISSING", null, 500);
+    if (!publicKey)
+      throw new AppResponse(false, "PAYMOB_PUBLIC_KEY_MISSING", null, 500);
     if (!integrationId)
       throw new AppResponse(false, "PAYMOB_INTEGRATION_ID_MISSING", null, 500);
-    if (!iframeId)
-      throw new AppResponse(false, "PAYMOB_IFRAME_ID_MISSING", null, 500);
 
-    // Step 1 — authenticate
-    const authData = await paymobRequest("POST", "/api/auth/tokens", {
-      api_key: apiKey,
-    });
-    const authToken: string = authData.token;
-    if (!authToken)
-      throw new AppResponse(false, "PAYMOB_AUTH_FAILED", authData, 500);
-
-    // Build reference_id using the same pipe-delimited pattern as Tabby/Tamara
-    const referenceId = [
+    // Paymob requires special_reference to be globally unique forever AND
+    // capped at 128 chars. Use a bare UUID for the reference, and carry the
+    // full booking payload in `extras` (no length limit) — the webhook reads
+    // it back from there.
+    const specialReference = crypto.randomUUID();
+    const bookingRef = [
+      specialReference,
       payload.serviceId,
       payload.clientEmail,
       payload.name,
@@ -98,49 +95,38 @@ export class PaymobProvider implements IPaymentProvider {
     ].join("|");
 
     const amountCents = Math.round(amount * 100);
+    const [firstName, ...lastNameParts] = payload.name.split(" ");
 
-    // Step 2 — create order
-    const orderData = await paymobRequest("POST", "/api/ecommerce/orders", {
-      auth_token: authToken,
-      delivery_needed: false,
-      amount_cents: amountCents,
-      currency,
-      merchant_order_id: referenceId,
-      items: [
-        {
-          name: `Service Booking – ${payload.date}`,
-          amount_cents: amountCents,
-          description: `${payload.startTime}–${payload.endTime}`,
-          quantity: 1,
-        },
-      ],
-    });
-    const orderId: string = String(orderData.id);
-    if (!orderId)
-      throw new AppResponse(
-        false,
-        "PAYMOB_ORDER_CREATION_FAILED",
-        orderData,
-        500,
-      );
-
-    // Step 3 — get payment key
-    const keyData = await paymobRequest(
-      "POST",
-      "/api/acceptance/payment_keys",
-      {
-        auth_token: authToken,
-        amount_cents: amountCents,
-        expiration: 1800, // 30 minutes
-        order_id: orderId,
+    // Intention API — Paymob's current recommended flow. The response gives
+    // a client_secret that pairs with PAYMOB_PUBLIC_KEY to launch the
+    // unified checkout (legacy ?payment_token= flow renders blank on KSA).
+    const intentionRes = await fetch(`${getPaymobBase()}/v1/intention/`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Token ${secretKey}`,
+      },
+      body: JSON.stringify({
+        amount: amountCents,
         currency,
-        integration_id: parseInt(integrationId, 10),
+        payment_methods: integrationId
+          .split(",")
+          .map((id) => parseInt(id.trim(), 10))
+          .filter((n) => !Number.isNaN(n)),
+        items: [
+          {
+            name: `Service Booking – ${payload.date}`,
+            amount: amountCents,
+            description: `${payload.startTime}–${payload.endTime}`,
+            quantity: 1,
+          },
+        ],
         billing_data: {
           apartment: "NA",
           email: payload.clientEmail,
           floor: "NA",
-          first_name: payload.name.split(" ")[0] || payload.name,
-          last_name: payload.name.split(" ").slice(1).join(" ") || "NA",
+          first_name: firstName || payload.name,
+          last_name: lastNameParts.join(" ") || "NA",
           street: "NA",
           building: "NA",
           phone_number: payload.phone,
@@ -150,22 +136,58 @@ export class PaymobProvider implements IPaymentProvider {
           country: "SA",
           state: "NA",
         },
-        redirection_url: successUrl,
-        lock_order_when_paid: false,
-      },
-    );
-    const paymentKey: string = keyData.token;
-    if (!paymentKey)
-      throw new AppResponse(false, "PAYMOB_PAYMENT_KEY_FAILED", keyData, 500);
+        customer: {
+          first_name: firstName || payload.name,
+          last_name: lastNameParts.join(" ") || "NA",
+          email: payload.clientEmail,
+        },
+        extras: { booking_ref: bookingRef },
+        special_reference: specialReference,
+        notification_url: notificationUrl || undefined,
+        redirection_url: successUrl || undefined,
+        expiration: 1800,
+      }),
+    });
 
-    const checkoutUrl = `${getPaymobBase()}/api/acceptance/iframes/${iframeId}?payment_token=${paymentKey}`;
+    const intentionText = await intentionRes.text();
+    let intentionData: any;
+    try {
+      intentionData = JSON.parse(intentionText);
+    } catch {
+      intentionData = { raw: intentionText };
+    }
 
-    console.log(`[Paymob] Checkout created for order ${orderId}`);
+    if (!intentionRes.ok) {
+      console.error("[Paymob] Intention error:", {
+        status: intentionRes.status,
+        data: intentionData,
+      });
+      throw new AppResponse(
+        false,
+        "PAYMOB_INTENTION_FAILED",
+        intentionData,
+        intentionRes.status,
+      );
+    }
+
+    const clientSecret: string = intentionData.client_secret;
+    const intentionId: string = String(intentionData.id ?? specialReference);
+    if (!clientSecret)
+      throw new AppResponse(
+        false,
+        "PAYMOB_CLIENT_SECRET_MISSING",
+        intentionData,
+        500,
+      );
+
+    const checkoutUrl = `${getPaymobBase()}/unifiedcheckout/?publicKey=${publicKey}&clientSecret=${clientSecret}`;
+
+    console.log(`[Paymob] Intention created ${intentionId}`);
 
     return {
       url: checkoutUrl,
-      sessionId: paymentKey,
-      paymentId: orderId,
+      sessionId: clientSecret,
+      paymentId: intentionId,
       qrCode: null,
       provider: "PAYMOB",
     };
@@ -364,7 +386,11 @@ export class PaymobProvider implements IPaymentProvider {
     }
 
     // ── Parse merchant_order_id (pipe-delimited reference_id) ────────────
-    const merchantOrderId: string = transaction.order?.merchant_order_id ?? "";
+    const merchantOrderId: string =
+      transaction.intention?.extras?.booking_ref ??
+      transaction.intention?.special_reference ??
+      transaction.order?.merchant_order_id ??
+      "";
     if (!merchantOrderId || !merchantOrderId.includes("|")) {
       console.error(
         `[Paymob] Missing or invalid merchant_order_id: ${merchantOrderId}`,
@@ -373,6 +399,7 @@ export class PaymobProvider implements IPaymentProvider {
     }
 
     const [
+      ,
       serviceId,
       clientEmail,
       name,

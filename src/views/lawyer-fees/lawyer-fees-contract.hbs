@@ -84,72 +84,74 @@
     /* ============ PAGE 1 ============ */
     .f-contract-number {
       top: 18.22%;
-      left: 5.7%;
-      width: 6%;
+      left: 5.2%;
+      width: 7%;
       height: 2%;
       font-size: 1.65cqw;
     }
 
     .f-contract-day {
-      top: 24.5%;
-      left: 75%;
-      width: 9%;
+      top: 24%;
+      left: 66.5%;
+      width: 17%;
       height: 1.9%;
     }
 
     .f-contract-date {
-      top: 24.5%;
-      left: 26.6%;
-      width: 14.5%;
+      top: 24%;
+      left: 8%;
+      width: 17.5%;
       height: 1.9%;
     }
 
     .f-hijri-date {
-      top: 24.5%;
-      left: 52.5%;
-      width: 15%;
+      top: 24%;
+      left: 40%;
+      width: 17.3%;
       height: 1.9%;
     }
 
     .f-client-name {
-      top: 33%;
-      left: 63%;
+      top: 33.4%;
+      left: 38%;
       font-size: 1.6cqw;
-      width: 21%;
+      width: 45%;
       height: 2.1%;
     }
 
     .f-client-id {
-      top: 33%;
-      left: 35%;
-      width: 16%;
+      top: 33.5%;
+      left: 5.5%;
+      width: 21%;
       height: 2.1%;
     }
 
     .f-client-phone {
-      top: 33%;
-      left: 6%;
-      width: 14.5%;
+      top: 36.7%;
+      left: 60%;
+      width: 23%;
       height: 2.1%;
     }
 
     .f-service-description {
-      top: 72%;
-      left: 4.5%;
-      width: 92%;
-      font-size: 1.9cqw;
-      font-weight: 800;
+      top: 72.8%;
+      left: 5.5%;
+      width: 90%;
+      max-height: 5.5%;
+      font-size: 1.8cqw;
+      font-weight: 700;
       text-align: center;
-      white-space: pre-wrap;
+      word-break: break-word;
       display: block;
-      padding: 0.4% 1%;
+      overflow: hidden;
       align-items: flex-start;
       justify-content: flex-start;
+      line-height: 2.35;
     }
 
-    /* ============ PAGE 2 — fees ============ */
+    /* ============ PAGE 2 — fees overlays ============ */
     .f-total-fees {
-      top: 24.6%;
+      top: 25.6%;
       left: 22%;
       width: 18%;
       height: 2.6%;
@@ -157,15 +159,29 @@
     }
 
     .f-first-installment {
-      top: 28.1%;
+      top: 29.1%;
       left: 58%;
       width: 18%;
       height: 2.1%;
       font-size: 2.2cqw;
     }
 
+    .f-first-installment-note {
+      top: 29.4%;
+      left: 5%;
+      width: 47%;
+      height: 2.1%;
+      font-size: 1.8cqw;
+      display: block;
+      overflow: hidden;
+      white-space: nowrap;
+      text-overflow: ellipsis;
+      text-align: right;
+      direction: rtl;
+    }
+
     .f-second-installment {
-      top: 31.4%;
+      top: 32.4%;
       left: 58%;
       width: 18%;
       height: 2.1%;
@@ -173,64 +189,96 @@
     }
 
     .f-other-fees {
-      top: 31.4%;
+      top: 31.8%;
+      font-weight: 700;
       left: 5%;
-      width: 36%;
-      height: 2%;
+      width: 89%;
+      height: 5.5%;
       font-size: 1.75cqw;
-      text-align: right;
+      text-align: justify;
+      direction: rtl;
       white-space: pre-wrap;
+      word-break: break-word;
       display: block;
-      padding: 0.4% 1%;
-      align-items: flex-start;
-      justify-content: flex-start;
+      text-indent: 60.5%;
+      overflow: hidden;
+      line-height: 2.47;
     }
 
-    /* ============ PAGE 3 — signatures ============ */
-    .f-second-party-signature {
+    /* Free-form body below fees section on page 2 */
+    .f-page2-body {
       position: absolute;
-      top: 80%;
-      left: 2%;
-      width: 24%;
-      height: 10%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
+      top: 38%;
+      right: 4.5%;
+      left: 4.5%;
+      bottom: 13%;
+      font-size: 1.9cqw;
+      font-weight: 600;
+      color: #160C3B;
+      white-space: normal;
+      text-align: justify;
+      direction: rtl;
+      line-height: 2;
       overflow: hidden;
     }
 
-    .f-second-party-signature img {
-      max-width: 100%;
-      max-height: 100%;
+    /* ============ PAGE 3 — free text + signatures ============ */
+    .p3-body {
+      position: absolute;
+      top: 21.5%;
+      right: 4.5%;
+      left: 4.5%;
+      bottom: 28%;
+      font-size: 2cqw;
+      font-weight: 600;
+      color: #160C3B;
+      white-space: normal;
+      text-align: justify;
+      direction: rtl;
+      line-height: 2.4;
+      overflow: hidden;
+    }
+
+    .p3-sig-section {
+      position: absolute;
+      bottom: 2%;
+      right: 4.5%;
+      left: 0;
+      height: 18%;
+      display: flex;
+      direction: rtl;
+      align-items: flex-start;
+      justify-content: space-between;
+    }
+
+
+    .p3-sig-party {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 36%;
+    }
+
+    .p3-sig-title {
+      font-weight: 800;
+      font-size: 2.3cqw;
+      color: #1A113A;
+      margin-bottom: 3%;
+    }
+
+    .p3-sig-img {
+      max-width: 80%;
+      max-height: 80%;
+      width: 100%;
       object-fit: contain;
     }
 
-    .f-second-party-signed-at {
-      top: 89%;
-      left: 6%;
-      width: 24%;
-      height: 1.6%;
+    .p3-sig-date {
       font-size: 1.5cqw;
       font-weight: 600;
-      color: #444;
-    }
-
-    .f-first-party-signature {
-      position: absolute;
-      top: 78%;
-      left: 68%;
-      width: 24%;
-      height: 10%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      overflow: hidden;
-    }
-
-    .f-first-party-signature img {
-      max-width: 100%;
-      max-height: 100%;
-      object-fit: contain;
+      color: #555;
+      direction: ltr;
+      margin-top: -4%;
     }
 
     @media print {
@@ -245,6 +293,7 @@
 </head>
 
 <body>
+  <!-- ============ PAGE 1 ============ -->
   <div class="lfc-page page-1">
     <div class="ov f-contract-number">{{contract_number}}</div>
 
@@ -256,29 +305,40 @@
     <div class="ov f-client-id">{{client_id_number}}</div>
     <div class="ov f-client-phone" dir="ltr">{{client_phone}}</div>
 
-    <div class="ov f-service-description">{{service_description}}</div>
+    <div class="ov f-service-description">{{{service_description}}}</div>
   </div>
 
+  <!-- ============ PAGE 2 — fees overlays + optional free body ============ -->
   <div class="lfc-page page-2">
     <div class="ov f-total-fees" dir="ltr">{{total_fees}}</div>
     <div class="ov f-first-installment" dir="ltr">{{first_installment}}</div>
+    <div class="ov f-first-installment-note">{{first_installment_note}}</div>
     <div class="ov f-second-installment" dir="ltr">{{second_installment}}</div>
-    <div class="ov f-other-fees">{{other_fees}}</div>
+    <div class="ov f-other-fees">{{{other_fees}}}</div>
+
+    <div class="f-page2-body">{{{page2_content}}}</div>
   </div>
 
+  <!-- ============ PAGE 3 — free text + signatures ============ -->
   <div class="lfc-page page-3">
-    {{#if first_party_signature_url}}
-    <div class="f-first-party-signature">
-      <img src="{{{first_party_signature_url}}}" alt="first party signature" />
-    </div>
-    {{/if}}
+    <div class="p3-body">{{{page3_content}}}</div>
 
-    {{#if second_party_signature_url}}
-    <div class="f-second-party-signature">
-      <img src="{{{second_party_signature_url}}}" alt="second party signature" />
+    <div class="p3-sig-section">
+      <div class="p3-sig-party">
+        {{#if first_party_signature_url}}
+        <img class="p3-sig-img" src="{{{first_party_signature_url}}}" alt="first party signature" />
+        {{/if}}
+      </div>
+
+      <div class="p3-sig-party">
+        {{#if second_party_signature_url}}
+        <img class="p3-sig-img" src="{{{second_party_signature_url}}}" alt="second party signature" />
+        {{/if}}
+        {{#if second_party_signed_at}}
+        <div class="p3-sig-date" dir="ltr">{{second_party_signed_at}}</div>
+        {{/if}}
+      </div>
     </div>
-    <div class="ov f-second-party-signed-at" dir="ltr">{{second_party_signed_at}}</div>
-    {{/if}}
   </div>
 </body>
 
