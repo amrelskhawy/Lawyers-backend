@@ -15,7 +15,7 @@ import { validateCreateCustomer, validateUpdateCustomer } from "./customers.vali
 
 const router = express.Router();
 
-router.get("/", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), listCustomers);
+router.get("/", protect, requireRole("ADMIN", "LAWYER", "MODERATOR", "RECEPTIONIST"), listCustomers);
 router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), getCustomer);
 router.post("/", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), validateCreateCustomer, logActivity("CREATE", "Customer"), createCustomer);
 router.put("/:id", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), validateUpdateCustomer, logActivity("UPDATE", "Customer"), updateCustomer);

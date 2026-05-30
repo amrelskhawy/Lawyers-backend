@@ -9,6 +9,7 @@ import {
     assignCase,
     acceptCaseAssignment,
     rejectCaseAssignment,
+    unassignCase,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
@@ -82,6 +83,13 @@ router.patch(
     requireRole("LAWYER"),
     logActivity("REJECT_ASSIGNMENT", "Case"),
     rejectCaseAssignment,
+);
+router.patch(
+    "/:id/unassign",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    logActivity("UNASSIGN", "Case"),
+    unassignCase,
 );
 
 router.post(

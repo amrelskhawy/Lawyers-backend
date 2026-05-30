@@ -82,3 +82,19 @@ export const getPublicData = asyncHandler(
     );
   },
 );
+
+
+export const getLawyers = asyncHandler(
+  async (req: Request, res: Response) => {
+    const lawyers = await prisma.user.findMany({
+      where: { role: "LAWYER" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        picture: true,
+      },
+    });
+    res.status(200).json(new AppResponse(true, "LAWYERS_RETRIEVED_SUCCESS", lawyers));
+  },
+);

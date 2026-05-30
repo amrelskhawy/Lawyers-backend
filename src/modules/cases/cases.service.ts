@@ -131,6 +131,9 @@ export class CasesService {
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
+        if (existing.assignmentStatus === "PENDING" || existing.assignmentStatus === "ACCEPTED") {
+            throw new AppResponse(false, "CASE_ALREADY_ASSIGNED", null, 409);
+        }
 
         const lawyer = await prisma.user.findUnique({ where: { id: payload.lawyerId } });
         if (!lawyer || lawyer.role !== "LAWYER") {
@@ -194,6 +197,29 @@ export class CasesService {
                 preferredLawyerName: null,
                 wantsSpecificLawyer: false,
                 updatedBy: { connect: { id: lawyerId } },
+            },
+            include: caseInclude,
+        });
+    }
+
+    async unassign(caseId: string, unassignedById: string) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (existing.assignmentStatus !== "PENDING" && existing.assignmentStatus !== "ACCEPTED") {
+            throw new AppResponse(false, "CASE_NOT_ASSIGNED", null, 400);
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                assignmentStatus: "UNASSIGNED",
+                assignmentRejectedAt: null,
+                preferredLawyer: { disconnect: true },
+                preferredLawyerName: null,
+                wantsSpecificLawyer: false,
+                updatedBy: { connect: { id: unassignedById } },
             },
             include: caseInclude,
         });

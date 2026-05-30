@@ -51,6 +51,11 @@ export const rejectCaseAssignment = asyncHandler(async (req: AuthRequest, res: R
     res.status(200).json(new AppResponse(true, "CASE_ASSIGNMENT_REJECTED", data));
 });
 
+export const unassignCase = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await cases.unassign(req.params.id as string, req.user.id);
+    res.status(200).json(new AppResponse(true, "CASE_UNASSIGNED_SUCCESS", data));
+});
+
 export const generateCasePdf = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { data, regenerated } = await cases.generateAndUploadPdf(req.params.id as string);
     const messageKey = regenerated
