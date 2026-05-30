@@ -6,22 +6,105 @@ import {
     createCase,
     updateCase,
     deleteCase,
+    assignCase,
+    acceptCaseAssignment,
+    rejectCaseAssignment,
+    unassignCase,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
-import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
-import { validateCreateCase, validateUpdateCase } from "./cases.validator.js";
+import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
+import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
+import { validateCreateCase, validateUpdateCase, validateAssignCase } from "./cases.validator.js";
 
 const router = express.Router();
 
-router.get("/", protect, moderatorMiddleware, listCases);
-router.get("/lawyers", protect, moderatorMiddleware, listLawyers);
-router.get("/:id", protect, moderatorMiddleware, getCase);
-router.post("/", protect, moderatorMiddleware, validateCreateCase, createCase);
-router.patch("/:id", protect, moderatorMiddleware, validateUpdateCase, updateCase);
-router.delete("/:id", protect, moderatorMiddleware, deleteCase);
+router.get(
+    "/",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"),
+    listCases,
+);
+router.get(
+    "/lawyers",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    listLawyers,
+);
+router.get(
+    "/:id",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"),
+    getCase,
+);
+router.post(
+    "/",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    validateCreateCase,
+    logActivity("CREATE", "Case"),
+    createCase,
+);
+router.patch(
+    "/:id",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    validateUpdateCase,
+    logActivity("UPDATE", "Case"),
+    updateCase,
+);
+router.delete(
+    "/:id",
+    protect,
+    requireRole("ADMIN", "MODERATOR"),
+    logActivity("DELETE", "Case"),
+    deleteCase,
+);
 
-router.post("/:id/generate-pdf", protect, moderatorMiddleware, generateCasePdf);
-router.post("/:id/send-to-client", protect, moderatorMiddleware, sendCaseToClient);
+// Assignment flow
+router.patch(
+    "/:id/assign",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    validateAssignCase,
+    logActivity("ASSIGN", "Case"),
+    assignCase,
+);
+router.patch(
+    "/:id/assignment/accept",
+    protect,
+    requireRole("LAWYER"),
+    logActivity("ACCEPT_ASSIGNMENT", "Case"),
+    acceptCaseAssignment,
+);
+router.patch(
+    "/:id/assignment/reject",
+    protect,
+    requireRole("LAWYER"),
+    logActivity("REJECT_ASSIGNMENT", "Case"),
+    rejectCaseAssignment,
+);
+router.patch(
+    "/:id/unassign",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    logActivity("UNASSIGN", "Case"),
+    unassignCase,
+);
+
+router.post(
+    "/:id/generate-pdf",
+    protect,
+    requireRole("ADMIN", "LAWYER"),
+    logActivity("GENERATE_PDF", "Case"),
+    generateCasePdf,
+);
+router.post(
+    "/:id/send-to-client",
+    protect,
+    requireRole("ADMIN", "LAWYER"),
+    logActivity("SEND_TO_CLIENT", "Case"),
+    sendCaseToClient,
+);
 
 export default router;
