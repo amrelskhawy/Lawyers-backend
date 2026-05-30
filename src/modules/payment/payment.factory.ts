@@ -46,7 +46,7 @@ export class PaymentFactory {
         if (!valid.includes(upper)) {
             throw new AppResponse(
                 false,
-                `INVALID_PAYMENT_PROVIDER. Must be one of: ${valid.join(", ")}`,
+                "UNSUPPORTED_PAYMENT_PROVIDER",
                 null,
                 400
             );

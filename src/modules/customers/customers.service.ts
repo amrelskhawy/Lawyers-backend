@@ -101,7 +101,7 @@ export class CustomerService {
             data: { isDeleted: true },
         });
 
-        return { message: "Customer deleted successfully" };
+        return { message: "CUSTOMER_DELETED_SUCCESS" };
     }
 
     async deleteMultipleCustomers(ids: string[]) {

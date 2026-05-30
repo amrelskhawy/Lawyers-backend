@@ -93,7 +93,7 @@ export class ServiceService {
         if (service.Booking.length > 0) {
             // Check if it's already disabled
             if (!service.isActive) {
-                return { message: "Service is already disabled and cannot be deleted because it has associated bookings", id: service.id, status: "ALREADY_DISABLED" };
+                return { message: "SERVICE_ALREADY_DISABLED_HAS_BOOKINGS", id: service.id, status: "ALREADY_DISABLED" };
             }
 
             await prisma.service.update({
@@ -103,14 +103,14 @@ export class ServiceService {
 
             appEvents.emitDataChange(SystemEvents.SERVICE_UPDATED, { serviceId: service.id });
 
-            return { message: "Service has bookings, so it has been disabled instead of deleted", id: service.id, status: "DISABLED_ONLY" };
+            return { message: "SERVICE_DISABLED_INSTEAD_OF_DELETED", id: service.id, status: "DISABLED_ONLY" };
         }
 
         await prisma.service.delete({ where: { id } });
 
         appEvents.emitDataChange(SystemEvents.SERVICE_DELETED, { serviceId: service.id });
 
-        return { message: "Service deleted successfully" };
+        return { message: "SERVICE_DELETED_SUCCESS" };
     }
 
     async deleteMultipleServices(ids: string[]) {
