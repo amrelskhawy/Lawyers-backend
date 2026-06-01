@@ -160,14 +160,19 @@ export class ReminderService {
                 now,
             );
 
+            const noRecipients = !lawyerPhone && !customerPhone;
             await prisma.reminder.update({
                 where: { id: r.id },
                 data: {
-                    status: failures.length && !lawyerPhone && !customerPhone ? "FAILED" : next.status,
+                    status: noRecipients ? "FAILED" : next.status,
                     scheduledAt: next.scheduledAt,
-                    lastSentAt: next.lastSentAt,
-                    sentCount: { increment: next.sentCountDelta },
-                    failureReason: failures.length ? failures.join("; ") : null,
+                    lastSentAt: noRecipients ? null : next.lastSentAt,
+                    sentCount: { increment: noRecipients ? 0 : next.sentCountDelta },
+                    failureReason: noRecipients
+                        ? "no recipient phone on file"
+                        : failures.length
+                          ? failures.join("; ")
+                          : null,
                 },
             });
         }
