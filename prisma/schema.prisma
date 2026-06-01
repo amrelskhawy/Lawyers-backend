@@ -47,7 +47,8 @@ model User {
   createdOrganizers  Organizer[]  @relation("OrganizerCreator")
   updatedOrganizers  Organizer[]  @relation("OrganizerUpdater")
 
-  activityLogs ActivityLog[]
+  activityLogs     ActivityLog[]
+  createdReminders Reminder[] @relation("ReminderCreator")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -127,6 +128,49 @@ model Holiday {
   @@unique([date, startTime, endTime])
   @@index([createdById])
   @@index([updatedById])
+}
+
+enum ReminderType {
+  SESSION_DETAILS_REVIEW
+  MEMO_REVIEW_UPLOAD
+  URGENT_SESSION_SOON
+  CUSTOM
+}
+
+enum ReminderStatus {
+  PENDING
+  SENT
+  FAILED
+  CANCELLED
+}
+
+model Reminder {
+  id     String @id @default(uuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  type    ReminderType
+  title   String?
+  content String?
+
+  scheduledAt      DateTime
+  repeat           Boolean  @default(false)
+  repeatEveryHours Int?
+
+  status        ReminderStatus @default(PENDING)
+  lastSentAt    DateTime?
+  sentCount     Int            @default(0)
+  failureReason String?
+
+  createdById String
+  createdBy   User   @relation("ReminderCreator", fields: [createdById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([caseId])
+  @@index([status, scheduledAt])
+  @@index([createdById])
 }
 
 enum Role {
@@ -282,6 +326,7 @@ model Case {
   sessionReports      SessionReport[]
   fieldVisitReports   FieldVisitReport[]
   lawyerFeesContracts LawyerFeesContract[]
+  reminders           Reminder[]
 
   @@index([customerId])
   @@index([createdById])
