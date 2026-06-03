@@ -139,9 +139,11 @@ export class ReminderService {
             const customerPhone = r.case.customer?.phone ?? null;
 
             const failures: string[] = [];
+            let anySuccess = false;
             if (lawyerPhone) {
                 try {
                     await sendWhatsAppMessage(lawyerPhone, lawyer);
+                    anySuccess = true;
                 } catch (e: any) {
                     failures.push(`lawyer: ${e?.message ?? "send failed"}`);
                 }
@@ -149,9 +151,33 @@ export class ReminderService {
             if (customerPhone) {
                 try {
                     await sendWhatsAppMessage(customerPhone, customer);
+                    anySuccess = true;
                 } catch (e: any) {
                     failures.push(`customer: ${e?.message ?? "send failed"}`);
                 }
+            }
+
+            const noRecipients = !lawyerPhone && !customerPhone;
+
+            if (noRecipients) {
+                await prisma.reminder.update({
+                    where: { id: r.id },
+                    data: {
+                        status: "FAILED",
+                        failureReason: "no recipient phone on file",
+                    },
+                });
+                continue;
+            }
+
+            if (!anySuccess) {
+                // Every attempted send failed — keep PENDING so the next tick retries.
+                // Don't advance the schedule, set lastSentAt, or count it as sent.
+                await prisma.reminder.update({
+                    where: { id: r.id },
+                    data: { failureReason: failures.join("; ") },
+                });
+                continue;
             }
 
             const next = computeNextReminderState(
@@ -160,19 +186,14 @@ export class ReminderService {
                 now,
             );
 
-            const noRecipients = !lawyerPhone && !customerPhone;
             await prisma.reminder.update({
                 where: { id: r.id },
                 data: {
-                    status: noRecipients ? "FAILED" : next.status,
+                    status: next.status,
                     scheduledAt: next.scheduledAt,
-                    lastSentAt: noRecipients ? null : next.lastSentAt,
-                    sentCount: { increment: noRecipients ? 0 : next.sentCountDelta },
-                    failureReason: noRecipients
-                        ? "no recipient phone on file"
-                        : failures.length
-                          ? failures.join("; ")
-                          : null,
+                    lastSentAt: next.lastSentAt,
+                    sentCount: { increment: next.sentCountDelta },
+                    failureReason: failures.length ? failures.join("; ") : null,
                 },
             });
         }
