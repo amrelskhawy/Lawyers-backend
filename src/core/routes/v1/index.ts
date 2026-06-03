@@ -18,6 +18,7 @@ import lawyerFeesContractsRoutes, {
     lawyerFeesContractSigningPublicRouter,
 } from "../../../modules/lawyer-fees-contracts/lawyer-fees-contracts.routes.js";
 import activityLogsRoutes from "../../../modules/activity-logs/activity-logs.routes.js";
+import remindersRoutes from "../../../modules/reminders/reminders.routes.js";
 
 const router = Router();
 
@@ -39,5 +40,6 @@ router.use("/field-visit-reports", fieldVisitReportsRoutes);
 router.use("/lawyer-fees-contracts", lawyerFeesContractsRoutes);
 router.use("/public/sign-contract", lawyerFeesContractSigningPublicRouter);
 router.use("/activity-logs", activityLogsRoutes);
+router.use("/reminders", remindersRoutes);
 
 export default router;
