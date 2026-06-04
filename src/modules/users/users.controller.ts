@@ -6,51 +6,39 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 
 const usersService = new UsersService();
 
-export const getUser = asyncHandler(async (req: AuthRequest, res: Response) => {
-    try {
-        const user = await usersService.getUserById(req.user.id);
-        res.status(200).json(new AppResponse(true, "USER_RETRIEVED_SUCCESS", user));
-    } catch (error: any) {
-        res.status(404).json({ message: error.message });
-    }
-});
-
-export const updateUser = asyncHandler(async (req: AuthRequest, res: Response) => {
-    try {
-        const { name } = req.body;
-        const updatedUser = await usersService.updateUser(req.user.id, { name });
-        res.status(200).json(new AppResponse(true, "USER_UPDATED_SUCCESS", updatedUser));
-    } catch (error: any) {
-        res.status(404).json({ message: error.message });
-    }
+export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const user = await usersService.getUserById(req.user.id);
+    res.status(200).json(new AppResponse(true, "USER_RETRIEVED_SUCCESS", user));
 });
 
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
-    try {
-        const { role } = req.query as { role: string };
-        const users = await usersService.getAllUsers(role?.toUpperCase() as 'ADMIN' | 'MODERATOR');
-        res.status(200).json(new AppResponse(true, "USERS_RETRIEVED_SUCCESS", users));
-    } catch (error: any) {
-        res.status(500).json({ message: "Cannot get users" });
-    }
+    const { role } = req.query as { role?: string };
+    const users = await usersService.getAllUsers(role);
+    res.status(200).json(new AppResponse(true, "USERS_RETRIEVED_SUCCESS", users));
+});
+
+export const getUserById = asyncHandler(async (req: Request, res: Response) => {
+    const user = await usersService.getUserById(req.params["id"] as string);
+    res.status(200).json(new AppResponse(true, "USER_RETRIEVED_SUCCESS", user));
+});
+
+export const createUser = asyncHandler(async (req: Request, res: Response) => {
+    const user = await usersService.createUser(req.body);
+    res.status(201).json(new AppResponse(true, "USER_CREATED_SUCCESS", user));
+});
+
+export const updateUser = asyncHandler(async (req: Request, res: Response) => {
+    const id = req.params["id"] as string;
+    const user = await usersService.updateUser(id, req.body);
+    res.status(200).json(new AppResponse(true, "USER_UPDATED_SUCCESS", user));
 });
 
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
-    const { id } = req.params;
-    try {
-        await usersService.deleteUser(id as string);
-        res.status(200).json(new AppResponse(true, "USER_DELETED_SUCCESS"));
-    } catch (error: any) {
-        res.status(500).json({ message: "Cannot Delete User" });
-    }
+    await usersService.deleteUser(req.params["id"] as string);
+    res.status(200).json(new AppResponse(true, "USER_DELETED_SUCCESS"));
 });
 
 export const deleteMultipleUsers = asyncHandler(async (req: Request, res: Response) => {
-    const { ids } = req.body;
-    try {
-        const result = await usersService.deleteMultipleUsers(ids);
-        res.status(200).json(new AppResponse(true, "USERS_DELETED_SUCCESS", result));
-    } catch (error: any) {
-        res.status(500).json({ message: "Cannot Delete Users" });
-    }
+    const result = await usersService.deleteMultipleUsers(req.body.ids);
+    res.status(200).json(new AppResponse(true, "USERS_DELETED_SUCCESS", result));
 });

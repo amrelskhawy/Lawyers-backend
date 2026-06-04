@@ -63,7 +63,7 @@ export class ModeratorService {
         }
 
         await prisma.user.delete({ where: { id } });
-        return { message: "Moderator deleted successfully" };
+        return { message: "MODERATOR_DELETED_SUCCESS" };
     }
 
     async deleteMultipleModerators(ids: string[]) {

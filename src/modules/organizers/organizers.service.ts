@@ -90,7 +90,7 @@ export class OrganizerService {
         }
 
         await prisma.organizer.delete({ where: { id } });
-        return { message: "Organizer deleted successfully" };
+        return { message: "ORGANIZER_DELETED_SUCCESS" };
     }
 
     async deleteMultipleOrganizers(ids: string[]) {

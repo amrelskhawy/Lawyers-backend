@@ -10,7 +10,7 @@ import {
     resetPassword,
     changePassword,
 } from "./auth.controller.js";
-import { getUser, updateUser } from "../users/users.controller.js";
+import { getMe, updateUser } from "../users/users.controller.js";
 import { protect, clearSession } from "../../core/middlewares/authMiddleware.js";
 import { validateRequest } from "../../core/middlewares/validateRequest.js";
 import { UserSchema, LoginSchema } from "./auth.types.js";
@@ -34,7 +34,7 @@ router.patch("/change-password", protect, changePassword);
 
 // User Profile
 router.route("/user")
-    .get(protect, getUser)
+    .get(protect, getMe)
     .patch(protect, updateUser);
 
 export default router;

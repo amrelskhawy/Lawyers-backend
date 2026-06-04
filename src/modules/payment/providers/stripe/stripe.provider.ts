@@ -98,7 +98,7 @@ export class StripeProvider implements IPaymentProvider {
         if (pi.status !== "requires_capture") {
             throw new AppResponse(
                 false,
-                `PAYMENT_INTENT_NOT_CAPTURABLE: current status is ${pi.status}`,
+                "PAYMENT_INTENT_NOT_CAPTURABLE",
                 null,
                 400
             );

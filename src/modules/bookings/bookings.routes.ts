@@ -12,7 +12,8 @@ import {
     createManualBooking,
     capturePayment,
 } from "./bookings.controller.js";
-import { protect, moderatorMiddleware } from "../../core/middlewares/authMiddleware.js";
+import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
+import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
 
 import { validateRequest } from "../../core/middlewares/validateRequest.js";
 import { BookingSchema, ManualBookingSchema } from "./bookings.types.js";
@@ -26,13 +27,12 @@ router.get("/availability/slots", getDetailedDaySlots);
 router.get("/metadata", getBookingMetadata);
 
 // Protected Routes
-router.get("/", protect, moderatorMiddleware, getAllBookings);
-router.post("/manual", protect, moderatorMiddleware, validateRequest(ManualBookingSchema), createManualBooking);
+router.get("/", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), getAllBookings);
+router.post("/manual", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), validateRequest(ManualBookingSchema), logActivity("CREATE", "Booking"), createManualBooking);
 
-//this endpoint should be delete but if we will ignore the payment module later it work correctly!
-router.patch("/:id/confirm", protect, moderatorMiddleware, confirmBooking);
-router.patch("/:id/complete", protect, moderatorMiddleware, completeBooking);
-router.patch("/:id/cancel", protect, moderatorMiddleware, cancelBooking);
-router.post("/:id/capture-payment", protect, moderatorMiddleware, capturePayment);
+router.patch("/:id/confirm", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), logActivity("CONFIRM", "Booking"), confirmBooking);
+router.patch("/:id/complete", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), logActivity("COMPLETE", "Booking"), completeBooking);
+router.patch("/:id/cancel", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), logActivity("CANCEL", "Booking"), cancelBooking);
+router.post("/:id/capture-payment", protect, requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"), capturePayment);
 
 export default router;

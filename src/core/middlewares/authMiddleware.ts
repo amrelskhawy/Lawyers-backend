@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import asyncHandler from "express-async-handler";
 import jwt from "jsonwebtoken";
+import { Role } from "@prisma/client";
 import prisma from "../db/prisma.js";
 import { AppResponse } from "../utils/AppResponse.js";
 
@@ -91,6 +92,14 @@ export const verifiedMiddleware = asyncHandler(async (req: AuthRequest, res: Res
     }
     throw new AppResponse(false, "AUTH_EMAIL_NOT_VERIFIED", null, 403);
 });
+
+export const requireRole = (...roles: Role[]) =>
+    asyncHandler(async (req: AuthRequest, _res: Response, next: NextFunction) => {
+        if (!req.user || !roles.includes(req.user.role as Role)) {
+            throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
+        }
+        next();
+    });
 
 export const clearSession = asyncHandler(async (req: Request, res: Response, next: NextFunction) => {
     const token = req.cookies.token;

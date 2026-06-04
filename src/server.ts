@@ -11,6 +11,7 @@ import { apiReference } from "@scalar/express-api-reference";
 import swaggerSpec from "./core/utils/swagger.js";
 import { chatbotService } from "./modules/chatbot/chatbot.service.js";
 import logger from "./core/utils/logger.js";
+import { startReminderCron } from "./core/services/scheduler/reminders.cron.js";
 
 dotenv.config();
 
@@ -93,6 +94,7 @@ const startServer = async () => {
             app.listen(port, () => {
                 logger.success(`Server is running on port ${port}`);
             });
+            startReminderCron();
         }
     } catch (error: any) {
         logger.error("Failed to start server!", error.message);
