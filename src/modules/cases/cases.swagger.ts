@@ -122,5 +122,64 @@
  *         schema: { type: string }
  *     responses:
  *       200: { description: Sent }
+ *
+ * /cases/{id}/assignment/reject:
+ *   patch:
+ *     tags: [Cases]
+ *     summary: Reject a pending case assignment (assigned lawyer only) with a required reason
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [reason]
+ *             properties:
+ *               reason:
+ *                 type: string
+ *                 description: Why the lawyer is rejecting the assignment
+ *     responses:
+ *       200: { description: Assignment rejected }
+ *
+ * /cases/{id}/session:
+ *   patch:
+ *     tags: [Cases]
+ *     summary: Set the (Hijri) session date and time; auto-schedules the 3 session reminders
+ *     description: >
+ *       Stores the Hijri session date as the canonical value and derives the Gregorian
+ *       instant used for reminder scheduling. (Re)schedules the SESSION_DETAILS_REVIEW
+ *       (15 days before), MEMO_REVIEW_UPLOAD (7 days before) and URGENT_SESSION_SOON
+ *       (1 hour before) reminders, replacing any still-pending auto reminders.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [sessionHijriDate, sessionTime]
+ *             properties:
+ *               sessionHijriDate:
+ *                 type: string
+ *                 example: "1447-12-15"
+ *                 description: Hijri date as iYYYY-iMM-iDD
+ *               sessionTime:
+ *                 type: string
+ *                 example: "14:30"
+ *                 description: 24h time-of-day as HH:mm
+ *     responses:
+ *       200: { description: Session date set and reminders scheduled }
+ *       400: { description: Invalid Hijri date or date in the past }
  */
 export {};

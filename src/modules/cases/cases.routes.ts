@@ -10,12 +10,19 @@ import {
     acceptCaseAssignment,
     rejectCaseAssignment,
     unassignCase,
+    setCaseSessionDate,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
 import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
-import { validateCreateCase, validateUpdateCase, validateAssignCase } from "./cases.validator.js";
+import {
+    validateCreateCase,
+    validateUpdateCase,
+    validateAssignCase,
+    validateRejectAssignment,
+    validateSetSessionDate,
+} from "./cases.validator.js";
 
 const router = express.Router();
 
@@ -81,6 +88,7 @@ router.patch(
     "/:id/assignment/reject",
     protect,
     requireRole("LAWYER"),
+    validateRejectAssignment,
     logActivity("REJECT_ASSIGNMENT", "Case"),
     rejectCaseAssignment,
 );
@@ -90,6 +98,16 @@ router.patch(
     requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
     logActivity("UNASSIGN", "Case"),
     unassignCase,
+);
+
+// Set the (Hijri) session date — auto-schedules the 3 session reminders
+router.patch(
+    "/:id/session",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    validateSetSessionDate,
+    logActivity("SET_SESSION_DATE", "Case"),
+    setCaseSessionDate,
 );
 
 router.post(
