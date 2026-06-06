@@ -118,9 +118,19 @@ export class ReminderService {
                 case: {
                     select: {
                         sessionDate: true,
-                        customer: { select: { phone: true } },
+                        sessionHijriDate: true,
+                        sessionTime: true,
+                        agencyNumber: true,
+                        customer: { select: { fullName: true, phone: true } },
                         preferredLawyer: { select: { phone: true } },
                         sessionReceiver: { select: { phone: true } },
+                        // Case number + court live on the latest session report.
+                        sessionReports: {
+                            where: { isDeleted: false },
+                            orderBy: { createdAt: "desc" },
+                            take: 1,
+                            select: { caseNumber: true, courtName: true },
+                        },
                     },
                 },
             },
@@ -134,7 +144,15 @@ export class ReminderService {
                 continue;
             }
 
-            const { lawyer, customer } = buildMessages(r.type, r.content);
+            const latestReport = r.case.sessionReports[0];
+            const { lawyer, customer } = buildMessages(r.type, {
+                clientName: r.case.customer?.fullName,
+                caseNumber: latestReport?.caseNumber ?? r.case.agencyNumber,
+                court: latestReport?.courtName,
+                sessionDate: r.case.sessionHijriDate,
+                sessionTime: r.case.sessionTime,
+                content: r.content,
+            });
             const lawyerPhone = r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone ?? null;
             const customerPhone = r.case.customer?.phone ?? null;
 

@@ -38,7 +38,6 @@ export const UpdateCaseSchema = z
 
         sessionReceiverId: z.string().uuid().nullable().optional(),
         sessionReceiverName: z.string().nullable().optional(),
-        sessionDate: isoDate.nullable().optional(),
 
         hasStructuredNotes: z.boolean().optional(),
         weaknesses: z.array(z.string()).optional(),
@@ -54,9 +53,29 @@ export const AssignCaseSchema = z.object({
     lawyerName: z.string().optional(),
 }).strict();
 
+// Assignment rejection — the assigned lawyer must give a reason
+export const RejectAssignmentSchema = z.object({
+    reason: z.string().trim().min(1, "Rejection reason is required"),
+}).strict();
+
+// Setting the (Hijri) session date — triggers auto-scheduling of the 3 reminders.
+// `sessionHijriDate` is iYYYY-iMM-iDD (e.g. "1447-12-15"); `sessionTime` is HH:mm.
+export const SetSessionDateSchema = z.object({
+    sessionHijriDate: z
+        .string()
+        .trim()
+        .regex(/^\d{4}-\d{1,2}-\d{1,2}$/, "Expected Hijri date as iYYYY-iMM-iDD"),
+    sessionTime: z
+        .string()
+        .trim()
+        .regex(/^\d{1,2}:\d{2}$/, "Expected time as HH:mm"),
+}).strict();
+
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
 export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
+export type RejectAssignmentPayload = z.infer<typeof RejectAssignmentSchema>;
+export type SetSessionDatePayload = z.infer<typeof SetSessionDateSchema>;
 
 export const validateCreateCase = (req: Request, res: Response, next: NextFunction) => {
     const result = CreateCaseSchema.safeParse(req.body);
@@ -82,6 +101,28 @@ export const validateUpdateCase = (req: Request, res: Response, next: NextFuncti
 
 export const validateAssignCase = (req: Request, res: Response, next: NextFunction) => {
     const result = AssignCaseSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateRejectAssignment = (req: Request, res: Response, next: NextFunction) => {
+    const result = RejectAssignmentSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateSetSessionDate = (req: Request, res: Response, next: NextFunction) => {
+    const result = SetSessionDateSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)

@@ -162,6 +162,10 @@ model Reminder {
   sentCount     Int            @default(0)
   failureReason String?
 
+  // True for the 3 reminders auto-created when a session date is set. Lets the
+  // re-schedule path replace only auto reminders, leaving manual ones untouched.
+  autoScheduled Boolean @default(false)
+
   createdById String
   createdBy   User   @relation("ReminderCreator", fields: [createdById], references: [id])
 
@@ -295,12 +299,17 @@ model Case {
   preferredLawyerId    String?
   preferredLawyer      User?                @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
   preferredLawyerName  String?
-  assignmentStatus     CaseAssignmentStatus @default(UNASSIGNED)
-  assignmentRejectedAt DateTime?
+  assignmentStatus         CaseAssignmentStatus @default(UNASSIGNED)
+  assignmentRejectedAt     DateTime?
+  assignmentRejectionReason String?
 
   sessionReceiverId   String?
   sessionReceiver     User?     @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
   sessionReceiverName String?
+  // Canonical session date is Hijri (sessionHijriDate + sessionTime). sessionDate is
+  // the Gregorian instant derived on save — the source of truth for reminder scheduling.
+  sessionHijriDate    String?
+  sessionTime         String?
   sessionDate         DateTime?
 
   hasStructuredNotes Boolean  @default(true)

@@ -5,7 +5,14 @@ import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
-import type { CreateCasePayload, UpdateCasePayload, AssignCasePayload } from "./cases.validator.js";
+import { hijriToGregorian } from "../../core/utils/hijri.js";
+import { scheduleSessionReminders } from "../reminders/reminders.scheduler.js";
+import type {
+    CreateCasePayload,
+    UpdateCasePayload,
+    AssignCasePayload,
+    SetSessionDatePayload,
+} from "./cases.validator.js";
 
 const caseInclude = {
     customer: {
@@ -108,9 +115,6 @@ export class CasesService {
         if (payload.sessionReceiverName !== undefined) {
             data.sessionReceiverName = payload.sessionReceiverName;
         }
-        if (payload.sessionDate !== undefined) {
-            data.sessionDate = payload.sessionDate ? new Date(payload.sessionDate) : null;
-        }
         if (payload.hasStructuredNotes !== undefined) data.hasStructuredNotes = payload.hasStructuredNotes;
         if (payload.weaknesses !== undefined) data.weaknesses = payload.weaknesses;
         if (payload.strengths !== undefined) data.strengths = payload.strengths;
@@ -148,6 +152,7 @@ export class CasesService {
                 preferredLawyerName: payload.lawyerName ?? lawyer.name,
                 assignmentStatus: "PENDING",
                 assignmentRejectedAt: null,
+                assignmentRejectionReason: null,
                 updatedBy: { connect: { id: assignedById } },
             },
             include: caseInclude,
@@ -176,7 +181,7 @@ export class CasesService {
         });
     }
 
-    async rejectAssignment(caseId: string, lawyerId: string) {
+    async rejectAssignment(caseId: string, lawyerId: string, reason: string) {
         const existing = await prisma.case.findUnique({ where: { id: caseId } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
@@ -193,6 +198,7 @@ export class CasesService {
             data: {
                 assignmentStatus: "REJECTED",
                 assignmentRejectedAt: new Date(),
+                assignmentRejectionReason: reason,
                 preferredLawyer: { disconnect: true },
                 preferredLawyerName: null,
                 wantsSpecificLawyer: false,
@@ -216,6 +222,7 @@ export class CasesService {
             data: {
                 assignmentStatus: "UNASSIGNED",
                 assignmentRejectedAt: null,
+                assignmentRejectionReason: null,
                 preferredLawyer: { disconnect: true },
                 preferredLawyerName: null,
                 wantsSpecificLawyer: false,
@@ -223,6 +230,57 @@ export class CasesService {
             },
             include: caseInclude,
         });
+    }
+
+    /**
+     * Set the case's (Hijri) session date + time. Converts to the Gregorian
+     * instant used for scheduling, persists both, then (re)schedules the 3
+     * auto reminders against the new date. Lawyers may only do this for cases
+     * they've accepted; staff may always.
+     */
+    async setSessionDate(
+        caseId: string,
+        payload: SetSessionDatePayload,
+        userId: string,
+        userRole: string,
+    ) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (userRole === "LAWYER") {
+            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+                throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+            }
+            if (existing.assignmentStatus !== "ACCEPTED") {
+                throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_ACCEPTED", null, 403);
+            }
+        }
+
+        let sessionDate: Date;
+        try {
+            sessionDate = hijriToGregorian(payload.sessionHijriDate, payload.sessionTime);
+        } catch {
+            throw new AppResponse(false, "CASE_INVALID_HIJRI_DATE", null, 400);
+        }
+        if (sessionDate.getTime() <= Date.now()) {
+            throw new AppResponse(false, "CASE_SESSION_DATE_IN_PAST", null, 400);
+        }
+
+        const updated = await prisma.case.update({
+            where: { id: caseId },
+            data: {
+                sessionHijriDate: payload.sessionHijriDate,
+                sessionTime: payload.sessionTime,
+                sessionDate,
+                updatedBy: { connect: { id: userId } },
+            },
+            include: caseInclude,
+        });
+
+        await scheduleSessionReminders(caseId, sessionDate, userId);
+
+        return updated;
     }
 
     async remove(id: string) {

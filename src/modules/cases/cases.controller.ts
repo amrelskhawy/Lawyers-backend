@@ -47,13 +47,23 @@ export const acceptCaseAssignment = asyncHandler(async (req: AuthRequest, res: R
 });
 
 export const rejectCaseAssignment = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.rejectAssignment(req.params.id as string, req.user.id);
+    const data = await cases.rejectAssignment(req.params.id as string, req.user.id, req.body.reason);
     res.status(200).json(new AppResponse(true, "CASE_ASSIGNMENT_REJECTED", data));
 });
 
 export const unassignCase = asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = await cases.unassign(req.params.id as string, req.user.id);
     res.status(200).json(new AppResponse(true, "CASE_UNASSIGNED_SUCCESS", data));
+});
+
+export const setCaseSessionDate = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await cases.setSessionDate(
+        req.params.id as string,
+        req.body,
+        req.user.id,
+        req.user.role,
+    );
+    res.status(200).json(new AppResponse(true, "CASE_SESSION_DATE_SET_SUCCESS", data));
 });
 
 export const generateCasePdf = asyncHandler(async (req: AuthRequest, res: Response) => {
