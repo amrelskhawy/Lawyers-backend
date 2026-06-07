@@ -174,7 +174,9 @@ export class ReminderService {
                 content: r.content,
             });
             const lawyerPhone = r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone ?? null;
-            const customerPhone = r.case.customer?.phone ?? null;
+            // CUSTOM reminders are lawyer-only — never delivered to the customer.
+            const customerPhone =
+                r.type === "CUSTOM" ? null : (r.case.customer?.phone ?? null);
 
             const failures: string[] = [];
             let anySuccess = false;
