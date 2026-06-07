@@ -6,15 +6,30 @@ const HOUR = 60 * 60 * 1000;
 const DAY = 24 * HOUR;
 
 /**
- * The 3 reminders auto-scheduled when a session date is set, each at a fixed
+ * The reminders auto-scheduled when a session date is set, each at a fixed
  * offset before the session. Messages are resolved at send time from
  * `reminders.messages.ts` by type — nothing is persisted per reminder here.
  */
-const SESSION_REMINDER_OFFSETS: { type: ReminderType; beforeMs: number }[] = [
-    { type: "SESSION_DETAILS_REVIEW", beforeMs: 15 * DAY },
-    { type: "MEMO_REVIEW_UPLOAD", beforeMs: 7 * DAY },
-    { type: "URGENT_SESSION_SOON", beforeMs: 1 * HOUR },
-];
+const SESSION_DETAILS_REVIEW = { type: "SESSION_DETAILS_REVIEW" as ReminderType, beforeMs: 15 * DAY };
+const MEMO_REVIEW_UPLOAD = { type: "MEMO_REVIEW_UPLOAD" as ReminderType, beforeMs: 7 * DAY };
+const URGENT_SESSION_SOON = { type: "URGENT_SESSION_SOON" as ReminderType, beforeMs: 1 * HOUR };
+
+/**
+ * Pick which reminders to schedule based on how far the session is.
+ * The full set only makes sense when there's enough lead time:
+ *   - ≥ 15 days out → 3 reminders (15d, 7d, 1h)
+ *   - ≥ 7 days out  → 2 reminders (7d, 1h)
+ *   - otherwise     → 1 reminder  (1h)
+ */
+export function selectSessionReminderOffsets(
+    sessionDate: Date,
+    now: Date,
+): { type: ReminderType; beforeMs: number }[] {
+    const gap = sessionDate.getTime() - now.getTime();
+    if (gap >= 15 * DAY) return [SESSION_DETAILS_REVIEW, MEMO_REVIEW_UPLOAD, URGENT_SESSION_SOON];
+    if (gap >= 7 * DAY) return [MEMO_REVIEW_UPLOAD, URGENT_SESSION_SOON];
+    return [URGENT_SESSION_SOON];
+}
 
 /**
  * (Re)schedule the 3 session reminders for a case against `sessionDate`.
@@ -35,8 +50,11 @@ export async function scheduleSessionReminders(
 
     const now = Date.now();
     const skipped: ReminderType[] = [];
-    const toCreate = SESSION_REMINDER_OFFSETS.flatMap(({ type, beforeMs }) => {
+    const offsets = selectSessionReminderOffsets(sessionDate, new Date(now));
+    const toCreate = offsets.flatMap(({ type, beforeMs }) => {
         const scheduledAt = new Date(sessionDate.getTime() - beforeMs);
+        // Safety net: even within the selected tier, never schedule in the past
+        // (e.g. session is < 1h away).
         if (scheduledAt.getTime() <= now) {
             skipped.push(type);
             return [];
