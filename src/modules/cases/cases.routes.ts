@@ -11,6 +11,7 @@ import {
     rejectCaseAssignment,
     unassignCase,
     setCaseSessionDate,
+    setCaseCompletion,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
@@ -22,6 +23,7 @@ import {
     validateAssignCase,
     validateRejectAssignment,
     validateSetSessionDate,
+    validateSetCompletion,
 } from "./cases.validator.js";
 
 const router = express.Router();
@@ -108,6 +110,16 @@ router.patch(
     validateSetSessionDate,
     logActivity("SET_SESSION_DATE", "Case"),
     setCaseSessionDate,
+);
+
+// Toggle "fully completed" — cancels pending reminders, blocks new ones
+router.patch(
+    "/:id/completion",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    validateSetCompletion,
+    logActivity("SET_COMPLETION", "Case"),
+    setCaseCompletion,
 );
 
 router.post(

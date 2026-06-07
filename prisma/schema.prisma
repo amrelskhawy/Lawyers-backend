@@ -50,6 +50,9 @@ model User {
   activityLogs     ActivityLog[]
   createdReminders Reminder[] @relation("ReminderCreator")
 
+  completedCases       Case[]           @relation("CaseCompleter")
+  uploadedAttachments  CaseAttachment[] @relation("AttachmentUploader")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -323,6 +326,13 @@ model Case {
   reportGeneratedAt DateTime?
   sentToClientAt    DateTime?
 
+  // Set when staff mark the case "fully completed" from the reminders dialog.
+  // While non-null, the case is closed: pending reminders are cancelled and new
+  // reminder actions are blocked. Cleared (null) when the case is reopened.
+  completedAt   DateTime?
+  completedById String?
+  completedBy   User?     @relation("CaseCompleter", fields: [completedById], references: [id])
+
   createdById String
   createdBy   User    @relation("CaseCreator", fields: [createdById], references: [id])
   updatedById String?
@@ -336,10 +346,35 @@ model Case {
   fieldVisitReports   FieldVisitReport[]
   lawyerFeesContracts LawyerFeesContract[]
   reminders           Reminder[]
+  attachments         CaseAttachment[]
 
   @@index([customerId])
   @@index([createdById])
   @@index([updatedById])
+}
+
+/// A document uploaded from a device into the customer's Drive folder and
+/// surfaced in the reminders dialog. Staff can send it to the client manually
+/// via WhatsApp; `sentAt` records the last successful send.
+model CaseAttachment {
+  id     String @id @default(uuid())
+  caseId String
+  case   Case   @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  fileName    String
+  mimeType    String
+  sizeBytes   Int
+  driveFileId String
+  url         String // public link used for WhatsApp send + download
+
+  uploadedById String
+  uploadedBy   User   @relation("AttachmentUploader", fields: [uploadedById], references: [id])
+
+  sentAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([caseId])
+  @@index([uploadedById])
 }
 
 model SessionReport {

@@ -36,7 +36,14 @@ const STAFF: Role[] = ["ADMIN", "MODERATOR"];
 async function assertCaseAccess(caseId: string, user: { id: string; role: Role }) {
     const c = await prisma.case.findUnique({
         where: { id: caseId },
-        select: { id: true, sessionDate: true, preferredLawyerId: true, sessionReceiverId: true, isDeleted: true },
+        select: {
+            id: true,
+            sessionDate: true,
+            preferredLawyerId: true,
+            sessionReceiverId: true,
+            isDeleted: true,
+            completedAt: true,
+        },
     });
     if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
     if (user.role === "LAWYER" && c.preferredLawyerId !== user.id && c.sessionReceiverId !== user.id) {
@@ -59,6 +66,9 @@ export class ReminderService {
 
     async create(payload: CreateReminderPayload, user: { id: string; role: Role }) {
         const c = await assertCaseAccess(payload.caseId, user);
+        if (c.completedAt) {
+            throw new AppResponse(false, "CASE_COMPLETED", null, 400);
+        }
         if (!c.sessionDate) {
             throw new AppResponse(false, "REMINDER_SESSION_DATE_REQUIRED", null, 400);
         }
@@ -87,6 +97,9 @@ export class ReminderService {
         const existing = await prisma.reminder.findUnique({ where: { id }, select: { caseId: true } });
         if (!existing) throw new AppResponse(false, "REMINDER_NOT_FOUND", null, 404);
         const c = await assertCaseAccess(existing.caseId, user);
+        if (c.completedAt) {
+            throw new AppResponse(false, "CASE_COMPLETED", null, 400);
+        }
 
         const data: Record<string, unknown> = { ...payload };
         if (payload.scheduledAt) {

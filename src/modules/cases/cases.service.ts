@@ -7,6 +7,7 @@ import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
 import { hijriToGregorian } from "../../core/utils/hijri.js";
 import { scheduleSessionReminders } from "../reminders/reminders.scheduler.js";
+import { ensureCustomerFolder } from "../../core/services/google/customer-folder.js";
 import type {
     CreateCasePayload,
     UpdateCasePayload,
@@ -248,6 +249,9 @@ export class CasesService {
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
+        if (existing.completedAt) {
+            throw new AppResponse(false, "CASE_COMPLETED", null, 400);
+        }
         if (userRole === "LAWYER") {
             if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
@@ -293,44 +297,50 @@ export class CasesService {
     }
 
     /**
-     * Resolve (creating if necessary) the Drive folder for a customer's case reports.
-     * Each customer gets a sub-folder under the configured root.
+     * Toggle the case's "fully completed" state. Completing cancels every still
+     * PENDING reminder (the scheduler only sends PENDING, so cancelled ones are
+     * never delivered) and blocks new reminder actions. Reopening clears the
+     * flag but does not recreate the cancelled reminders.
      */
-    private async ensureCustomerFolder(customerId: string): Promise<string> {
-        const rootFolderId = process.env.GOOGLE_DRIVE_CASE_REPORTS_FOLDER_ID;
-        if (!rootFolderId) {
-            throw new AppResponse(
-                false,
-                "CASE_REPORTS_FOLDER_NOT_CONFIGURED",
-                null,
-                500,
-            );
+    async setCompletion(
+        caseId: string,
+        completed: boolean,
+        userId: string,
+        userRole: string,
+    ) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (userRole === "LAWYER") {
+            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+                throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+            }
         }
 
-        const customer = await prisma.customer.findUnique({ where: { id: customerId } });
-        if (!customer) {
-            throw new AppResponse(false, "CUSTOMER_NOT_FOUND", null, 404);
-        }
-
-        if (customer.caseReportsFolderId) {
-            return customer.caseReportsFolderId;
-        }
-
-        const folder = await driveService.createFolder(
-            `${customer.fullName} (${customer.id.slice(0, 8)})`,
-            rootFolderId,
-        );
-
-        if (!folder.id) {
-            throw new AppResponse(false, "DRIVE_FOLDER_CREATE_FAILED", null, 500);
-        }
-
-        await prisma.customer.update({
-            where: { id: customerId },
-            data: { caseReportsFolderId: folder.id },
+        return prisma.$transaction(async (tx) => {
+            if (completed) {
+                await tx.reminder.updateMany({
+                    where: { caseId, status: "PENDING" },
+                    data: { status: "CANCELLED" },
+                });
+            }
+            return tx.case.update({
+                where: { id: caseId },
+                data: {
+                    completedAt: completed ? new Date() : null,
+                    completedBy: completed
+                        ? { connect: { id: userId } }
+                        : { disconnect: true },
+                    updatedBy: { connect: { id: userId } },
+                },
+                include: caseInclude,
+            });
         });
+    }
 
-        return folder.id;
+    private ensureCustomerFolder(customerId: string): Promise<string> {
+        return ensureCustomerFolder(customerId);
     }
 
     /**

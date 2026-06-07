@@ -19,6 +19,7 @@ import lawyerFeesContractsRoutes, {
 } from "../../../modules/lawyer-fees-contracts/lawyer-fees-contracts.routes.js";
 import activityLogsRoutes from "../../../modules/activity-logs/activity-logs.routes.js";
 import remindersRoutes from "../../../modules/reminders/reminders.routes.js";
+import attachmentsRoutes from "../../../modules/attachments/attachments.routes.js";
 
 const router = Router();
 
@@ -41,5 +42,6 @@ router.use("/lawyer-fees-contracts", lawyerFeesContractsRoutes);
 router.use("/public/sign-contract", lawyerFeesContractSigningPublicRouter);
 router.use("/activity-logs", activityLogsRoutes);
 router.use("/reminders", remindersRoutes);
+router.use("/attachments", attachmentsRoutes);
 
 export default router;

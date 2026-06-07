@@ -66,6 +66,17 @@ export const setCaseSessionDate = asyncHandler(async (req: AuthRequest, res: Res
     res.status(200).json(new AppResponse(true, "CASE_SESSION_DATE_SET_SUCCESS", data));
 });
 
+export const setCaseCompletion = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await cases.setCompletion(
+        req.params.id as string,
+        req.body.completed as boolean,
+        req.user.id,
+        req.user.role,
+    );
+    const messageKey = req.body.completed ? "CASE_COMPLETED_SUCCESS" : "CASE_REOPENED_SUCCESS";
+    res.status(200).json(new AppResponse(true, messageKey, data));
+});
+
 export const generateCasePdf = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { data, regenerated } = await cases.generateAndUploadPdf(req.params.id as string);
     const messageKey = regenerated

@@ -71,6 +71,11 @@ export const SetSessionDateSchema = z.object({
         .regex(/^\d{1,2}:\d{2}$/, "Expected time as HH:mm"),
 }).strict();
 
+// Toggling the "fully completed" state of a case.
+export const SetCompletionSchema = z.object({
+    completed: z.boolean(),
+}).strict();
+
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
 export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
@@ -123,6 +128,17 @@ export const validateRejectAssignment = (req: Request, res: Response, next: Next
 
 export const validateSetSessionDate = (req: Request, res: Response, next: NextFunction) => {
     const result = SetSessionDateSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateSetCompletion = (req: Request, res: Response, next: NextFunction) => {
+    const result = SetCompletionSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)
