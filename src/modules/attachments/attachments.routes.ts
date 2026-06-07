@@ -20,13 +20,13 @@ const router = express.Router();
 router.get(
     "/case/:caseId",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     listCaseAttachments,
 );
 router.post(
     "/case/:caseId",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     upload.single("file"),
     logActivity("CREATE", "CaseAttachment"),
     uploadCaseAttachment,
@@ -34,14 +34,14 @@ router.post(
 router.post(
     "/:id/send",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     logActivity("SEND", "CaseAttachment"),
     sendCaseAttachment,
 );
 router.delete(
     "/:id",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     logActivity("DELETE", "CaseAttachment"),
     deleteCaseAttachment,
 );

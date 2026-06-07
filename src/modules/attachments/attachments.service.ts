@@ -35,10 +35,11 @@ async function assertCaseAccess(caseId: string, user: Actor) {
         },
     });
     if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
-    if (user.role === "LAWYER" && c.preferredLawyerId !== user.id && c.sessionReceiverId !== user.id) {
+    const isCaseHandler = user.role === "LAWYER" || user.role === "CONSULTANT";
+    if (isCaseHandler && c.preferredLawyerId !== user.id && c.sessionReceiverId !== user.id) {
         throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
     }
-    if (!STAFF.includes(user.role) && user.role !== "LAWYER") {
+    if (!STAFF.includes(user.role) && !isCaseHandler) {
         throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
     }
     return c;

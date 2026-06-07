@@ -29,7 +29,7 @@ type RequestingUser = { id: string; role: string };
 export class CasesService {
     async list(requestingUser: RequestingUser) {
         const where: Prisma.CaseWhereInput = { isDeleted: false };
-        if (requestingUser.role === "LAWYER") {
+        if (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") {
             where.preferredLawyerId = requestingUser.id;
         }
         return prisma.case.findMany({
@@ -41,7 +41,7 @@ export class CasesService {
 
     async listLawyers() {
         return prisma.user.findMany({
-            where: { role: "LAWYER" },
+            where: { role: { in: ["LAWYER", "CONSULTANT"] } },
             select: { id: true, name: true, email: true },
             orderBy: { name: "asc" },
         });
@@ -55,7 +55,10 @@ export class CasesService {
         if (!c || c.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (requestingUser.role === "LAWYER" && c.preferredLawyerId !== requestingUser.id) {
+        if (
+            (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") &&
+            c.preferredLawyerId !== requestingUser.id
+        ) {
             throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
         }
         return c;
@@ -89,8 +92,8 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
 
-        // Lawyers can only edit cases they have accepted
-        if (updaterRole === "LAWYER") {
+        // Lawyers and consultants can only edit cases they have accepted
+        if (updaterRole === "LAWYER" || updaterRole === "CONSULTANT") {
             if (existing.preferredLawyerId !== updatedById) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
@@ -141,7 +144,7 @@ export class CasesService {
         }
 
         const lawyer = await prisma.user.findUnique({ where: { id: payload.lawyerId } });
-        if (!lawyer || lawyer.role !== "LAWYER") {
+        if (!lawyer || (lawyer.role !== "LAWYER" && lawyer.role !== "CONSULTANT")) {
             throw new AppResponse(false, "CASE_ASSIGN_INVALID_LAWYER", null, 400);
         }
 
@@ -252,7 +255,7 @@ export class CasesService {
         if (existing.completedAt) {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
-        if (userRole === "LAWYER") {
+        if (userRole === "LAWYER" || userRole === "CONSULTANT") {
             if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
@@ -312,7 +315,7 @@ export class CasesService {
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (userRole === "LAWYER") {
+        if (userRole === "LAWYER" || userRole === "CONSULTANT") {
             if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }

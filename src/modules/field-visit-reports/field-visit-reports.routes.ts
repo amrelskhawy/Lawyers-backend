@@ -17,13 +17,13 @@ import {
 
 const router = express.Router();
 
-router.get("/by-case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listFieldVisitReportsByCase);
-router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getFieldVisitReport);
-router.post("/", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateCreateFieldVisitReport, logActivity("CREATE", "FieldVisitReport"), createFieldVisitReport);
-router.patch("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateUpdateFieldVisitReport, logActivity("UPDATE", "FieldVisitReport"), updateFieldVisitReport);
+router.get("/by-case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listFieldVisitReportsByCase);
+router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), getFieldVisitReport);
+router.post("/", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateCreateFieldVisitReport, logActivity("CREATE", "FieldVisitReport"), createFieldVisitReport);
+router.patch("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateUpdateFieldVisitReport, logActivity("UPDATE", "FieldVisitReport"), updateFieldVisitReport);
 router.delete("/:id", protect, requireRole("ADMIN", "MODERATOR"), logActivity("DELETE", "FieldVisitReport"), deleteFieldVisitReport);
 
-router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("GENERATE_PDF", "FieldVisitReport"), generateFieldVisitReportPdf);
-router.post("/:id/send-to-client", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("SEND_TO_CLIENT", "FieldVisitReport"), sendFieldVisitReportToClient);
+router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("GENERATE_PDF", "FieldVisitReport"), generateFieldVisitReportPdf);
+router.post("/:id/send-to-client", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("SEND_TO_CLIENT", "FieldVisitReport"), sendFieldVisitReportToClient);
 
 export default router;

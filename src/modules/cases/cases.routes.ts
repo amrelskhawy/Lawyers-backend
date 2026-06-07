@@ -31,7 +31,7 @@ const router = express.Router();
 router.get(
     "/",
     protect,
-    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"),
     listCases,
 );
 router.get(
@@ -43,7 +43,7 @@ router.get(
 router.get(
     "/:id",
     protect,
-    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"),
     getCase,
 );
 router.post(
@@ -57,7 +57,7 @@ router.post(
 router.patch(
     "/:id",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateUpdateCase,
     logActivity("UPDATE", "Case"),
     updateCase,
@@ -82,14 +82,14 @@ router.patch(
 router.patch(
     "/:id/assignment/accept",
     protect,
-    requireRole("LAWYER"),
+    requireRole("LAWYER", "CONSULTANT"),
     logActivity("ACCEPT_ASSIGNMENT", "Case"),
     acceptCaseAssignment,
 );
 router.patch(
     "/:id/assignment/reject",
     protect,
-    requireRole("LAWYER"),
+    requireRole("LAWYER", "CONSULTANT"),
     validateRejectAssignment,
     logActivity("REJECT_ASSIGNMENT", "Case"),
     rejectCaseAssignment,
@@ -106,7 +106,7 @@ router.patch(
 router.patch(
     "/:id/session",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateSetSessionDate,
     logActivity("SET_SESSION_DATE", "Case"),
     setCaseSessionDate,
@@ -116,7 +116,7 @@ router.patch(
 router.patch(
     "/:id/completion",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateSetCompletion,
     logActivity("SET_COMPLETION", "Case"),
     setCaseCompletion,
@@ -125,14 +125,14 @@ router.patch(
 router.post(
     "/:id/generate-pdf",
     protect,
-    requireRole("ADMIN", "LAWYER"),
+    requireRole("ADMIN", "LAWYER", "CONSULTANT"),
     logActivity("GENERATE_PDF", "Case"),
     generateCasePdf,
 );
 router.post(
     "/:id/send-to-client",
     protect,
-    requireRole("ADMIN", "LAWYER"),
+    requireRole("ADMIN", "LAWYER", "CONSULTANT"),
     logActivity("SEND_TO_CLIENT", "Case"),
     sendCaseToClient,
 );

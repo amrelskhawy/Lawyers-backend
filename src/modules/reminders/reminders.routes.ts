@@ -12,12 +12,12 @@ import { validateCreateReminder, validateUpdateReminder } from "./reminders.vali
 
 const router = express.Router();
 
-router.get("/types", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getReminderTypes);
-router.get("/case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listCaseReminders);
+router.get("/types", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), getReminderTypes);
+router.get("/case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listCaseReminders);
 router.post(
     "/",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateCreateReminder,
     logActivity("CREATE", "Reminder"),
     createReminder,
@@ -25,7 +25,7 @@ router.post(
 router.patch(
     "/:id",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateUpdateReminder,
     logActivity("UPDATE", "Reminder"),
     updateReminder,
@@ -33,7 +33,7 @@ router.patch(
 router.delete(
     "/:id",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     logActivity("DELETE", "Reminder"),
     deleteReminder,
 );

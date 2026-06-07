@@ -22,21 +22,21 @@ import {
 
 const router = express.Router();
 
-router.get("/",                        protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContracts);
-router.get("/by-case/:caseId",         protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContractsByCase);
-router.get("/by-customer/:customerId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listLawyerFeesContractsByCustomer);
-router.get("/:id",                     protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getLawyerFeesContract);
+router.get("/",                        protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listLawyerFeesContracts);
+router.get("/by-case/:caseId",         protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listLawyerFeesContractsByCase);
+router.get("/by-customer/:customerId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listLawyerFeesContractsByCustomer);
+router.get("/:id",                     protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), getLawyerFeesContract);
 
-router.post("/",       protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateCreateLawyerFeesContract, logActivity("CREATE", "LawyerFeesContract"), createLawyerFeesContract);
-router.patch("/:id",   protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateUpdateLawyerFeesContract, logActivity("UPDATE", "LawyerFeesContract"), updateLawyerFeesContract);
+router.post("/",       protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateCreateLawyerFeesContract, logActivity("CREATE", "LawyerFeesContract"), createLawyerFeesContract);
+router.patch("/:id",   protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateUpdateLawyerFeesContract, logActivity("UPDATE", "LawyerFeesContract"), updateLawyerFeesContract);
 router.delete("/:id",  protect, requireRole("ADMIN", "MODERATOR"), logActivity("DELETE", "LawyerFeesContract"), deleteLawyerFeesContract);
 
-router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("GENERATE_PDF", "LawyerFeesContract"), generateLawyerFeesContractPdf);
-router.post("/:id/signing-link", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("CREATE_SIGNING_LINK", "LawyerFeesContract"), createLawyerFeesContractSigningLink);
+router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("GENERATE_PDF", "LawyerFeesContract"), generateLawyerFeesContractPdf);
+router.post("/:id/signing-link", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("CREATE_SIGNING_LINK", "LawyerFeesContract"), createLawyerFeesContractSigningLink);
 router.post(
     "/:id/signing-link/send-whatsapp",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     logActivity("SEND_SIGNING_LINK", "LawyerFeesContract"),
     sendLawyerFeesContractSigningLinkWhatsapp,
 );

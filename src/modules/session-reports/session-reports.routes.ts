@@ -17,13 +17,13 @@ import {
 
 const router = express.Router();
 
-router.get("/by-case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), listSessionReportsByCase);
-router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), getSessionReport);
-router.post("/", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateCreateSessionReport, logActivity("CREATE", "SessionReport"), createSessionReport);
-router.patch("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), validateUpdateSessionReport, logActivity("UPDATE", "SessionReport"), updateSessionReport);
+router.get("/by-case/:caseId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listSessionReportsByCase);
+router.get("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), getSessionReport);
+router.post("/", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateCreateSessionReport, logActivity("CREATE", "SessionReport"), createSessionReport);
+router.patch("/:id", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateUpdateSessionReport, logActivity("UPDATE", "SessionReport"), updateSessionReport);
 router.delete("/:id", protect, requireRole("ADMIN", "MODERATOR"), logActivity("DELETE", "SessionReport"), deleteSessionReport);
 
-router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("GENERATE_PDF", "SessionReport"), generateSessionReportPdf);
-router.post("/:id/send-to-client", protect, requireRole("ADMIN", "MODERATOR", "LAWYER"), logActivity("SEND_TO_CLIENT", "SessionReport"), sendSessionReportToClient);
+router.post("/:id/generate-pdf", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("GENERATE_PDF", "SessionReport"), generateSessionReportPdf);
+router.post("/:id/send-to-client", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), logActivity("SEND_TO_CLIENT", "SessionReport"), sendSessionReportToClient);
 
 export default router;

@@ -185,6 +185,7 @@ enum Role {
   RECEPTIONIST
   MODERATOR
   LAWYER
+  CONSULTANT
 }
 
 model Token {

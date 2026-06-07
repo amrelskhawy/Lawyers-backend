@@ -87,7 +87,7 @@ export const getPublicData = asyncHandler(
 export const getLawyers = asyncHandler(
   async (req: Request, res: Response) => {
     const lawyers = await prisma.user.findMany({
-      where: { role: "LAWYER" },
+      where: { role: { in: ["LAWYER", "CONSULTANT"] } },
       select: {
         id: true,
         name: true,

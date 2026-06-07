@@ -9,7 +9,7 @@ export const CreateUserSchema = z.object({
     phone:    z.string().nullish(),
     location: z.string().nullish(),
     picture:  z.string().nullish(),
-    role:     z.enum(["ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"]),
+    role:     z.enum(["ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"]),
 });
 
 export const UpdateUserSchema = z.object({
@@ -19,7 +19,7 @@ export const UpdateUserSchema = z.object({
     phone:    z.string().nullish(),
     location: z.string().nullish(),
     picture:  z.string().nullish(),
-    role:     z.enum(["ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER"]).optional(),
+    role:     z.enum(["ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"]).optional(),
     password: z.string().min(6).optional(),
 });
 
