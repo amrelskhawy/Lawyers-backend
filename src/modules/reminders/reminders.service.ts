@@ -94,8 +94,15 @@ export class ReminderService {
     }
 
     async update(id: string, payload: UpdateReminderPayload, user: { id: string; role: Role }) {
-        const existing = await prisma.reminder.findUnique({ where: { id }, select: { caseId: true } });
+        const existing = await prisma.reminder.findUnique({
+            where: { id },
+            select: { caseId: true, status: true },
+        });
         if (!existing) throw new AppResponse(false, "REMINDER_NOT_FOUND", null, 404);
+        // Only pending reminders can be edited — sent/failed/cancelled ones are history.
+        if (existing.status !== "PENDING") {
+            throw new AppResponse(false, "REMINDER_NOT_EDITABLE", null, 400);
+        }
         const c = await assertCaseAccess(existing.caseId, user);
         if (c.completedAt) {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);

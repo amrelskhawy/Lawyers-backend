@@ -83,3 +83,14 @@ describe("ReminderService blocks actions on a completed case", () => {
         ).rejects.toMatchObject({ message: "CASE_COMPLETED" });
     });
 });
+
+describe("ReminderService.update only edits PENDING reminders", () => {
+    it("throws REMINDER_NOT_EDITABLE when the reminder is already SENT", async () => {
+        prismaMock.reminder.findUnique.mockResolvedValue({ caseId: "c1", status: "SENT" });
+
+        await expect(
+            reminders.update("r1", { title: "new" }, admin),
+        ).rejects.toMatchObject({ message: "REMINDER_NOT_EDITABLE" });
+        expect(prismaMock.case.findUnique).not.toHaveBeenCalled();
+    });
+});
