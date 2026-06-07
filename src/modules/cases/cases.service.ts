@@ -20,9 +20,24 @@ const caseInclude = {
         select: { id: true, fullName: true, email: true, phone: true, caseReportsFolderId: true },
     },
     preferredLawyer: { select: { id: true, name: true } },
+    consultant: { select: { id: true, name: true } },
     sessionReceiver: { select: { id: true, name: true } },
     createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.CaseInclude;
+
+type AssignmentKind = "LAWYER" | "CONSULTANT";
+
+/** Map a user's role to the assignment slot they occupy. */
+function kindFromRole(role: string): AssignmentKind {
+    return role === "CONSULTANT" ? "CONSULTANT" : "LAWYER";
+}
+
+/** Read the current assignee id + status for one slot of a case row. */
+function slotState(c: { preferredLawyerId: string | null; assignmentStatus: string; consultantId: string | null; consultantAssignmentStatus: string }, kind: AssignmentKind) {
+    return kind === "CONSULTANT"
+        ? { assigneeId: c.consultantId, status: c.consultantAssignmentStatus }
+        : { assigneeId: c.preferredLawyerId, status: c.assignmentStatus };
+}
 
 type RequestingUser = { id: string; role: string };
 
@@ -30,7 +45,11 @@ export class CasesService {
     async list(requestingUser: RequestingUser) {
         const where: Prisma.CaseWhereInput = { isDeleted: false };
         if (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") {
-            where.preferredLawyerId = requestingUser.id;
+            // Visible if assigned to this user in either the lawyer or consultant slot.
+            where.OR = [
+                { preferredLawyerId: requestingUser.id },
+                { consultantId: requestingUser.id },
+            ];
         }
         return prisma.case.findMany({
             where,
@@ -57,7 +76,8 @@ export class CasesService {
         }
         if (
             (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") &&
-            c.preferredLawyerId !== requestingUser.id
+            c.preferredLawyerId !== requestingUser.id &&
+            c.consultantId !== requestingUser.id
         ) {
             throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
         }
@@ -92,12 +112,13 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
 
-        // Lawyers and consultants can only edit cases they have accepted
+        // Lawyers and consultants can only edit cases they have accepted (in their own slot)
         if (updaterRole === "LAWYER" || updaterRole === "CONSULTANT") {
-            if (existing.preferredLawyerId !== updatedById) {
+            const { assigneeId, status } = slotState(existing, kindFromRole(updaterRole));
+            if (assigneeId !== updatedById) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
-            if (existing.assignmentStatus !== "ACCEPTED") {
+            if (status !== "ACCEPTED") {
                 throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_ACCEPTED", null, 403);
             }
         }
@@ -139,99 +160,140 @@ export class CasesService {
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (existing.assignmentStatus === "PENDING" || existing.assignmentStatus === "ACCEPTED") {
+
+        const kind = payload.kind;
+        const { status } = slotState(existing, kind);
+        if (status === "PENDING" || status === "ACCEPTED") {
             throw new AppResponse(false, "CASE_ALREADY_ASSIGNED", null, 409);
         }
 
-        const lawyer = await prisma.user.findUnique({ where: { id: payload.lawyerId } });
-        if (!lawyer || (lawyer.role !== "LAWYER" && lawyer.role !== "CONSULTANT")) {
+        const user = await prisma.user.findUnique({ where: { id: payload.lawyerId } });
+        // The picked user must exist AND hold the role matching the chosen slot.
+        if (!user || user.role !== kind) {
             throw new AppResponse(false, "CASE_ASSIGN_INVALID_LAWYER", null, 400);
         }
 
+        const data: Prisma.CaseUpdateInput =
+            kind === "CONSULTANT"
+                ? {
+                      consultant: { connect: { id: payload.lawyerId } },
+                      consultantName: payload.lawyerName ?? user.name,
+                      consultantAssignmentStatus: "PENDING",
+                      consultantAssignmentRejectedAt: null,
+                      consultantAssignmentRejectionReason: null,
+                  }
+                : {
+                      wantsSpecificLawyer: true,
+                      preferredLawyer: { connect: { id: payload.lawyerId } },
+                      preferredLawyerName: payload.lawyerName ?? user.name,
+                      assignmentStatus: "PENDING",
+                      assignmentRejectedAt: null,
+                      assignmentRejectionReason: null,
+                  };
+
         return prisma.case.update({
             where: { id: caseId },
-            data: {
-                wantsSpecificLawyer: true,
-                preferredLawyer: { connect: { id: payload.lawyerId } },
-                preferredLawyerName: payload.lawyerName ?? lawyer.name,
-                assignmentStatus: "PENDING",
-                assignmentRejectedAt: null,
-                assignmentRejectionReason: null,
-                updatedBy: { connect: { id: assignedById } },
-            },
+            data: { ...data, updatedBy: { connect: { id: assignedById } } },
             include: caseInclude,
         });
     }
 
-    async acceptAssignment(caseId: string, lawyerId: string) {
+    async acceptAssignment(caseId: string, userId: string, role: string) {
         const existing = await prisma.case.findUnique({ where: { id: caseId } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (existing.preferredLawyerId !== lawyerId) {
+        const kind = kindFromRole(role);
+        const { assigneeId, status } = slotState(existing, kind);
+        if (assigneeId !== userId) {
             throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
         }
-        if (existing.assignmentStatus !== "PENDING") {
+        if (status !== "PENDING") {
             throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_PENDING", null, 400);
         }
 
+        const data: Prisma.CaseUpdateInput =
+            kind === "CONSULTANT"
+                ? { consultantAssignmentStatus: "ACCEPTED" }
+                : { assignmentStatus: "ACCEPTED" };
+
         return prisma.case.update({
             where: { id: caseId },
-            data: {
-                assignmentStatus: "ACCEPTED",
-                updatedBy: { connect: { id: lawyerId } },
-            },
+            data: { ...data, updatedBy: { connect: { id: userId } } },
             include: caseInclude,
         });
     }
 
-    async rejectAssignment(caseId: string, lawyerId: string, reason: string) {
+    async rejectAssignment(caseId: string, userId: string, reason: string, role: string) {
         const existing = await prisma.case.findUnique({ where: { id: caseId } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (existing.preferredLawyerId !== lawyerId) {
+        const kind = kindFromRole(role);
+        const { assigneeId, status } = slotState(existing, kind);
+        if (assigneeId !== userId) {
             throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
         }
-        if (existing.assignmentStatus !== "PENDING") {
+        if (status !== "PENDING") {
             throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_PENDING", null, 400);
         }
 
+        const data: Prisma.CaseUpdateInput =
+            kind === "CONSULTANT"
+                ? {
+                      consultantAssignmentStatus: "REJECTED",
+                      consultantAssignmentRejectedAt: new Date(),
+                      consultantAssignmentRejectionReason: reason,
+                      consultant: { disconnect: true },
+                      consultantName: null,
+                  }
+                : {
+                      assignmentStatus: "REJECTED",
+                      assignmentRejectedAt: new Date(),
+                      assignmentRejectionReason: reason,
+                      preferredLawyer: { disconnect: true },
+                      preferredLawyerName: null,
+                      wantsSpecificLawyer: false,
+                  };
+
         return prisma.case.update({
             where: { id: caseId },
-            data: {
-                assignmentStatus: "REJECTED",
-                assignmentRejectedAt: new Date(),
-                assignmentRejectionReason: reason,
-                preferredLawyer: { disconnect: true },
-                preferredLawyerName: null,
-                wantsSpecificLawyer: false,
-                updatedBy: { connect: { id: lawyerId } },
-            },
+            data: { ...data, updatedBy: { connect: { id: userId } } },
             include: caseInclude,
         });
     }
 
-    async unassign(caseId: string, unassignedById: string) {
+    async unassign(caseId: string, unassignedById: string, kind: AssignmentKind) {
         const existing = await prisma.case.findUnique({ where: { id: caseId } });
         if (!existing || existing.isDeleted) {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
-        if (existing.assignmentStatus !== "PENDING" && existing.assignmentStatus !== "ACCEPTED") {
+        const { status } = slotState(existing, kind);
+        if (status !== "PENDING" && status !== "ACCEPTED") {
             throw new AppResponse(false, "CASE_NOT_ASSIGNED", null, 400);
         }
 
+        const data: Prisma.CaseUpdateInput =
+            kind === "CONSULTANT"
+                ? {
+                      consultantAssignmentStatus: "UNASSIGNED",
+                      consultantAssignmentRejectedAt: null,
+                      consultantAssignmentRejectionReason: null,
+                      consultant: { disconnect: true },
+                      consultantName: null,
+                  }
+                : {
+                      assignmentStatus: "UNASSIGNED",
+                      assignmentRejectedAt: null,
+                      assignmentRejectionReason: null,
+                      preferredLawyer: { disconnect: true },
+                      preferredLawyerName: null,
+                      wantsSpecificLawyer: false,
+                  };
+
         return prisma.case.update({
             where: { id: caseId },
-            data: {
-                assignmentStatus: "UNASSIGNED",
-                assignmentRejectedAt: null,
-                assignmentRejectionReason: null,
-                preferredLawyer: { disconnect: true },
-                preferredLawyerName: null,
-                wantsSpecificLawyer: false,
-                updatedBy: { connect: { id: unassignedById } },
-            },
+            data: { ...data, updatedBy: { connect: { id: unassignedById } } },
             include: caseInclude,
         });
     }

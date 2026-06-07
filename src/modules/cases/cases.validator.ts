@@ -47,10 +47,20 @@ export const UpdateCaseSchema = z
     })
     .strict();
 
-// Assignment — only staff (admin/moderator/receptionist) can send this
+// A case has two independent assignment slots: one LAWYER, one CONSULTANT.
+export const AssignmentKindEnum = z.enum(["LAWYER", "CONSULTANT"]);
+
+// Assignment — only staff (admin/moderator/receptionist) can send this.
+// `kind` selects which slot (lawyer vs consultant) to assign.
 export const AssignCaseSchema = z.object({
     lawyerId: z.string().uuid(),
     lawyerName: z.string().optional(),
+    kind: AssignmentKindEnum,
+}).strict();
+
+// Unassign — clears the given slot.
+export const UnassignCaseSchema = z.object({
+    kind: AssignmentKindEnum,
 }).strict();
 
 // Assignment rejection — the assigned lawyer must give a reason
@@ -79,6 +89,8 @@ export const SetCompletionSchema = z.object({
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
 export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
+export type UnassignCasePayload = z.infer<typeof UnassignCaseSchema>;
+export type AssignmentKind = z.infer<typeof AssignmentKindEnum>;
 export type RejectAssignmentPayload = z.infer<typeof RejectAssignmentSchema>;
 export type SetSessionDatePayload = z.infer<typeof SetSessionDateSchema>;
 
@@ -106,6 +118,17 @@ export const validateUpdateCase = (req: Request, res: Response, next: NextFuncti
 
 export const validateAssignCase = (req: Request, res: Response, next: NextFunction) => {
     const result = AssignCaseSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateUnassignCase = (req: Request, res: Response, next: NextFunction) => {
+    const result = UnassignCaseSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)

@@ -26,6 +26,7 @@ model User {
   createdCases               Case[]               @relation("CaseCreator")
   updatedCases               Case[]               @relation("CaseUpdater")
   preferredOnCases           Case[]               @relation("CasePreferredLawyer")
+  consultantOnCases          Case[]               @relation("CaseConsultant")
   sessionReceivedCases       Case[]               @relation("CaseSessionReceiver")
   createdSessionReports      SessionReport[]      @relation("SessionReportCreator")
   updatedSessionReports      SessionReport[]      @relation("SessionReportUpdater")
@@ -299,6 +300,7 @@ model Case {
   hijriDate     String?
   agencyNumber  String?
 
+  // Lawyer slot
   wantsSpecificLawyer  Boolean              @default(false)
   preferredLawyerId    String?
   preferredLawyer      User?                @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
@@ -306,6 +308,14 @@ model Case {
   assignmentStatus         CaseAssignmentStatus @default(UNASSIGNED)
   assignmentRejectedAt     DateTime?
   assignmentRejectionReason String?
+
+  // Consultant slot — independent of the lawyer slot (own accept/reject lifecycle)
+  consultantId         String?
+  consultant           User?                @relation("CaseConsultant", fields: [consultantId], references: [id])
+  consultantName       String?
+  consultantAssignmentStatus         CaseAssignmentStatus @default(UNASSIGNED)
+  consultantAssignmentRejectedAt     DateTime?
+  consultantAssignmentRejectionReason String?
 
   sessionReceiverId   String?
   sessionReceiver     User?     @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])

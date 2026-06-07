@@ -42,17 +42,22 @@ export const assignCase = asyncHandler(async (req: AuthRequest, res: Response) =
 });
 
 export const acceptCaseAssignment = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.acceptAssignment(req.params.id as string, req.user.id);
+    const data = await cases.acceptAssignment(req.params.id as string, req.user.id, req.user.role);
     res.status(200).json(new AppResponse(true, "CASE_ASSIGNMENT_ACCEPTED", data));
 });
 
 export const rejectCaseAssignment = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.rejectAssignment(req.params.id as string, req.user.id, req.body.reason);
+    const data = await cases.rejectAssignment(
+        req.params.id as string,
+        req.user.id,
+        req.body.reason,
+        req.user.role,
+    );
     res.status(200).json(new AppResponse(true, "CASE_ASSIGNMENT_REJECTED", data));
 });
 
 export const unassignCase = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.unassign(req.params.id as string, req.user.id);
+    const data = await cases.unassign(req.params.id as string, req.user.id, req.body.kind);
     res.status(200).json(new AppResponse(true, "CASE_UNASSIGNED_SUCCESS", data));
 });
 

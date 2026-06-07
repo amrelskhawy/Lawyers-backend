@@ -21,6 +21,7 @@ import {
     validateCreateCase,
     validateUpdateCase,
     validateAssignCase,
+    validateUnassignCase,
     validateRejectAssignment,
     validateSetSessionDate,
     validateSetCompletion,
@@ -98,6 +99,7 @@ router.patch(
     "/:id/unassign",
     protect,
     requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    validateUnassignCase,
     logActivity("UNASSIGN", "Case"),
     unassignCase,
 );

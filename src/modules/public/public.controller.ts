@@ -93,6 +93,7 @@ export const getLawyers = asyncHandler(
         name: true,
         email: true,
         picture: true,
+        role: true,
       },
     });
     res.status(200).json(new AppResponse(true, "LAWYERS_RETRIEVED_SUCCESS", lawyers));
