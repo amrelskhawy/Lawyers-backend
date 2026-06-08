@@ -25,7 +25,8 @@ export const uploadCaseAttachment = asyncHandler(async (req: AuthRequest, res: R
 
 export const sendCaseAttachment = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { id } = req.params as { id: string };
-    const data = await service.send(id, req.user);
+    const { message } = (req.body ?? {}) as { message?: string };
+    const data = await service.send(id, req.user, message);
     res.status(200).json(new AppResponse(true, "ATTACHMENT_SENT", data));
 });
 

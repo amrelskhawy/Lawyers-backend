@@ -3,13 +3,10 @@ import { hijriToGregorian } from "./hijri.js";
 
 describe("hijriToGregorian", () => {
     it("converts a valid Hijri date + time to the right Gregorian instant", () => {
-        // 1447-12-15 14:30 (Umm al-Qura) → 2026-06-01 14:30 local
+        // 1447-12-15 14:30 (Umm al-Qura) → 2026-06-01 14:30 Asia/Riyadh (+03:00).
+        // Asserted as an absolute UTC instant so the result is host/TZ-independent.
         const d = hijriToGregorian("1447-12-15", "14:30");
-        expect(d.getFullYear()).toBe(2026);
-        expect(d.getMonth()).toBe(5); // June (0-indexed)
-        expect(d.getDate()).toBe(1);
-        expect(d.getHours()).toBe(14);
-        expect(d.getMinutes()).toBe(30);
+        expect(d.toISOString()).toBe("2026-06-01T11:30:00.000Z");
     });
 
     it("rejects a malformed Hijri date", () => {

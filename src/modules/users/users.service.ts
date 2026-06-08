@@ -1,4 +1,4 @@
-import { Role } from "@prisma/client";
+import { CaseAssignmentStatus, Role } from "@prisma/client";
 import bcrypt from "bcrypt";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
@@ -27,11 +27,51 @@ export class UsersService {
     }
 
     async getAllUsers(role?: string) {
-        return prisma.user.findMany({
+        const users = await prisma.user.findMany({
             select: USER_SELECT,
             where: role ? { role: role.toUpperCase() as Role } : undefined,
             orderBy: { createdAt: "desc" },
         });
+
+        const userIds = users.map((u) => u.id);
+        if (userIds.length === 0) return users;
+
+        // Count accepted case assignments per user across both the lawyer slot
+        // (preferredLawyer/assignmentStatus) and the consultant slot
+        // (consultant/consultantAssignmentStatus).
+        const [lawyerCounts, consultantCounts] = await Promise.all([
+            prisma.case.groupBy({
+                by: ["preferredLawyerId"],
+                where: {
+                    preferredLawyerId: { in: userIds },
+                    assignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                },
+                _count: { _all: true },
+            }),
+            prisma.case.groupBy({
+                by: ["consultantId"],
+                where: {
+                    consultantId: { in: userIds },
+                    consultantAssignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                },
+                _count: { _all: true },
+            }),
+        ]);
+
+        const countMap = new Map<string, number>();
+        for (const row of lawyerCounts) {
+            if (row.preferredLawyerId)
+                countMap.set(row.preferredLawyerId, row._count._all);
+        }
+        for (const row of consultantCounts) {
+            if (row.consultantId)
+                countMap.set(
+                    row.consultantId,
+                    (countMap.get(row.consultantId) ?? 0) + row._count._all,
+                );
+        }
+
+        return users.map((u) => ({ ...u, acceptedCasesCount: countMap.get(u.id) ?? 0 }));
     }
 
     async createUser(data: CreateUserPayload) {

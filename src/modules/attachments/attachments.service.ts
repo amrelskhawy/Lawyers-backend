@@ -96,8 +96,12 @@ export class AttachmentService {
         });
     }
 
-    /** Send the attachment to the client (customer) via WhatsApp. */
-    async send(id: string, user: Actor) {
+    /**
+     * Send the attachment to the client (customer) via WhatsApp.
+     * An optional `message` is sent as the file caption; when omitted we fall
+     * back to the file name so the message is never empty.
+     */
+    async send(id: string, user: Actor, message?: string) {
         const att = await prisma.caseAttachment.findUnique({ where: { id } });
         if (!att) throw new AppResponse(false, "ATTACHMENT_NOT_FOUND", null, 404);
         const c = await assertCaseAccess(att.caseId, user);
@@ -107,12 +111,14 @@ export class AttachmentService {
             throw new AppResponse(false, "ATTACHMENT_NO_RECIPIENT", null, 400);
         }
 
+        const caption = message?.trim() || att.fileName;
+
         try {
             // Same pattern as the working report sends: hand WAAPI the public
             // Drive URL with a `&filename=` suffix so it can detect the file type.
             let publicUrl = await driveService.makePublic(att.driveFileId);
             publicUrl += `&filename=${att.fileName}`;
-            await sendWhatsAppFile(phone, publicUrl, att.fileName);
+            await sendWhatsAppFile(phone, publicUrl, caption);
         } catch (e: any) {
             // WAAPI rejects unsupported/unreachable files — surface a clean 400
             // instead of a generic 500 so the client can show a useful message.
