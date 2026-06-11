@@ -16,7 +16,7 @@ export const registerUser = asyncHandler(async (req: Request, res: Response) => 
     res.cookie("token", result.token, {
         path: "/",
         httpOnly: true,
-        maxAge: 30 * 24 * 60 * 60 * 1000,
+        maxAge: 60 * 60 * 1000, // 1 hour — matches the JWT expiry
         sameSite: "none",
         secure: true,
     });
@@ -39,7 +39,7 @@ export const loginUser = asyncHandler(async (req: Request, res: Response) => {
     res.cookie("token", result.token, {
         path: "/",
         httpOnly: true,
-        maxAge: 30 * 24 * 60 * 60 * 1000,
+        maxAge: 60 * 60 * 1000, // 1 hour — matches the JWT expiry
         sameSite: "none",
         secure: true,
     });
