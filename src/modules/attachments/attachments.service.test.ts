@@ -66,6 +66,29 @@ describe("AttachmentService.send", () => {
         );
     });
 
+    it("URL-encodes filenames with spaces and Arabic characters in the WAAPI url", async () => {
+        prismaMock.caseAttachment.findUnique.mockResolvedValue({
+            id: "a1",
+            caseId: "c1",
+            driveFileId: "drive1",
+            url: "https://drive/x",
+            fileName: "انذار قبل البيع.pdf",
+            mimeType: "application/pdf",
+        });
+        prismaMock.case.findUnique.mockResolvedValue(caseRow);
+        makePublic.mockResolvedValue("https://drive.google.com/uc?export=download&id=drive1");
+        prismaMock.caseAttachment.update.mockResolvedValue({ id: "a1", sentAt: new Date() });
+
+        await service.send("a1", admin, "تفضل المرفق");
+
+        const sentUrl = sendWhatsAppFile.mock.calls[0][1] as string;
+        expect(sentUrl).toBe(
+            "https://drive.google.com/uc?export=download&id=drive1&filename=" +
+                encodeURIComponent("انذار قبل البيع.pdf"),
+        );
+        expect(sentUrl).not.toMatch(/\s/);
+    });
+
     it("rejects when the client has no phone on file", async () => {
         prismaMock.caseAttachment.findUnique.mockResolvedValue({ id: "a1", caseId: "c1" });
         prismaMock.case.findUnique.mockResolvedValue({
@@ -99,6 +122,56 @@ describe("AttachmentService.upload", () => {
         expect(prismaMock.caseAttachment.create).toHaveBeenCalledWith(
             expect.objectContaining({
                 data: expect.objectContaining({ driveFileId: "drive1", url: "https://public" }),
+            }),
+        );
+    });
+
+    it("repairs multer's latin1-mangled Arabic filenames before storing", async () => {
+        prismaMock.case.findUnique.mockResolvedValue(caseRow);
+        ensureCustomerFolder.mockResolvedValue("folder1");
+        uploadBuffer.mockResolvedValue({ id: "drive1", webViewLink: "https://view" });
+        makePublic.mockResolvedValue("https://public");
+        prismaMock.caseAttachment.create.mockResolvedValue({ id: "a1" });
+
+        // multer decodes the multipart filename as latin1, so UTF-8 Arabic
+        // arrives as mojibake — exactly what the service receives.
+        const mangled = Buffer.from("انذار قبل البيع.pdf", "utf8").toString("latin1");
+
+        await service.upload(
+            "c1",
+            { originalname: mangled, buffer: Buffer.from("x"), mimetype: "application/pdf", size: 1 },
+            admin,
+        );
+
+        expect(uploadBuffer).toHaveBeenCalledWith(
+            "انذار قبل البيع.pdf",
+            expect.anything(),
+            "folder1",
+            "application/pdf",
+        );
+        expect(prismaMock.caseAttachment.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ fileName: "انذار قبل البيع.pdf" }),
+            }),
+        );
+    });
+
+    it("keeps plain ASCII filenames unchanged", async () => {
+        prismaMock.case.findUnique.mockResolvedValue(caseRow);
+        ensureCustomerFolder.mockResolvedValue("folder1");
+        uploadBuffer.mockResolvedValue({ id: "drive1", webViewLink: "https://view" });
+        makePublic.mockResolvedValue("https://public");
+        prismaMock.caseAttachment.create.mockResolvedValue({ id: "a1" });
+
+        await service.upload(
+            "c1",
+            { originalname: "report v2.pdf", buffer: Buffer.from("x"), mimetype: "application/pdf", size: 1 },
+            admin,
+        );
+
+        expect(prismaMock.caseAttachment.create).toHaveBeenCalledWith(
+            expect.objectContaining({
+                data: expect.objectContaining({ fileName: "report v2.pdf" }),
             }),
         );
     });

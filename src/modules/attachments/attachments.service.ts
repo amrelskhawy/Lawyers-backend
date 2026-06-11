@@ -19,6 +19,16 @@ function fileExtension(name: string): string {
 }
 
 /**
+ * Multer decodes multipart filenames as latin1, so UTF-8 names (Arabic)
+ * arrive mangled ("انذار.pdf" → "Ø§ÙØ°Ø§Ø±.pdf"). Re-decode as UTF-8;
+ * keep the original if the result isn't valid UTF-8 (it was real latin1).
+ */
+function fixFileNameEncoding(name: string): string {
+    const decoded = Buffer.from(name, "latin1").toString("utf8");
+    return decoded.includes("�") ? name : decoded;
+}
+
+/**
  * Throw 404/403 unless the case exists and the actor may manage its files.
  * Mirrors the reminders access rule: staff always, lawyers only on their cases.
  */
@@ -62,7 +72,8 @@ export class AttachmentService {
     ) {
         const c = await assertCaseAccess(caseId, user);
 
-        if (!ALLOWED_EXTENSIONS.includes(fileExtension(file.originalname))) {
+        const fileName = fixFileNameEncoding(file.originalname);
+        if (!ALLOWED_EXTENSIONS.includes(fileExtension(fileName))) {
             throw new AppResponse(
                 false,
                 "ATTACHMENT_UNSUPPORTED_TYPE",
@@ -73,7 +84,7 @@ export class AttachmentService {
 
         const folderId = await ensureCustomerFolder(c.customerId);
         const uploaded = await driveService.uploadBuffer(
-            file.originalname,
+            fileName,
             file.buffer,
             folderId,
             file.mimetype,
@@ -86,7 +97,7 @@ export class AttachmentService {
         return prisma.caseAttachment.create({
             data: {
                 caseId,
-                fileName: file.originalname,
+                fileName,
                 mimeType: file.mimetype,
                 sizeBytes: file.size,
                 driveFileId: uploaded.id,
@@ -116,8 +127,10 @@ export class AttachmentService {
         try {
             // Same pattern as the working report sends: hand WAAPI the public
             // Drive URL with a `&filename=` suffix so it can detect the file type.
+            // Encode the filename — user uploads have spaces/Arabic that
+            // would otherwise produce a URL WAAPI cannot fetch.
             let publicUrl = await driveService.makePublic(att.driveFileId);
-            publicUrl += `&filename=${att.fileName}`;
+            publicUrl += `&filename=${encodeURIComponent(att.fileName)}`;
             await sendWhatsAppFile(phone, publicUrl, caption);
         } catch (e: any) {
             // WAAPI rejects unsupported/unreachable files — surface a clean 400

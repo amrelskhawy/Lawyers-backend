@@ -15,6 +15,25 @@ interface WaapiSendResult {
     };
 }
 
+/**
+ * WAAPI returns HTTP 200 even when delivery fails — failures are only
+ * reported in the JSON body. Treat an error-ish `message_status` as a
+ * failure so callers don't mark messages as sent when they never were.
+ */
+async function parseWaapiResponse(res: Response, context: string): Promise<WaapiSendResult> {
+    if (!res.ok) {
+        const text = await res.text();
+        throw new Error(`WAAPI ${context} failed (${res.status}): ${text}`);
+    }
+    const body = (await res.json()) as WaapiSendResult;
+    if (/error|fail/i.test(body.message_status ?? "")) {
+        throw new Error(
+            `WAAPI ${context} failed (status: ${body.message_status}, code: ${body.data?.status_code ?? "?"})`,
+        );
+    }
+    return body;
+}
+
 function getKeys() {
     const appkey = process.env.WAAPI_APP_KEY;
     const authkey = process.env.WAAPI_AUTH_KEY;
@@ -45,12 +64,7 @@ export async function sendWhatsAppMessage(
         body: form,
     });
 
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`WAAPI send message failed (${res.status}): ${text}`);
-    }
-
-    return res.json() as Promise<WaapiSendResult>;
+    return parseWaapiResponse(res, "send message");
 }
 
 /**
@@ -80,10 +94,5 @@ export async function sendWhatsAppFile(
         body: form,
     });
 
-    if (!res.ok) {
-        const text = await res.text();
-        throw new Error(`WAAPI send file failed (${res.status}): ${text}`);
-    }
-
-    return res.json() as Promise<WaapiSendResult>;
+    return parseWaapiResponse(res, "send file");
 }
