@@ -48,6 +48,9 @@ type RequestingUser = { id: string; role: string };
 export interface CaseListOptions {
     hijriYear?: number;
     hijriMonth?: number;
+    /** Calendar range as canonical Hijri dates "iYYYY-iMM-iDD"; `toHijri` is exclusive. */
+    fromHijri?: string;
+    toHijri?: string;
     query?: Record<string, unknown>;
     search?: string;
     caseType?: CaseType;
@@ -77,9 +80,18 @@ export class CasesService {
             });
         }
 
-        // Calendar: restrict to sessions within one Hijri month via the reliable
+        // Calendar: restrict to sessions within a Hijri window via the reliable
         // Gregorian `sessionDate` (cases without a session are naturally excluded).
-        if (opts.hijriYear && opts.hijriMonth) {
+        // An explicit from/to range (day/week/month/year views) takes precedence;
+        // otherwise fall back to a single Hijri month.
+        if (opts.fromHijri && opts.toHijri) {
+            and.push({
+                sessionDate: {
+                    gte: hijriToGregorian(opts.fromHijri, "00:00"),
+                    lt: hijriToGregorian(opts.toHijri, "00:00"),
+                },
+            });
+        } else if (opts.hijriYear && opts.hijriMonth) {
             const { start, end } = hijriMonthRange(opts.hijriYear, opts.hijriMonth);
             and.push({ sessionDate: { gte: start, lt: end } });
         }
@@ -116,7 +128,10 @@ export class CasesService {
         // callers — e.g. stats — getting the full array, unchanged).
         const wantsPage =
             opts.query != null && (opts.query.page != null || opts.query.limit != null);
-        if ((opts.hijriYear && opts.hijriMonth) || !wantsPage) {
+        const isCalendar =
+            (opts.hijriYear != null && opts.hijriMonth != null) ||
+            (opts.fromHijri != null && opts.toHijri != null);
+        if (isCalendar || !wantsPage) {
             const data = await prisma.case.findMany({
                 where,
                 include: caseInclude,

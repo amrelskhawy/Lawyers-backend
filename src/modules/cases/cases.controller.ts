@@ -24,9 +24,21 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
     }
 
     const asStr = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+
+    // Optional `?from=iYYYY-iMM-iDD&to=iYYYY-iMM-iDD` (exclusive end) for the
+    // day/week/month/year calendar views.
+    const hijriDate = /^\d{3,4}-\d{1,2}-\d{1,2}$/;
+    const from = asStr(req.query.from);
+    const to = asStr(req.query.to);
+    if ((from && !hijriDate.test(from)) || (to && !hijriDate.test(to))) {
+        throw new AppResponse(false, "INVALID_DATE_RANGE", null, 400);
+    }
+
     const { data, meta } = await cases.list(req.user, {
         hijriYear,
         hijriMonth,
+        fromHijri: from && to ? from : undefined,
+        toHijri: from && to ? to : undefined,
         query: req.query,
         search: asStr(req.query.search),
         caseType: asStr(req.query.caseType) as never,
