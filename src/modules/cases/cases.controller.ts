@@ -7,7 +7,22 @@ import type { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 const cases = new CasesService();
 
 export const listCases = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await cases.list(req.user);
+    // Optional `?month=iYYYY-iMM` pages the (calendar) list to one Hijri month.
+    let hijriYear: number | undefined;
+    let hijriMonth: number | undefined;
+    const month = req.query.month;
+    if (typeof month === "string") {
+        const m = month.trim().match(/^(\d{3,4})-(\d{1,2})$/);
+        if (!m) {
+            throw new AppResponse(false, "INVALID_MONTH_PARAM", null, 400);
+        }
+        hijriYear = Number(m[1]);
+        hijriMonth = Number(m[2]);
+        if (hijriMonth < 1 || hijriMonth > 12) {
+            throw new AppResponse(false, "INVALID_MONTH_PARAM", null, 400);
+        }
+    }
+    const data = await cases.list(req.user, { hijriYear, hijriMonth });
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data));
 });
 

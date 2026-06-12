@@ -5,7 +5,7 @@ import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
-import { hijriToGregorian } from "../../core/utils/hijri.js";
+import { hijriToGregorian, hijriMonthRange } from "../../core/utils/hijri.js";
 import { scheduleSessionReminders } from "../reminders/reminders.scheduler.js";
 import { ensureCustomerFolder } from "../../core/services/google/customer-folder.js";
 import type {
@@ -43,7 +43,7 @@ function slotState(c: { preferredLawyerId: string | null; assignmentStatus: stri
 type RequestingUser = { id: string; role: string };
 
 export class CasesService {
-    async list(requestingUser: RequestingUser) {
+    async list(requestingUser: RequestingUser, opts?: { hijriYear?: number; hijriMonth?: number }) {
         const where: Prisma.CaseWhereInput = { isDeleted: false };
         if (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") {
             // Visible if assigned to this user in either the lawyer or consultant slot.
@@ -51,6 +51,13 @@ export class CasesService {
                 { preferredLawyerId: requestingUser.id },
                 { consultantId: requestingUser.id },
             ];
+        }
+        // Calendar pagination: restrict to sessions within one Hijri month. Filters
+        // the reliable Gregorian `sessionDate`, so cases without a session date are
+        // naturally excluded from a month view.
+        if (opts?.hijriYear && opts?.hijriMonth) {
+            const { start, end } = hijriMonthRange(opts.hijriYear, opts.hijriMonth);
+            where.sessionDate = { gte: start, lt: end };
         }
         return prisma.case.findMany({
             where,

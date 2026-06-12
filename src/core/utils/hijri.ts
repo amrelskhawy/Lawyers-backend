@@ -40,3 +40,26 @@ export function hijriToGregorian(hijriDate: string, time: string): Date {
     // The parsed instant is the wall-clock read as UTC; shift it back to +03:00.
     return new Date(m.toDate().getTime() - RIYADH_UTC_OFFSET_MINUTES * 60 * 1000);
 }
+
+/**
+ * Gregorian half-open range `[start, end)` covering one Hijri month — used to
+ * page the cases calendar by month by filtering the stored Gregorian
+ * `sessionDate` (which is reliable, unlike the loosely-formatted Hijri string).
+ *
+ * Boundaries are the start-of-day (Riyadh) of the 1st of the given month and the
+ * 1st of the following month, so a session anywhere in the month falls in range.
+ *
+ * @param iYear  Hijri year, e.g. 1447.
+ * @param iMonth Hijri month, 1-12.
+ */
+export function hijriMonthRange(iYear: number, iMonth: number): { start: Date; end: Date } {
+    if (!Number.isInteger(iYear) || !Number.isInteger(iMonth) || iMonth < 1 || iMonth > 12) {
+        throw new Error(`Invalid Hijri month ${iYear}-${iMonth}`);
+    }
+    // 1st of next month, rolling over the year boundary.
+    const nextYear = iMonth === 12 ? iYear + 1 : iYear;
+    const nextMonth = iMonth === 12 ? 1 : iMonth + 1;
+    const start = hijriToGregorian(`${iYear}-${iMonth}-1`, "00:00");
+    const end = hijriToGregorian(`${nextYear}-${nextMonth}-1`, "00:00");
+    return { start, end };
+}
