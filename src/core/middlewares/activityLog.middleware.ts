@@ -16,6 +16,7 @@ function extractDetails(action: string, resource: string, reqBody: any, resData:
             return {
                 customer: d.customer?.fullName ?? d.customerId ?? null,
                 caseType: d.caseType ?? null,
+                caseDegree: d.caseDegree ?? null,
                 assignmentStatus: d.assignmentStatus ?? null,
                 lawyer: d.preferredLawyerName ?? d.preferredLawyer?.name ?? null,
             };
