@@ -12,6 +12,7 @@ import {
     unassignCase,
     setCaseSessionDate,
     setCaseCompletion,
+    setCaseDegree,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
@@ -25,6 +26,7 @@ import {
     validateRejectAssignment,
     validateSetSessionDate,
     validateSetCompletion,
+    validateSetCaseDegree,
 } from "./cases.validator.js";
 
 const router = express.Router();
@@ -112,6 +114,16 @@ router.patch(
     validateSetSessionDate,
     logActivity("SET_SESSION_DATE", "Case"),
     setCaseSessionDate,
+);
+
+// Set the litigation degree (درجة التقاضي) — from the reminders dialog
+router.patch(
+    "/:id/degree",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
+    validateSetCaseDegree,
+    logActivity("SET_CASE_DEGREE", "Case"),
+    setCaseDegree,
 );
 
 // Toggle "fully completed" — cancels pending reminders, blocks new ones

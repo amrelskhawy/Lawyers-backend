@@ -11,6 +11,10 @@
  *           type: string
  *           enum: [CRIMINAL, ADMINISTRATIVE, LABOR, COMMERCIAL, PENAL, GENERAL, PERSONAL_STATUS, OTHER]
  *         otherCaseType: { type: string, nullable: true }
+ *         caseDegree:
+ *           type: string
+ *           enum: [FIRST_INSTANCE, APPEAL, CASSATION, PETITION]
+ *           nullable: true
  *         caseDate: { type: string, format: date-time }
  *         hijriDate: { type: string, nullable: true }
  *         agencyNumber: { type: string, nullable: true }
@@ -181,5 +185,29 @@
  *     responses:
  *       200: { description: Session date set and reminders scheduled }
  *       400: { description: Invalid Hijri date or date in the past }
+ *
+ * /cases/{id}/degree:
+ *   patch:
+ *     tags: [Cases]
+ *     summary: Set the case's litigation degree (درجة التقاضي)
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [caseDegree]
+ *             properties:
+ *               caseDegree:
+ *                 type: string
+ *                 enum: [FIRST_INSTANCE, APPEAL, CASSATION, PETITION]
+ *     responses:
+ *       200: { description: Case degree set }
  */
 export {};

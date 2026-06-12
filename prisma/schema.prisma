@@ -288,6 +288,16 @@ enum CaseAssignmentStatus {
   REJECTED
 }
 
+/// Litigation degree (درجة التقاضي). Each degree has a fixed UI color:
+/// FIRST_INSTANCE (الابتدائية) = green, APPEAL (الاستئناف) = yellow,
+/// CASSATION (النقض) = blue, PETITION (الالتماس) = orange.
+enum CaseDegree {
+  FIRST_INSTANCE
+  APPEAL
+  CASSATION
+  PETITION
+}
+
 model Case {
   id String @id @default(uuid())
 
@@ -296,6 +306,7 @@ model Case {
 
   caseType      CaseType
   otherCaseType String?
+  caseDegree    CaseDegree?
   caseDate      DateTime
   hijriDate     String?
   agencyNumber  String?

@@ -38,10 +38,11 @@ export class UsersService {
 
         // Count accepted case assignments per user across both the lawyer slot
         // (preferredLawyer/assignmentStatus) and the consultant slot
-        // (consultant/consultantAssignmentStatus).
+        // (consultant/consultantAssignmentStatus), broken down by litigation
+        // degree (caseDegree, null = not set yet).
         const [lawyerCounts, consultantCounts] = await Promise.all([
             prisma.case.groupBy({
-                by: ["preferredLawyerId"],
+                by: ["preferredLawyerId", "caseDegree"],
                 where: {
                     preferredLawyerId: { in: userIds },
                     assignmentStatus: CaseAssignmentStatus.ACCEPTED,
@@ -49,7 +50,7 @@ export class UsersService {
                 _count: { _all: true },
             }),
             prisma.case.groupBy({
-                by: ["consultantId"],
+                by: ["consultantId", "caseDegree"],
                 where: {
                     consultantId: { in: userIds },
                     consultantAssignmentStatus: CaseAssignmentStatus.ACCEPTED,
@@ -59,19 +60,27 @@ export class UsersService {
         ]);
 
         const countMap = new Map<string, number>();
+        const degreeMap = new Map<string, Record<string, number>>();
+        const add = (userId: string | null, degree: string | null, count: number) => {
+            if (!userId) return;
+            countMap.set(userId, (countMap.get(userId) ?? 0) + count);
+            const byDegree = degreeMap.get(userId) ?? {};
+            const key = degree ?? "UNASSIGNED";
+            byDegree[key] = (byDegree[key] ?? 0) + count;
+            degreeMap.set(userId, byDegree);
+        };
         for (const row of lawyerCounts) {
-            if (row.preferredLawyerId)
-                countMap.set(row.preferredLawyerId, row._count._all);
+            add(row.preferredLawyerId, row.caseDegree, row._count._all);
         }
         for (const row of consultantCounts) {
-            if (row.consultantId)
-                countMap.set(
-                    row.consultantId,
-                    (countMap.get(row.consultantId) ?? 0) + row._count._all,
-                );
+            add(row.consultantId, row.caseDegree, row._count._all);
         }
 
-        return users.map((u) => ({ ...u, acceptedCasesCount: countMap.get(u.id) ?? 0 }));
+        return users.map((u) => ({
+            ...u,
+            acceptedCasesCount: countMap.get(u.id) ?? 0,
+            acceptedCasesByDegree: degreeMap.get(u.id) ?? {},
+        }));
     }
 
     async createUser(data: CreateUserPayload) {

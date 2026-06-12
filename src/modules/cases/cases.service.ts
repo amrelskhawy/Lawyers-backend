@@ -13,6 +13,7 @@ import type {
     UpdateCasePayload,
     AssignCasePayload,
     SetSessionDatePayload,
+    SetCaseDegreePayload,
 } from "./cases.validator.js";
 
 const caseInclude = {
@@ -401,6 +402,36 @@ export class CasesService {
                 },
                 include: caseInclude,
             });
+        });
+    }
+
+    /**
+     * Set the case's litigation degree (درجة التقاضي). Lawyers/consultants may
+     * only do this for cases assigned to them; staff may always.
+     */
+    async setDegree(
+        caseId: string,
+        payload: SetCaseDegreePayload,
+        userId: string,
+        userRole: string,
+    ) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (userRole === "LAWYER" || userRole === "CONSULTANT") {
+            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+                throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+            }
+        }
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                caseDegree: payload.caseDegree,
+                updatedBy: { connect: { id: userId } },
+            },
+            include: caseInclude,
         });
     }
 

@@ -13,6 +13,14 @@ const CaseTypeEnum = z.enum([
     "OTHER",
 ]);
 
+// Litigation degree (درجة التقاضي) — set from the reminders dialog.
+const CaseDegreeEnum = z.enum([
+    "FIRST_INSTANCE",
+    "APPEAL",
+    "CASSATION",
+    "PETITION",
+]);
+
 const isoDate = z
     .string()
     .refine((v) => !Number.isNaN(new Date(v).getTime()), "Invalid date");
@@ -32,6 +40,7 @@ export const UpdateCaseSchema = z
         customerId: z.string().uuid().optional(),
         caseType: CaseTypeEnum.optional(),
         otherCaseType: z.string().nullable().optional(),
+        caseDegree: CaseDegreeEnum.nullable().optional(),
         caseDate: isoDate.optional(),
         hijriDate: z.string().nullable().optional(),
         agencyNumber: z.string().nullable().optional(),
@@ -86,6 +95,11 @@ export const SetCompletionSchema = z.object({
     completed: z.boolean(),
 }).strict();
 
+// Setting the litigation degree from the reminders dialog.
+export const SetCaseDegreeSchema = z.object({
+    caseDegree: CaseDegreeEnum,
+}).strict();
+
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
 export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
@@ -93,6 +107,7 @@ export type UnassignCasePayload = z.infer<typeof UnassignCaseSchema>;
 export type AssignmentKind = z.infer<typeof AssignmentKindEnum>;
 export type RejectAssignmentPayload = z.infer<typeof RejectAssignmentSchema>;
 export type SetSessionDatePayload = z.infer<typeof SetSessionDateSchema>;
+export type SetCaseDegreePayload = z.infer<typeof SetCaseDegreeSchema>;
 
 export const validateCreateCase = (req: Request, res: Response, next: NextFunction) => {
     const result = CreateCaseSchema.safeParse(req.body);
@@ -162,6 +177,17 @@ export const validateSetSessionDate = (req: Request, res: Response, next: NextFu
 
 export const validateSetCompletion = (req: Request, res: Response, next: NextFunction) => {
     const result = SetCompletionSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateSetCaseDegree = (req: Request, res: Response, next: NextFunction) => {
+    const result = SetCaseDegreeSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)
