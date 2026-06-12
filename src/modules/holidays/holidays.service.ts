@@ -4,6 +4,7 @@ import { startOfDay, format } from "date-fns";
 import { HolidayPayload } from "./holidays.types.js";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
 import { parseTimeTo24h } from "./holidays.types.js";
+import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
 
 export class HolidaysService {
     async createHoliday(payload: HolidayPayload) {
@@ -106,6 +107,43 @@ export class HolidaysService {
             ...h,
             date: format(h.date, "yyyy-MM-dd")
         }));
+    }
+
+    async listHolidays(query: Record<string, unknown>) {
+        const isPaginated = query.page !== undefined || query.limit !== undefined;
+
+        const where: any = {};
+        const search = typeof query.search === "string" ? query.search.trim() : "";
+        if (search) {
+            where.name = { contains: search, mode: "insensitive" };
+        }
+
+        if (!isPaginated) {
+            const holidays = await prisma.holiday.findMany({
+                where,
+                orderBy: { date: "asc" },
+            });
+            return {
+                data: holidays.map(h => ({ ...h, date: format(h.date, "yyyy-MM-dd") })),
+                meta: null,
+            };
+        }
+
+        const q = parseListQuery(query);
+        const [total, holidays] = await Promise.all([
+            prisma.holiday.count({ where }),
+            prisma.holiday.findMany({
+                where,
+                orderBy: { date: "asc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+        ]);
+
+        return {
+            data: holidays.map(h => ({ ...h, date: format(h.date, "yyyy-MM-dd") })),
+            meta: buildMeta(total, q.page, q.limit),
+        };
     }
 
     async deleteHoliday(id: string) {

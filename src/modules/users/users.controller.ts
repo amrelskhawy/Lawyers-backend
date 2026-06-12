@@ -13,8 +13,8 @@ export const getMe = asyncHandler(async (req: AuthRequest, res: Response) => {
 
 export const getAllUsers = asyncHandler(async (req: Request, res: Response) => {
     const { role } = req.query as { role?: string };
-    const users = await usersService.getAllUsers(role);
-    res.status(200).json(new AppResponse(true, "USERS_RETRIEVED_SUCCESS", users));
+    const { data, meta } = await usersService.listUsers(req.query, role);
+    res.status(200).json(new AppResponse(true, "USERS_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const getUserById = asyncHandler(async (req: Request, res: Response) => {

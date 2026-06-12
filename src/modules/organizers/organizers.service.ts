@@ -3,6 +3,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { format } from "date-fns";
 import { CreateOrganizerPayload, UpdateOrganizerPayload } from "./organizers.types.js";
+import { parseListQuery, buildMeta, type PageMeta } from "../../core/utils/pagination.js";
 
 type BookingEvent = "booked" | "confirmed" | "cancelled";
 
@@ -38,6 +39,51 @@ export class OrganizerService {
             include: includeUser,
             orderBy: { createdAt: "desc" },
         });
+    }
+
+    /**
+     * List organizers with OPT-IN server-side pagination.
+     * Paginates only when `page` or `limit` is present in the query; otherwise
+     * returns the full array unchanged with `meta = null`.
+     */
+    async listOrganizers(
+        query: Record<string, unknown>
+    ): Promise<{ data: Awaited<ReturnType<OrganizerService["getAllOrganizers"]>>; meta: PageMeta | null }> {
+        const isPaginated = query.page != null || query.limit != null;
+
+        if (!isPaginated) {
+            const data = await this.getAllOrganizers();
+            return { data, meta: null };
+        }
+
+        const q = parseListQuery(query);
+
+        const where = q.search
+            ? {
+                  AND: [
+                      {
+                          OR: [
+                              { user: { name: { contains: q.search, mode: "insensitive" as const } } },
+                              { user: { email: { contains: q.search, mode: "insensitive" as const } } },
+                              { user: { phone: { contains: q.search, mode: "insensitive" as const } } },
+                          ],
+                      },
+                  ],
+              }
+            : {};
+
+        const [total, data] = await Promise.all([
+            prisma.organizer.count({ where }),
+            prisma.organizer.findMany({
+                where,
+                include: includeUser,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async getOrganizerById(id: string) {

@@ -1,7 +1,8 @@
-import { CaseAssignmentStatus, Role } from "@prisma/client";
+import { CaseAssignmentStatus, Prisma, Role } from "@prisma/client";
 import bcrypt from "bcrypt";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { buildMeta, parseListQuery, PageMeta } from "../../core/utils/pagination.js";
 import { CreateUserPayload, UpdateUserPayload } from "./users.types.js";
 
 const USER_SELECT = {
@@ -26,13 +27,11 @@ export class UsersService {
         return user;
     }
 
-    async getAllUsers(role?: string) {
-        const users = await prisma.user.findMany({
-            select: USER_SELECT,
-            where: role ? { role: role.toUpperCase() as Role } : undefined,
-            orderBy: { createdAt: "desc" },
-        });
-
+    /**
+     * Attach per-user accepted-case assignment counts (total + by litigation
+     * degree) to a set of selected user rows.
+     */
+    private async enrichWithCaseCounts<T extends { id: string }>(users: T[]) {
         const userIds = users.map((u) => u.id);
         if (userIds.length === 0) return users;
 
@@ -81,6 +80,68 @@ export class UsersService {
             acceptedCasesCount: countMap.get(u.id) ?? 0,
             acceptedCasesByDegree: degreeMap.get(u.id) ?? {},
         }));
+    }
+
+    async getAllUsers(role?: string) {
+        const users = await prisma.user.findMany({
+            select: USER_SELECT,
+            where: role ? { role: role.toUpperCase() as Role } : undefined,
+            orderBy: { createdAt: "desc" },
+        });
+
+        return this.enrichWithCaseCounts(users);
+    }
+
+    /**
+     * Opt-in paginated list. When the request has `page` or `limit`, returns one
+     * page plus {@link PageMeta}; otherwise returns the full enriched array with
+     * `meta = null` (preserving non-dashboard callers).
+     */
+    async listUsers(
+        query: Record<string, unknown>,
+        roleParam?: string,
+    ): Promise<{ data: unknown[]; meta: PageMeta | null }> {
+        const q = parseListQuery(query);
+
+        const role = roleParam ?? (typeof query.role === "string" ? query.role : undefined);
+
+        const andFilters: Prisma.UserWhereInput[] = [];
+        if (role) andFilters.push({ role: role.toUpperCase() as Role });
+        if (q.search) {
+            andFilters.push({
+                OR: [
+                    { name: { contains: q.search, mode: "insensitive" } },
+                    { nameAr: { contains: q.search, mode: "insensitive" } },
+                    { nameEn: { contains: q.search, mode: "insensitive" } },
+                    { email: { contains: q.search, mode: "insensitive" } },
+                    { phone: { contains: q.search, mode: "insensitive" } },
+                ],
+            });
+        }
+        const where: Prisma.UserWhereInput = andFilters.length ? { AND: andFilters } : {};
+
+        const paginated = query.page !== undefined || query.limit !== undefined;
+
+        if (paginated) {
+            const total = await prisma.user.count({ where });
+            const users = await prisma.user.findMany({
+                where,
+                select: USER_SELECT,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            });
+            const data = await this.enrichWithCaseCounts(users);
+            return { data, meta: buildMeta(total, q.page, q.limit) };
+        }
+
+        const users = await prisma.user.findMany({
+            where,
+            select: USER_SELECT,
+            orderBy: { createdAt: "desc" },
+        });
+        const data = await this.enrichWithCaseCounts(users);
+        return { data, meta: null };
     }
 
     async createUser(data: CreateUserPayload) {

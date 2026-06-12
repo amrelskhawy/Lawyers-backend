@@ -6,6 +6,8 @@ import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
 import { hijriToGregorian, hijriMonthRange } from "../../core/utils/hijri.js";
+import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
+import type { CaseType, CaseDegree } from "@prisma/client";
 import { scheduleSessionReminders } from "../reminders/reminders.scheduler.js";
 import { ensureCustomerFolder } from "../../core/services/google/customer-folder.js";
 import type {
@@ -42,28 +44,131 @@ function slotState(c: { preferredLawyerId: string | null; assignmentStatus: stri
 
 type RequestingUser = { id: string; role: string };
 
+/** Options for {@link CasesService.list} — calendar window, pagination + filters. */
+export interface CaseListOptions {
+    hijriYear?: number;
+    hijriMonth?: number;
+    query?: Record<string, unknown>;
+    search?: string;
+    caseType?: CaseType;
+    /** A `CaseDegree`, or the sentinel "UNASSIGNED" for cases with no degree. */
+    caseDegree?: CaseDegree | "UNASSIGNED";
+    lawyerId?: string;
+}
+
 export class CasesService {
-    async list(requestingUser: RequestingUser, opts?: { hijriYear?: number; hijriMonth?: number }) {
-        const where: Prisma.CaseWhereInput = { isDeleted: false };
+    /**
+     * Build the Prisma `where` for a case list, combining role scoping, the
+     * calendar month window, free-text search and the column filters. Uses an
+     * `AND` array so the (role) and (search) OR-groups don't collide.
+     */
+    private buildListWhere(
+        requestingUser: RequestingUser,
+        opts: CaseListOptions,
+    ): Prisma.CaseWhereInput {
+        const and: Prisma.CaseWhereInput[] = [{ isDeleted: false }];
+
         if (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") {
-            // Visible if assigned to this user in either the lawyer or consultant slot.
-            where.OR = [
-                { preferredLawyerId: requestingUser.id },
-                { consultantId: requestingUser.id },
-            ];
+            and.push({
+                OR: [
+                    { preferredLawyerId: requestingUser.id },
+                    { consultantId: requestingUser.id },
+                ],
+            });
         }
-        // Calendar pagination: restrict to sessions within one Hijri month. Filters
-        // the reliable Gregorian `sessionDate`, so cases without a session date are
-        // naturally excluded from a month view.
-        if (opts?.hijriYear && opts?.hijriMonth) {
+
+        // Calendar: restrict to sessions within one Hijri month via the reliable
+        // Gregorian `sessionDate` (cases without a session are naturally excluded).
+        if (opts.hijriYear && opts.hijriMonth) {
             const { start, end } = hijriMonthRange(opts.hijriYear, opts.hijriMonth);
-            where.sessionDate = { gte: start, lt: end };
+            and.push({ sessionDate: { gte: start, lt: end } });
         }
-        return prisma.case.findMany({
-            where,
-            include: caseInclude,
-            orderBy: { createdAt: "desc" },
-        });
+
+        if (opts.search) {
+            const contains = { contains: opts.search, mode: "insensitive" as const };
+            and.push({
+                OR: [
+                    { customer: { fullName: contains } },
+                    { agencyNumber: contains },
+                    { preferredLawyerName: contains },
+                    { consultantName: contains },
+                ],
+            });
+        }
+
+        if (opts.caseType) and.push({ caseType: opts.caseType });
+        if (opts.caseDegree === "UNASSIGNED") and.push({ caseDegree: null });
+        else if (opts.caseDegree) and.push({ caseDegree: opts.caseDegree });
+        if (opts.lawyerId) {
+            and.push({
+                OR: [{ preferredLawyerId: opts.lawyerId }, { consultantId: opts.lawyerId }],
+            });
+        }
+
+        return { AND: and };
+    }
+
+    async list(requestingUser: RequestingUser, opts: CaseListOptions = {}) {
+        const where = this.buildListWhere(requestingUser, opts);
+
+        // Calendar path: the month view needs every case in the window, unpaginated.
+        // Also the default when no pagination is requested (keeps non-dashboard
+        // callers — e.g. stats — getting the full array, unchanged).
+        const wantsPage =
+            opts.query != null && (opts.query.page != null || opts.query.limit != null);
+        if ((opts.hijriYear && opts.hijriMonth) || !wantsPage) {
+            const data = await prisma.case.findMany({
+                where,
+                include: caseInclude,
+                orderBy: { createdAt: "desc" },
+            });
+            return { data, meta: null };
+        }
+
+        // Table path: paginate and attach summary counts for the dashboard cards.
+        const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
+        const [total, data, degreeGroups, pendingCount] = await Promise.all([
+            prisma.case.count({ where }),
+            prisma.case.findMany({
+                where,
+                include: caseInclude,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+            prisma.case.groupBy({ by: ["caseDegree"], where, _count: { _all: true } }),
+            this.countPendingForUser(requestingUser, where),
+        ]);
+
+        const degreeCounts: Record<string, number> = {};
+        for (const g of degreeGroups) {
+            degreeCounts[g.caseDegree ?? "UNASSIGNED"] = g._count._all;
+        }
+
+        return {
+            data,
+            meta: { ...buildMeta(total, q.page, q.limit), degreeCounts, pendingCount },
+        };
+    }
+
+    /** Cases still awaiting accept/reject in the requesting user's own slot. */
+    private async countPendingForUser(
+        requestingUser: RequestingUser,
+        where: Prisma.CaseWhereInput,
+    ): Promise<number> {
+        if (requestingUser.role === "LAWYER") {
+            return prisma.case.count({
+                where: { AND: [where, { preferredLawyerId: requestingUser.id, assignmentStatus: "PENDING" }] },
+            });
+        }
+        if (requestingUser.role === "CONSULTANT") {
+            return prisma.case.count({
+                where: {
+                    AND: [where, { consultantId: requestingUser.id, consultantAssignmentStatus: "PENDING" }],
+                },
+            });
+        }
+        return 0;
     }
 
     async listLawyers() {

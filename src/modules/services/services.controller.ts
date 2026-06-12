@@ -6,8 +6,8 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 const serviceService = new ServiceService();
 
 export const listServices = asyncHandler(async (req: Request, res: Response) => {
-    const services = await serviceService.getAllServices();
-    res.status(200).json(new AppResponse(true, "SERVICES_RETRIEVED_SUCCESS", services));
+    const { data, meta } = await serviceService.listServices(req.query);
+    res.status(200).json(new AppResponse(true, "SERVICES_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const getService = asyncHandler(async (req: Request, res: Response) => {

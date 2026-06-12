@@ -20,8 +20,8 @@ export const createModerator = asyncHandler(async (req: AuthRequest, res: Respon
 });
 
 export const getAllModerators = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const moderators = await moderatorService.getAllModerators();
-    res.status(200).json(new AppResponse(true, "MODERATORS_RETRIEVED_SUCCESS", moderators));
+    const { data, meta } = await moderatorService.getAllModerators(req.query);
+    res.status(200).json(new AppResponse(true, "MODERATORS_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const deleteModerator = asyncHandler(async (req: AuthRequest, res: Response) => {

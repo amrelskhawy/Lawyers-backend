@@ -3,6 +3,7 @@ import prisma from "../../core/db/prisma.js";
 import bcrypt from "bcrypt";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { CreateModeratorSchema } from "./moderators.types.js";
+import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
 import z from "zod";
 
 export class ModeratorService {
@@ -39,20 +40,53 @@ export class ModeratorService {
 
 
 
-    async getAllModerators() {
-        // Pagination could be added here later
-        const moderators = await prisma.user.findMany({
-            where: { role: Role.MODERATOR },
-            select: {
-                id: true,
-                name: true,
-                email: true,
-                role: true,
-                isVerified: true,
-                createdAt: true,
-            },
-        });
-        return moderators;
+    async getAllModerators(query: Record<string, unknown> = {}) {
+        const select = {
+            id: true,
+            name: true,
+            email: true,
+            role: true,
+            isVerified: true,
+            createdAt: true,
+        } as const;
+
+        const isPaginated = query.page !== undefined || query.limit !== undefined;
+
+        // OPT-IN: when no page/limit is provided, return the full array unchanged.
+        if (!isPaginated) {
+            const moderators = await prisma.user.findMany({
+                where: { role: Role.MODERATOR },
+                select,
+            });
+            return { data: moderators, meta: null };
+        }
+
+        const q = parseListQuery(query, { defaultLimit: 10 });
+
+        const where: any = {
+            AND: [
+                { role: Role.MODERATOR },
+            ],
+        };
+
+        if (q.search) {
+            where.AND.push({
+                OR: [
+                    { name: { contains: q.search, mode: "insensitive" } },
+                    { email: { contains: q.search, mode: "insensitive" } },
+                    { phone: { contains: q.search, mode: "insensitive" } },
+                ],
+            });
+        }
+
+        const orderBy = q.sortBy ? { [q.sortBy]: q.sortOrder } : { createdAt: q.sortOrder };
+
+        const [total, data] = await Promise.all([
+            prisma.user.count({ where }),
+            prisma.user.findMany({ where, select, orderBy, skip: q.skip, take: q.take }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async deleteModerator(id: string) {

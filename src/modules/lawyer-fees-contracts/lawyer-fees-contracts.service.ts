@@ -6,6 +6,7 @@ import { driveService } from "../../core/services/google/drive.js";
 import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { renderLawyerFeesContractPdf } from "./lawyer-fees-pdf.service.js";
 import type { UpdateLawyerFeesContractPayload } from "./lawyer-fees-contracts.validator.js";
+import { parseListQuery, buildMeta, type PageMeta } from "../../core/utils/pagination.js";
 
 const SIGNING_TOKEN_TTL_MS = 30 * 60 * 1000; // 30 minutes
 
@@ -51,6 +52,55 @@ export class LawyerFeesContractsService {
             include: contractInclude,
             orderBy: { createdAt: "desc" },
         });
+    }
+
+    /**
+     * Opt-in paginated dashboard list. When the request query carries neither
+     * `page` nor `limit`, returns the full array unchanged with `meta = null`
+     * (back-compat). Otherwise returns one page plus pagination metadata.
+     */
+    async listPaginated(
+        query: Record<string, unknown>,
+    ): Promise<{ data: unknown[]; meta: PageMeta | null }> {
+        const paginated = query.page !== undefined || query.limit !== undefined;
+
+        if (!paginated) {
+            const data = await this.list();
+            return { data, meta: null };
+        }
+
+        const q = parseListQuery(query);
+
+        const and: Prisma.LawyerFeesContractWhereInput[] = [{ isDeleted: false }];
+
+        if (q.search) {
+            const contains = { contains: q.search, mode: "insensitive" as const };
+            and.push({
+                OR: [
+                    { contractNumber: contains },
+                    { clientName: contains },
+                    { clientPhone: contains },
+                    { clientIdNumber: contains },
+                    { customer: { fullName: contains } },
+                    { case: { agencyNumber: contains } },
+                ],
+            });
+        }
+
+        const where: Prisma.LawyerFeesContractWhereInput = { AND: and };
+
+        const [total, data] = await Promise.all([
+            prisma.lawyerFeesContract.count({ where }),
+            prisma.lawyerFeesContract.findMany({
+                where,
+                include: contractInclude,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async listByCase(caseId: string) {

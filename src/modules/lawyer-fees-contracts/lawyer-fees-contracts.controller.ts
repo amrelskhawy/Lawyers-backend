@@ -7,9 +7,11 @@ import type { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 const service = new LawyerFeesContractsService();
 
 export const listLawyerFeesContracts = asyncHandler(
-    async (_req: AuthRequest, res: Response) => {
-        const data = await service.list();
-        res.status(200).json(new AppResponse(true, "LAWYER_FEES_CONTRACTS_RETRIEVED_SUCCESS", data));
+    async (req: AuthRequest, res: Response) => {
+        const { data, meta } = await service.listPaginated(req.query);
+        res.status(200).json(
+            new AppResponse(true, "LAWYER_FEES_CONTRACTS_RETRIEVED_SUCCESS", data, 200, meta),
+        );
     },
 );
 

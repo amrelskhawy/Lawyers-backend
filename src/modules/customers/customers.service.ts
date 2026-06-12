@@ -1,6 +1,7 @@
 import { Prisma } from "@prisma/client";
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { buildMeta, parseListQuery, PageMeta } from "../../core/utils/pagination.js";
 import { CreateCustomerPayload, UpdateCustomerPayload } from "./customers.validator.js";
 
 export class CustomerService {
@@ -10,6 +11,54 @@ export class CustomerService {
             orderBy: { createdAt: "desc" },
         });
         return customers;
+    }
+
+    /**
+     * Opt-in paginated list of customers.
+     *
+     * Only paginates when the request query carries `page` or `limit`.
+     * Otherwise returns the full array (meta: null), preserving the previous
+     * behaviour for stats/other callers that fetch all records.
+     */
+    async listCustomers(
+        query: Record<string, unknown>,
+    ): Promise<{ data: Awaited<ReturnType<CustomerService["getAllCustomers"]>>; meta: PageMeta | null }> {
+        const q = parseListQuery(query);
+
+        const search = q.search
+            ? [
+                  {
+                      OR: [
+                          { fullName: { contains: q.search, mode: "insensitive" as const } },
+                          { email: { contains: q.search, mode: "insensitive" as const } },
+                          { phone: { contains: q.search, mode: "insensitive" as const } },
+                          { location: { contains: q.search, mode: "insensitive" as const } },
+                      ],
+                  },
+              ]
+            : [];
+
+        const where: Prisma.CustomerWhereInput = {
+            AND: [{ isDeleted: false }, ...search],
+        };
+
+        const orderBy = q.sortBy
+            ? { [q.sortBy]: q.sortOrder }
+            : { createdAt: "desc" as const };
+
+        const isPaginated = query.page !== undefined || query.limit !== undefined;
+
+        if (!isPaginated) {
+            const data = await prisma.customer.findMany({ where, orderBy });
+            return { data, meta: null };
+        }
+
+        const [total, data] = await Promise.all([
+            prisma.customer.count({ where }),
+            prisma.customer.findMany({ where, orderBy, skip: q.skip, take: q.take }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async getCustomerById(id: string) {

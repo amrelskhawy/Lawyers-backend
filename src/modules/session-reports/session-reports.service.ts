@@ -6,6 +6,7 @@ import { ensureCustomerFolder } from "../../core/services/google/customer-folder
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
 import { renderSessionReportPdf } from "./session-report-pdf.service.js";
+import { parseListQuery, buildMeta, type PageMeta } from "../../core/utils/pagination.js";
 import type { UpdateSessionReportPayload } from "./session-reports.validator.js";
 
 const sessionReportInclude = {
@@ -21,12 +22,44 @@ const sessionReportInclude = {
 } satisfies Prisma.SessionReportInclude;
 
 export class SessionReportsService {
-    async listByCase(caseId: string) {
-        return prisma.sessionReport.findMany({
-            where: { caseId, isDeleted: false },
-            include: sessionReportInclude,
-            orderBy: { createdAt: "desc" },
-        });
+    async listByCase(caseId: string, query: Record<string, unknown> = {}) {
+        const paginated = query.page !== undefined || query.limit !== undefined;
+
+        const where: Prisma.SessionReportWhereInput = { caseId, isDeleted: false };
+
+        if (!paginated) {
+            const data = await prisma.sessionReport.findMany({
+                where,
+                include: sessionReportInclude,
+                orderBy: { createdAt: "desc" },
+            });
+            return { data, meta: null as PageMeta | null };
+        }
+
+        const q = parseListQuery(query);
+        if (q.search) {
+            where.OR = [
+                { sessionTitle: { contains: q.search, mode: "insensitive" } },
+                { sessionSummary: { contains: q.search, mode: "insensitive" } },
+                { courtDecision: { contains: q.search, mode: "insensitive" } },
+                { lawyerNotes: { contains: q.search, mode: "insensitive" } },
+                { reportNumber: { contains: q.search, mode: "insensitive" } },
+                { caseNumber: { contains: q.search, mode: "insensitive" } },
+            ];
+        }
+
+        const [total, data] = await Promise.all([
+            prisma.sessionReport.count({ where }),
+            prisma.sessionReport.findMany({
+                where,
+                include: sessionReportInclude,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async getById(id: string) {

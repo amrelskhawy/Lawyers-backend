@@ -29,8 +29,8 @@ export const getHolidaysInRange = asyncHandler(async (req: Request, res: Respons
 });
 
 export const getHolidays = asyncHandler(async (req: Request, res: Response) => {
-    const holidays = await holidaysService.getHolidays();
-    res.status(200).json(new AppResponse(true, "HOLIDAYS_RETRIEVED", holidays));
+    const { data, meta } = await holidaysService.listHolidays(req.query as Record<string, unknown>);
+    res.status(200).json(new AppResponse(true, "HOLIDAYS_RETRIEVED", data, 200, meta));
 });
 
 export const deleteHoliday = asyncHandler(async (req: Request, res: Response) => {

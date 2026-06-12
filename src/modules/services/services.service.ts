@@ -4,6 +4,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { CreateServicePayload, UpdateServicePayload } from "./services.validator.js";
 import z from "zod";
 import { appEvents, SystemEvents } from "../../core/utils/events.js";
+import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
 
 export class ServiceService {
     async getAllServices() {
@@ -11,6 +12,49 @@ export class ServiceService {
             orderBy: { createdAt: "desc" },
         });
         return services;
+    }
+
+    /**
+     * Opt-in paginated list. When the query has `page` or `limit`, returns one
+     * page plus pagination `meta`. Otherwise returns the FULL list (unchanged
+     * from {@link getAllServices}) with `meta = null` so the public website /
+     * landing page keeps receiving every service.
+     */
+    async listServices(query: Record<string, unknown>) {
+        const isPaginated = query.page !== undefined || query.limit !== undefined;
+
+        if (!isPaginated) {
+            const data = await this.getAllServices();
+            return { data, meta: null };
+        }
+
+        const q = parseListQuery(query, { defaultLimit: 10 });
+
+        const where = q.search
+            ? {
+                  AND: [
+                      {
+                          OR: [
+                              { name_ar: { contains: q.search, mode: "insensitive" as const } },
+                              { name_en: { contains: q.search, mode: "insensitive" as const } },
+                              { description_ar: { contains: q.search, mode: "insensitive" as const } },
+                              { description_en: { contains: q.search, mode: "insensitive" as const } },
+                          ],
+                      },
+                  ],
+              }
+            : {};
+
+        const orderBy = q.sortBy
+            ? { [q.sortBy]: q.sortOrder }
+            : { createdAt: "desc" as const };
+
+        const [total, data] = await Promise.all([
+            prisma.service.count({ where }),
+            prisma.service.findMany({ where, orderBy, skip: q.skip, take: q.take }),
+        ]);
+
+        return { data, meta: buildMeta(total, q.page, q.limit) };
     }
 
     async getServiceById(id: string) {

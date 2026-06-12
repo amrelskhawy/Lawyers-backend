@@ -7,7 +7,7 @@ import type { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 const cases = new CasesService();
 
 export const listCases = asyncHandler(async (req: AuthRequest, res: Response) => {
-    // Optional `?month=iYYYY-iMM` pages the (calendar) list to one Hijri month.
+    // Optional `?month=iYYYY-iMM` switches to the (unpaginated) calendar window.
     let hijriYear: number | undefined;
     let hijriMonth: number | undefined;
     const month = req.query.month;
@@ -22,8 +22,18 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
             throw new AppResponse(false, "INVALID_MONTH_PARAM", null, 400);
         }
     }
-    const data = await cases.list(req.user, { hijriYear, hijriMonth });
-    res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data));
+
+    const asStr = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+    const { data, meta } = await cases.list(req.user, {
+        hijriYear,
+        hijriMonth,
+        query: req.query,
+        search: asStr(req.query.search),
+        caseType: asStr(req.query.caseType) as never,
+        caseDegree: asStr(req.query.caseDegree) as never,
+        lawyerId: asStr(req.query.lawyerId),
+    });
+    res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const listLawyers = asyncHandler(async (_req: AuthRequest, res: Response) => {

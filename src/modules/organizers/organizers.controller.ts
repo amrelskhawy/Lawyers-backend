@@ -6,8 +6,8 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 const organizerService = new OrganizerService();
 
 export const listOrganizers = asyncHandler(async (req: Request, res: Response) => {
-    const organizers = await organizerService.getAllOrganizers();
-    res.status(200).json(new AppResponse(true, "ORGANIZERS_RETRIEVED_SUCCESS", organizers));
+    const { data, meta } = await organizerService.listOrganizers(req.query);
+    res.status(200).json(new AppResponse(true, "ORGANIZERS_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const getOrganizer = asyncHandler(async (req: Request, res: Response) => {

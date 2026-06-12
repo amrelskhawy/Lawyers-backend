@@ -8,9 +8,12 @@ const reports = new SessionReportsService();
 
 export const listSessionReportsByCase = asyncHandler(
     async (req: AuthRequest, res: Response) => {
-        const data = await reports.listByCase(req.params.caseId as string);
+        const { data, meta } = await reports.listByCase(
+            req.params.caseId as string,
+            req.query,
+        );
         res.status(200).json(
-            new AppResponse(true, "SESSION_REPORTS_RETRIEVED_SUCCESS", data),
+            new AppResponse(true, "SESSION_REPORTS_RETRIEVED_SUCCESS", data, 200, meta),
         );
     },
 );

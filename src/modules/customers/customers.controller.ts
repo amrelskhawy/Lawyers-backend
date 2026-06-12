@@ -6,8 +6,8 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 const customerService = new CustomerService();
 
 export const listCustomers = asyncHandler(async (req: Request, res: Response) => {
-    const customers = await customerService.getAllCustomers();
-    res.status(200).json(new AppResponse(true, "CUSTOMERS_RETRIEVED_SUCCESS", customers));
+    const { data, meta } = await customerService.listCustomers(req.query);
+    res.status(200).json(new AppResponse(true, "CUSTOMERS_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
 export const getCustomer = asyncHandler(async (req: Request, res: Response) => {
