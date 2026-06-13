@@ -77,7 +77,7 @@ describe("ReminderService blocks actions on a completed case", () => {
 
         await expect(
             reminders.create(
-                { caseId: "c1", type: "CUSTOM", scheduledAt: "2026-07-01T09:00:00.000Z", repeat: false },
+                { caseId: "c1", type: "CUSTOM", hijriDate: "1447-12-15", time: "14:30", repeat: false },
                 admin,
             ),
         ).rejects.toMatchObject({ message: "CASE_COMPLETED" });

@@ -36,7 +36,7 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [caseId, type, scheduledAt]
+ *             required: [caseId, type, hijriDate, time]
  *             properties:
  *               caseId: { type: string }
  *               type:
@@ -44,7 +44,8 @@
  *                 enum: [SESSION_DETAILS_REVIEW, MEMO_REVIEW_UPLOAD, URGENT_SESSION_SOON, CUSTOM]
  *               title: { type: string }
  *               content: { type: string }
- *               scheduledAt: { type: string, format: date-time }
+ *               hijriDate: { type: string, example: "1447-12-15", description: "Hijri (Umm al-Qura) date iYYYY-iMM-iDD" }
+ *               time: { type: string, example: "14:30", description: "Time of day HH:mm (Asia/Riyadh)" }
  *               repeat: { type: boolean }
  *               repeatEveryHours: { type: integer, minimum: 1 }
  *     responses:

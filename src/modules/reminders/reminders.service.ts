@@ -1,5 +1,6 @@
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
+import { hijriToGregorian } from "../../core/utils/hijri.js";
 import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { buildMessages } from "./reminders.messages.js";
 import type { CreateReminderPayload, UpdateReminderPayload } from "./reminders.types.js";
@@ -73,7 +74,9 @@ export class ReminderService {
         if (!c.sessionDate) {
             throw new AppResponse(false, "REMINDER_SESSION_DATE_REQUIRED", null, 400);
         }
-        const scheduledAt = new Date(payload.scheduledAt);
+        // Resolve the entered Hijri date + time into the Gregorian instant the
+        // cron fires off — the same conversion used for the case session date.
+        const scheduledAt = hijriToGregorian(payload.hijriDate, payload.time);
         if (scheduledAt.getTime() <= Date.now()) {
             throw new AppResponse(false, "REMINDER_SCHEDULE_IN_PAST", null, 400);
         }
@@ -109,9 +112,12 @@ export class ReminderService {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
 
-        const data: Record<string, unknown> = { ...payload };
-        if (payload.scheduledAt) {
-            const scheduledAt = new Date(payload.scheduledAt);
+        // `hijriDate`/`time` are not columns — convert them to `scheduledAt` and
+        // keep the rest of the payload as-is.
+        const { hijriDate, time, ...rest } = payload;
+        const data: Record<string, unknown> = { ...rest };
+        if (hijriDate && time) {
+            const scheduledAt = hijriToGregorian(hijriDate, time);
             if (c.sessionDate && scheduledAt.getTime() >= c.sessionDate.getTime()) {
                 throw new AppResponse(false, "REMINDER_AFTER_SESSION", null, 400);
             }
