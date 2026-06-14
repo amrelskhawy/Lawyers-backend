@@ -33,6 +33,34 @@ export function computeNextReminderState(
 
 const STAFF: Role[] = ["ADMIN", "MODERATOR"];
 
+/** CUSTOM reminders notify only whoever created them — never the customer or the other case handler. */
+function resolveCustomRecipientPhone(
+    createdBy: { role: Role; phone: string | null },
+    caseRow: {
+        preferredLawyer?: { phone: string | null } | null;
+        sessionReceiver?: { phone: string | null } | null;
+    },
+): string | null {
+    if (createdBy.role === "LAWYER" || createdBy.role === "CONSULTANT") {
+        return createdBy.phone;
+    }
+    // Staff-created custom reminders fall back to the assigned lawyer.
+    return caseRow.preferredLawyer?.phone ?? caseRow.sessionReceiver?.phone ?? null;
+}
+
+/** Lawyers/consultants may only change reminders they created manually — not auto session ones or others'. */
+function assertCanManageReminder(
+    reminder: { createdById: string; autoScheduled: boolean },
+    user: { id: string; role: Role },
+) {
+    if (STAFF.includes(user.role)) return;
+    if (user.role === "LAWYER" || user.role === "CONSULTANT") {
+        if (reminder.autoScheduled || reminder.createdById !== user.id) {
+            throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
+        }
+    }
+}
+
 /** Throw 404/403 unless the case exists and the actor may manage its reminders. */
 async function assertCaseAccess(caseId: string, user: { id: string; role: Role }) {
     const c = await prisma.case.findUnique({
@@ -106,13 +134,14 @@ export class ReminderService {
     async update(id: string, payload: UpdateReminderPayload, user: { id: string; role: Role }) {
         const existing = await prisma.reminder.findUnique({
             where: { id },
-            select: { caseId: true, status: true },
+            select: { caseId: true, status: true, createdById: true, autoScheduled: true },
         });
         if (!existing) throw new AppResponse(false, "REMINDER_NOT_FOUND", null, 404);
         // Only pending reminders can be edited — sent/failed/cancelled ones are history.
         if (existing.status !== "PENDING") {
             throw new AppResponse(false, "REMINDER_NOT_EDITABLE", null, 400);
         }
+        assertCanManageReminder(existing, user);
         const c = await assertCaseAccess(existing.caseId, user);
         if (c.completedAt) {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
@@ -133,8 +162,12 @@ export class ReminderService {
     }
 
     async remove(id: string, user: { id: string; role: Role }) {
-        const existing = await prisma.reminder.findUnique({ where: { id }, select: { caseId: true } });
+        const existing = await prisma.reminder.findUnique({
+            where: { id },
+            select: { caseId: true, createdById: true, autoScheduled: true },
+        });
         if (!existing) throw new AppResponse(false, "REMINDER_NOT_FOUND", null, 404);
+        assertCanManageReminder(existing, user);
         await assertCaseAccess(existing.caseId, user);
         await prisma.reminder.delete({ where: { id } });
         return { id };
@@ -148,6 +181,7 @@ export class ReminderService {
         const due = await prisma.reminder.findMany({
             where: { status: "PENDING", scheduledAt: { lte: now } },
             include: {
+                createdBy: { select: { role: true, phone: true } },
                 case: {
                     select: {
                         sessionDate: true,
@@ -186,31 +220,40 @@ export class ReminderService {
                 sessionTime: r.case.sessionTime,
                 content: r.content,
             });
-            const lawyerPhone = r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone ?? null;
-            // CUSTOM reminders are lawyer-only — never delivered to the customer.
-            const customerPhone =
-                r.type === "CUSTOM" ? null : (r.case.customer?.phone ?? null);
+
+            const targets: { phone: string; message: string }[] =
+                r.type === "CUSTOM"
+                    ? (() => {
+                          const phone = resolveCustomRecipientPhone(r.createdBy, r.case);
+                          return phone ? [{ phone, message: lawyer }] : [];
+                      })()
+                    : [
+                          ...(r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone
+                              ? [
+                                    {
+                                        phone: (r.case.preferredLawyer?.phone ??
+                                            r.case.sessionReceiver?.phone)!,
+                                        message: lawyer,
+                                    },
+                                ]
+                              : []),
+                          ...(r.case.customer?.phone
+                              ? [{ phone: r.case.customer.phone, message: customer }]
+                              : []),
+                      ];
 
             const failures: string[] = [];
             let anySuccess = false;
-            if (lawyerPhone) {
+            for (const { phone, message } of targets) {
                 try {
-                    await sendWhatsAppMessage(lawyerPhone, lawyer);
+                    await sendWhatsAppMessage(phone, message);
                     anySuccess = true;
                 } catch (e: any) {
-                    failures.push(`lawyer: ${e?.message ?? "send failed"}`);
-                }
-            }
-            if (customerPhone) {
-                try {
-                    await sendWhatsAppMessage(customerPhone, customer);
-                    anySuccess = true;
-                } catch (e: any) {
-                    failures.push(`customer: ${e?.message ?? "send failed"}`);
+                    failures.push(`${phone}: ${e?.message ?? "send failed"}`);
                 }
             }
 
-            const noRecipients = !lawyerPhone && !customerPhone;
+            const noRecipients = targets.length === 0;
 
             if (noRecipients) {
                 await prisma.reminder.update({
