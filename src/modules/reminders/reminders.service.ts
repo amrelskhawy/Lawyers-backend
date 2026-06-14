@@ -80,7 +80,7 @@ export class ReminderService {
         if (scheduledAt.getTime() <= Date.now()) {
             throw new AppResponse(false, "REMINDER_SCHEDULE_IN_PAST", null, 400);
         }
-        if (scheduledAt.getTime() >= c.sessionDate.getTime()) {
+        if (scheduledAt.getTime() >= c.sessionDate.getTime() && payload.type !== "CUSTOM") {
             throw new AppResponse(false, "REMINDER_AFTER_SESSION", null, 400);
         }
         return prisma.reminder.create({
