@@ -280,6 +280,7 @@
       top: 0;
       visibility: hidden;
       pointer-events: none;
+      display: none;
     }
   </style>
 </head>
@@ -368,6 +369,16 @@
         if (document.fonts && document.fonts.ready) {
           try { await document.fonts.ready; } catch (e) { }
         }
+
+        function finishPagination() {
+          var host = document.querySelector('.cf-measure-host');
+          if (host && host.parentNode) host.parentNode.removeChild(host);
+          var realPages = document.querySelectorAll('section.cf-page, section.cf2-page');
+          var lastReal = realPages[realPages.length - 1];
+          if (lastReal) lastReal.style.pageBreakAfter = 'avoid';
+          window.__cf2PaginationDone = true;
+        }
+
         var src = document.getElementById('cf2-notes-source');
         var raw = src ? src.innerHTML : '';
         var dec = document.createElement('textarea');
@@ -379,7 +390,11 @@
         var firstOut = document.getElementById('cf2-notes-first');
         var shell = document.getElementById('cf2-shell');
 
-        if (!text) { firstOut.textContent = ''; window.__cf2PaginationDone = true; return; }
+        if (!text) {
+          firstOut.textContent = '';
+          finishPagination();
+          return;
+        }
 
         var pages = [];
         var remaining = text;
@@ -406,21 +421,7 @@
           shell = page;
         }
 
-        // Drop the off-screen measurement host so its hidden .cf2-page
-        // descendants don't win the `.cf2-page:last-child` selector below —
-        // that mis-match was leaving `page-break-after: always` on the real
-        // last page and producing a trailing blank page in the PDF.
-        var host = document.querySelector('.cf-measure-host');
-        if (host && host.parentNode) host.parentNode.removeChild(host);
-
-        // Belt-and-suspenders: force `page-break-after: avoid` on the truly
-        // last content page in DOM order. The CSS `:last-child` selector
-        // can't catch it because <template> and <script> are siblings too.
-        var realPages = document.querySelectorAll('section.cf-page, section.cf2-page');
-        var lastReal = realPages[realPages.length - 1];
-        if (lastReal) lastReal.style.pageBreakAfter = 'avoid';
-
-        window.__cf2PaginationDone = true;
+        finishPagination();
       };
     })();
   </script>

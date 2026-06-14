@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import Handlebars from "handlebars";
 import puppeteer from "puppeteer";
 import type { Case, Customer, User } from "@prisma/client";
+import { formatSessionHijriDateForDisplay } from "../../core/utils/hijri.js";
 import { REPORT_BRANDING } from "./cases.constants.js";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -81,7 +82,7 @@ export function buildReportContext(c: CaseForReport) {
         // an in-page script (`__cf2Paginate`) measures overflow at render
         // time and spawns continuation pages.
         session_receiver: c.sessionReceiver?.name ?? c.sessionReceiverName ?? "",
-        session_date: formatDate(c.sessionDate),
+        session_date: formatSessionHijriDateForDisplay(c.sessionHijriDate, c.sessionDate),
         free_notes: c.freeNotes ?? "",
     };
 }

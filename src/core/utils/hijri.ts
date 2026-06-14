@@ -63,3 +63,38 @@ export function hijriMonthRange(iYear: number, iMonth: number): { start: Date; e
     const end = hijriToGregorian(`${nextYear}-${nextMonth}-1`, "00:00");
     return { start, end };
 }
+
+/** "1447-12-15" → "15 / 12 / 1447" (report / PDF picker format). */
+export function formatCanonicalHijriDate(value: string | null | undefined): string {
+    if (!value) return "";
+    const m = value.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+    if (!m) return value;
+    const [, year, month, day] = m;
+    return `${day.padStart(2, "0")} / ${month.padStart(2, "0")} / ${year}`;
+}
+
+const HIJRI_DISPLAY_FMT = new Intl.DateTimeFormat("en-u-ca-islamic-umalqura", {
+    day: "numeric",
+    month: "numeric",
+    year: "numeric",
+});
+
+/** Gregorian instant → "DD / MM / YYYY" Hijri string for display. */
+export function gregorianToDisplayHijri(value: Date | null | undefined): string {
+    if (!value) return "";
+    const parts = HIJRI_DISPLAY_FMT.formatToParts(value);
+    const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+    return `${get("day").padStart(2, "0")} / ${get("month").padStart(2, "0")} / ${get("year")}`;
+}
+
+/**
+ * Canonical Hijri session date for reports — prefers `sessionHijriDate`, falls
+ * back to deriving Hijri from the stored Gregorian `sessionDate`.
+ */
+export function formatSessionHijriDateForDisplay(
+    sessionHijriDate: string | null | undefined,
+    sessionDate: Date | null | undefined,
+): string {
+    if (sessionHijriDate) return formatCanonicalHijriDate(sessionHijriDate);
+    return gregorianToDisplayHijri(sessionDate);
+}
