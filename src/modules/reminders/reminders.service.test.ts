@@ -58,6 +58,32 @@ describe("computeNextReminderState", () => {
         );
         expect(next.status).toBe("SENT");
     });
+
+    it("CUSTOM repeat advances from the reminder date, not the send time", () => {
+        const scheduledAt = new Date("2026-07-01T09:00:00.000Z");
+        const now = new Date("2026-07-01T09:05:00.000Z"); // cron ran 5 min late
+        const next = computeNextReminderState(
+            { repeat: true, repeatEveryHours: 24, scheduledAt },
+            null,
+            now,
+            "CUSTOM",
+        );
+        expect(next.status).toBe("PENDING");
+        expect(next.scheduledAt).toEqual(new Date("2026-07-02T09:00:00.000Z"));
+    });
+
+    it("CUSTOM repeat is not capped by the session date", () => {
+        const scheduledAt = new Date("2026-07-09T09:00:00.000Z");
+        const now = new Date("2026-07-09T09:00:00.000Z");
+        const next = computeNextReminderState(
+            { repeat: true, repeatEveryHours: 8, scheduledAt },
+            sessionDate,
+            now,
+            "CUSTOM",
+        );
+        expect(next.status).toBe("PENDING");
+        expect(next.scheduledAt).toEqual(new Date("2026-07-09T17:00:00.000Z"));
+    });
 });
 
 describe("ReminderService ownership", () => {

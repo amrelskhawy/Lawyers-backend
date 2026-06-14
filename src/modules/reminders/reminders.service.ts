@@ -4,7 +4,7 @@ import { hijriToGregorian } from "../../core/utils/hijri.js";
 import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { buildMessages } from "./reminders.messages.js";
 import type { CreateReminderPayload, UpdateReminderPayload } from "./reminders.types.js";
-import type { Role } from "@prisma/client";
+import type { ReminderType, Role } from "@prisma/client";
 
 type NextStateInput = {
     repeat: boolean;
@@ -14,18 +14,26 @@ type NextStateInput = {
 
 /**
  * Pure decision for what a reminder's state becomes after a send at `now`.
- * Enforces the "always end before the next session" rule for repeats.
+ * Session reminders cap repeats before the next session; CUSTOM repeats anchor
+ * on the reminder's own scheduled date instead of the send time.
  */
 export function computeNextReminderState(
     r: NextStateInput,
-    sessionDate: Date,
+    sessionDate: Date | null,
     now: Date,
+    type: ReminderType = "SESSION_DETAILS_REVIEW",
 ): { status: "PENDING" | "SENT"; scheduledAt: Date; lastSentAt: Date; sentCountDelta: number } {
     if (!r.repeat || !r.repeatEveryHours) {
         return { status: "SENT", scheduledAt: r.scheduledAt, lastSentAt: now, sentCountDelta: 1 };
     }
-    const nextAt = new Date(now.getTime() + r.repeatEveryHours * 60 * 60 * 1000);
-    if (nextAt.getTime() >= sessionDate.getTime()) {
+    const anchorMs = type === "CUSTOM" ? r.scheduledAt.getTime() : now.getTime();
+    let nextAt = new Date(anchorMs + r.repeatEveryHours * 60 * 60 * 1000);
+    // CUSTOM repeats follow the reminder cadence — catch up if processing ran late.
+    if (type === "CUSTOM") {
+        while (nextAt.getTime() <= now.getTime()) {
+            nextAt = new Date(nextAt.getTime() + r.repeatEveryHours * 60 * 60 * 1000);
+        }
+    } else if (sessionDate && nextAt.getTime() >= sessionDate.getTime()) {
         return { status: "SENT", scheduledAt: r.scheduledAt, lastSentAt: now, sentCountDelta: 1 };
     }
     return { status: "PENDING", scheduledAt: nextAt, lastSentAt: now, sentCountDelta: 1 };
@@ -206,7 +214,7 @@ export class ReminderService {
         for (const r of due) {
             const sessionDate = r.case.sessionDate;
             // No session cap reference, or session already passed → finalize as SENT (don't send).
-            if (!sessionDate || now.getTime() >= sessionDate.getTime()) {
+            if (r.type !== "CUSTOM" && (!sessionDate || now.getTime() >= sessionDate.getTime())) {
                 await prisma.reminder.update({ where: { id: r.id }, data: { status: "SENT" } });
                 continue;
             }
@@ -278,8 +286,9 @@ export class ReminderService {
 
             const next = computeNextReminderState(
                 { repeat: r.repeat, repeatEveryHours: r.repeatEveryHours, scheduledAt: r.scheduledAt },
-                sessionDate,
+                r.type === "CUSTOM" ? null : sessionDate,
                 now,
+                r.type,
             );
 
             await prisma.reminder.update({
