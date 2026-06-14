@@ -14,7 +14,7 @@ const service = new ReminderService();
 const now = new Date("2026-07-01T09:00:00.000Z");
 const sessionDate = new Date("2026-07-10T09:00:00.000Z");
 
-function dueReminder(type: string) {
+function dueReminder(type: string, createdBy = { role: "LAWYER", phone: "966500000002" }) {
     return {
         id: "r1",
         type,
@@ -22,6 +22,7 @@ function dueReminder(type: string) {
         repeat: false,
         repeatEveryHours: null,
         scheduledAt: now,
+        createdBy,
         case: {
             sessionDate,
             sessionHijriDate: "1447-12-15",
@@ -42,7 +43,7 @@ beforeEach(() => {
 });
 
 describe("processDueReminders recipients", () => {
-    it("CUSTOM reminders go to the lawyer only, not the customer", async () => {
+    it("CUSTOM reminders created by a lawyer go to that lawyer only", async () => {
         prismaMock.reminder.findMany.mockResolvedValue([dueReminder("CUSTOM")]);
 
         await service.processDueReminders(now);
@@ -51,6 +52,20 @@ describe("processDueReminders recipients", () => {
         expect(sendWhatsAppMessage).toHaveBeenCalledWith("966500000002", expect.any(String));
         const calledNumbers = sendWhatsAppMessage.mock.calls.map((c) => c[0]);
         expect(calledNumbers).not.toContain("966500000001");
+    });
+
+    it("CUSTOM reminders created by a consultant go to that consultant only", async () => {
+        prismaMock.reminder.findMany.mockResolvedValue([
+            dueReminder("CUSTOM", { role: "CONSULTANT", phone: "966500000003" }),
+        ]);
+
+        await service.processDueReminders(now);
+
+        expect(sendWhatsAppMessage).toHaveBeenCalledTimes(1);
+        expect(sendWhatsAppMessage).toHaveBeenCalledWith("966500000003", expect.any(String));
+        const calledNumbers = sendWhatsAppMessage.mock.calls.map((c) => c[0]);
+        expect(calledNumbers).not.toContain("966500000001");
+        expect(calledNumbers).not.toContain("966500000002");
     });
 
     it("non-CUSTOM reminders go to both lawyer and customer", async () => {

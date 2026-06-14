@@ -1,7 +1,28 @@
-import { describe, it, expect } from "vitest";
-import { computeNextReminderState } from "./reminders.service.js";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+
+const prismaMock = {
+    reminder: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    case: { findUnique: vi.fn() },
+};
+
+vi.mock("../../core/db/prisma.js", () => ({ default: prismaMock }));
+
+const { computeNextReminderState, ReminderService } = await import("./reminders.service.js");
 
 const sessionDate = new Date("2026-07-10T09:00:00.000Z");
+const service = new ReminderService();
+
+const openCase = {
+    id: "c1",
+    sessionDate,
+    preferredLawyerId: "lawyer1",
+    consultantId: "consultant1",
+    sessionReceiverId: null,
+    isDeleted: false,
+    completedAt: null,
+};
+
+beforeEach(() => vi.clearAllMocks());
 
 describe("computeNextReminderState", () => {
     it("one-shot (no repeat) → SENT", () => {
@@ -36,5 +57,61 @@ describe("computeNextReminderState", () => {
             now,
         );
         expect(next.status).toBe("SENT");
+    });
+});
+
+describe("ReminderService ownership", () => {
+    it("allows a lawyer to update their own manual reminder", async () => {
+        prismaMock.reminder.findUnique.mockResolvedValue({
+            caseId: "c1",
+            status: "PENDING",
+            createdById: "lawyer1",
+            autoScheduled: false,
+        });
+        prismaMock.case.findUnique.mockResolvedValue(openCase);
+        prismaMock.reminder.update.mockResolvedValue({ id: "r1" });
+
+        await service.update("r1", { content: "updated" }, { id: "lawyer1", role: "LAWYER" });
+
+        expect(prismaMock.reminder.update).toHaveBeenCalled();
+    });
+
+    it("rejects a lawyer updating another user's reminder", async () => {
+        prismaMock.reminder.findUnique.mockResolvedValue({
+            caseId: "c1",
+            status: "PENDING",
+            createdById: "consultant1",
+            autoScheduled: false,
+        });
+
+        await expect(
+            service.update("r1", { content: "nope" }, { id: "lawyer1", role: "LAWYER" }),
+        ).rejects.toMatchObject({ message: "AUTH_UNAUTHORIZED" });
+    });
+
+    it("rejects a consultant deleting auto-scheduled session reminders", async () => {
+        prismaMock.reminder.findUnique.mockResolvedValue({
+            caseId: "c1",
+            createdById: "consultant1",
+            autoScheduled: true,
+        });
+
+        await expect(service.remove("r1", { id: "consultant1", role: "CONSULTANT" })).rejects.toMatchObject({
+            message: "AUTH_UNAUTHORIZED",
+        });
+    });
+
+    it("allows staff to delete any reminder", async () => {
+        prismaMock.reminder.findUnique.mockResolvedValue({
+            caseId: "c1",
+            createdById: "lawyer1",
+            autoScheduled: true,
+        });
+        prismaMock.case.findUnique.mockResolvedValue(openCase);
+        prismaMock.reminder.delete.mockResolvedValue({ id: "r1" });
+
+        await service.remove("r1", { id: "admin1", role: "ADMIN" });
+
+        expect(prismaMock.reminder.delete).toHaveBeenCalled();
     });
 });
