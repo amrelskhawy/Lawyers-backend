@@ -41,6 +41,7 @@ async function assertCaseAccess(caseId: string, user: { id: string; role: Role }
             id: true,
             sessionDate: true,
             preferredLawyerId: true,
+            consultantId: true,
             sessionReceiverId: true,
             isDeleted: true,
             completedAt: true,
@@ -48,7 +49,12 @@ async function assertCaseAccess(caseId: string, user: { id: string; role: Role }
     });
     if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
     const isCaseHandler = user.role === "LAWYER" || user.role === "CONSULTANT";
-    if (isCaseHandler && c.preferredLawyerId !== user.id && c.sessionReceiverId !== user.id) {
+    if (
+        isCaseHandler &&
+        c.preferredLawyerId !== user.id &&
+        c.consultantId !== user.id &&
+        c.sessionReceiverId !== user.id
+    ) {
         throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
     }
     if (!STAFF.includes(user.role) && !isCaseHandler) {
