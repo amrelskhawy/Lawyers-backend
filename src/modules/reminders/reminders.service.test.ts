@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 const prismaMock = {
-    reminder: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn() },
+    reminder: { findUnique: vi.fn(), update: vi.fn(), delete: vi.fn(), create: vi.fn() },
     case: { findUnique: vi.fn() },
 };
 
@@ -83,6 +83,39 @@ describe("computeNextReminderState", () => {
         );
         expect(next.status).toBe("PENDING");
         expect(next.scheduledAt).toEqual(new Date("2026-07-09T17:00:00.000Z"));
+    });
+});
+
+describe("ReminderService create — CUSTOM without a session date", () => {
+    const noSessionCase = { ...openCase, sessionDate: null };
+    // A Hijri date that resolves well into the future, past "now".
+    const futureReminder = {
+        caseId: "c1",
+        type: "CUSTOM" as const,
+        content: "follow up with the client",
+        hijriDate: "1448-12-15",
+        time: "14:30",
+    };
+
+    it("creates a CUSTOM reminder even when the case has no session date", async () => {
+        prismaMock.case.findUnique.mockResolvedValue(noSessionCase);
+        prismaMock.reminder.create.mockResolvedValue({ id: "r1" });
+
+        await service.create(futureReminder, { id: "lawyer1", role: "LAWYER" });
+
+        expect(prismaMock.reminder.create).toHaveBeenCalled();
+    });
+
+    it("still requires a session date for non-CUSTOM reminders", async () => {
+        prismaMock.case.findUnique.mockResolvedValue(noSessionCase);
+
+        await expect(
+            service.create(
+                { ...futureReminder, type: "SESSION_DETAILS_REVIEW" },
+                { id: "lawyer1", role: "LAWYER" },
+            ),
+        ).rejects.toMatchObject({ message: "REMINDER_SESSION_DATE_REQUIRED" });
+        expect(prismaMock.reminder.create).not.toHaveBeenCalled();
     });
 });
 

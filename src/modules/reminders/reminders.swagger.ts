@@ -43,7 +43,7 @@
  *                 type: string
  *                 enum: [SESSION_DETAILS_REVIEW, MEMO_REVIEW_UPLOAD, URGENT_SESSION_SOON, CUSTOM]
  *               title: { type: string }
- *               content: { type: string }
+ *               content: { type: string, description: "Message body. Required when type is CUSTOM (CUSTOM has no template). CUSTOM reminders do not require the case to have a session date." }
  *               hijriDate: { type: string, example: "1447-12-15", description: "Hijri (Umm al-Qura) date iYYYY-iMM-iDD" }
  *               time: { type: string, example: "14:30", description: "Time of day HH:mm (Asia/Riyadh)" }
  *               repeat: { type: boolean }

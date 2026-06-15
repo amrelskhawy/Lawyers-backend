@@ -56,6 +56,7 @@ export async function sendWhatsAppMessage(
     const form = new FormData();
     form.append("appkey", appkey);
     form.append("authkey", authkey);
+    form.append("type", "text");
     form.append("to", to);
     form.append("message", message);
 

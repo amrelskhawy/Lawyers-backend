@@ -34,6 +34,11 @@ export const CreateReminderSchema = z
     .refine((d) => !d.repeat || d.repeatEveryHours != null, {
         message: "repeatEveryHours is required when repeat is true",
         path: ["repeatEveryHours"],
+    })
+    // CUSTOM reminders have no template — their `content` IS the message body.
+    .refine((d) => d.type !== "CUSTOM" || (d.content != null && d.content.trim().length > 0), {
+        message: "content is required for CUSTOM reminders",
+        path: ["content"],
     });
 
 export const UpdateReminderSchema = z

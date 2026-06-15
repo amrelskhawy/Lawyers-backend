@@ -49,7 +49,9 @@ function resolveCustomRecipientPhone(
         sessionReceiver?: { phone: string | null } | null;
     },
 ): string | null {
-    if (createdBy.role === "LAWYER" || createdBy.role === "CONSULTANT") {
+    if (
+        ["LAWYER", "CONSULTANT", "ADMIN"].includes(createdBy.role)
+    ) {
         return createdBy.phone;
     }
     // Staff-created custom reminders fall back to the assigned lawyer.
@@ -113,7 +115,9 @@ export class ReminderService {
         if (c.completedAt) {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
-        if (!c.sessionDate) {
+        // CUSTOM reminders stand alone and need no session to anchor to; every
+        // other type is scheduled relative to the case session.
+        if (payload.type !== "CUSTOM" && !c.sessionDate) {
             throw new AppResponse(false, "REMINDER_SESSION_DATE_REQUIRED", null, 400);
         }
         // Resolve the entered Hijri date + time into the Gregorian instant the
@@ -122,7 +126,12 @@ export class ReminderService {
         if (scheduledAt.getTime() <= Date.now()) {
             throw new AppResponse(false, "REMINDER_SCHEDULE_IN_PAST", null, 400);
         }
-        if (scheduledAt.getTime() >= c.sessionDate.getTime() && payload.type !== "CUSTOM") {
+        // Only session-anchored reminders are capped to before the session.
+        if (
+            payload.type !== "CUSTOM" &&
+            c.sessionDate &&
+            scheduledAt.getTime() >= c.sessionDate.getTime()
+        ) {
             throw new AppResponse(false, "REMINDER_AFTER_SESSION", null, 400);
         }
         return prisma.reminder.create({
@@ -232,23 +241,23 @@ export class ReminderService {
             const targets: { phone: string; message: string }[] =
                 r.type === "CUSTOM"
                     ? (() => {
-                          const phone = resolveCustomRecipientPhone(r.createdBy, r.case);
-                          return phone ? [{ phone, message: lawyer }] : [];
-                      })()
+                        const phone = resolveCustomRecipientPhone(r.createdBy, r.case);
+                        return phone ? [{ phone, message: lawyer }] : [];
+                    })()
                     : [
-                          ...(r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone
-                              ? [
-                                    {
-                                        phone: (r.case.preferredLawyer?.phone ??
-                                            r.case.sessionReceiver?.phone)!,
-                                        message: lawyer,
-                                    },
-                                ]
-                              : []),
-                          ...(r.case.customer?.phone
-                              ? [{ phone: r.case.customer.phone, message: customer }]
-                              : []),
-                      ];
+                        ...(r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone
+                            ? [
+                                {
+                                    phone: (r.case.preferredLawyer?.phone ??
+                                        r.case.sessionReceiver?.phone)!,
+                                    message: lawyer,
+                                },
+                            ]
+                            : []),
+                        ...(r.case.customer?.phone
+                            ? [{ phone: r.case.customer.phone, message: customer }]
+                            : []),
+                    ];
 
             const failures: string[] = [];
             let anySuccess = false;
