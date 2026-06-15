@@ -83,6 +83,7 @@ export async function sendWhatsAppFile(
     const form = new FormData();
     form.append("appkey", appkey);
     form.append("authkey", authkey);
+    form.append("type", "media");
     form.append("to", to);
     form.append("file", fileUrl);
     if (caption) {
