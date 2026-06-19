@@ -61,7 +61,6 @@ function resolveCustomRecipients(
     }
     if (createdBy.role === "ADMIN") {
         const phones: string[] = [];
-        if (createdBy.phone) phones.push(createdBy.phone);
         const lawyerPhone = caseRow.preferredLawyer?.phone ?? caseRow.sessionReceiver?.phone;
         if (lawyerPhone) phones.push(lawyerPhone);
         if (caseRow.consultant?.phone) phones.push(caseRow.consultant.phone);
