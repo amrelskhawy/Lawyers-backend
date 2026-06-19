@@ -133,7 +133,9 @@
       height: 38.44%;
       font-size: 1.637cqw;
       font-weight: 400;
-      line-height: 37px;
+      /* Match the pre-printed ruled lines (3.62% of page height apart).
+         Must be container-relative so it scales with the background. */
+      line-height: 4.83cqw;
       text-align: right;
       display: block;
       padding: 1% 1.5%;
