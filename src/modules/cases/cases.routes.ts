@@ -40,7 +40,6 @@ router.get(
 router.get(
     "/lawyers",
     protect,
-    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
     listLawyers,
 );
 router.get(
