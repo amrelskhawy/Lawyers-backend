@@ -41,21 +41,35 @@ export function computeNextReminderState(
 
 const STAFF: Role[] = ["ADMIN", "MODERATOR"];
 
-/** CUSTOM reminders notify only whoever created them — never the customer or the other case handler. */
-function resolveCustomRecipientPhone(
+/**
+ * CUSTOM reminder recipients by creator role:
+ *   LAWYER     → lawyer only
+ *   CONSULTANT → consultant only
+ *   ADMIN      → admin + case lawyer + case consultant
+ *   MODERATOR  → assigned lawyer (fallback)
+ */
+function resolveCustomRecipients(
     createdBy: { role: Role; phone: string | null },
     caseRow: {
         preferredLawyer?: { phone: string | null } | null;
         sessionReceiver?: { phone: string | null } | null;
+        consultant?: { phone: string | null } | null;
     },
-): string | null {
-    if (
-        ["LAWYER", "CONSULTANT", "ADMIN"].includes(createdBy.role)
-    ) {
-        return createdBy.phone;
+): string[] {
+    if (createdBy.role === "LAWYER" || createdBy.role === "CONSULTANT") {
+        return createdBy.phone ? [createdBy.phone] : [];
     }
-    // Staff-created custom reminders fall back to the assigned lawyer.
-    return caseRow.preferredLawyer?.phone ?? caseRow.sessionReceiver?.phone ?? null;
+    if (createdBy.role === "ADMIN") {
+        const phones: string[] = [];
+        if (createdBy.phone) phones.push(createdBy.phone);
+        const lawyerPhone = caseRow.preferredLawyer?.phone ?? caseRow.sessionReceiver?.phone;
+        if (lawyerPhone) phones.push(lawyerPhone);
+        if (caseRow.consultant?.phone) phones.push(caseRow.consultant.phone);
+        return phones;
+    }
+    // MODERATOR: fall back to the assigned lawyer.
+    const fallback = caseRow.preferredLawyer?.phone ?? caseRow.sessionReceiver?.phone;
+    return fallback ? [fallback] : [];
 }
 
 /** Lawyers/consultants may only change reminders they created manually — not auto session ones or others'. */
@@ -208,6 +222,7 @@ export class ReminderService {
                         customer: { select: { fullName: true, phone: true } },
                         preferredLawyer: { select: { phone: true } },
                         sessionReceiver: { select: { phone: true } },
+                        consultant: { select: { phone: true } },
                         // Case number + court live on the latest session report.
                         sessionReports: {
                             where: { isDeleted: false },
@@ -240,10 +255,7 @@ export class ReminderService {
 
             const targets: { phone: string; message: string }[] =
                 r.type === "CUSTOM"
-                    ? (() => {
-                        const phone = resolveCustomRecipientPhone(r.createdBy, r.case);
-                        return phone ? [{ phone, message: lawyer }] : [];
-                    })()
+                    ? resolveCustomRecipients(r.createdBy, r.case).map((phone) => ({ phone, message: lawyer }))
                     : [
                         ...(r.case.preferredLawyer?.phone ?? r.case.sessionReceiver?.phone
                             ? [
