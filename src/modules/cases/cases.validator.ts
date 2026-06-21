@@ -19,6 +19,7 @@ const CaseDegreeEnum = z.enum([
     "APPEAL",
     "CASSATION",
     "PETITION",
+    "OTHER",
 ]);
 
 const isoDate = z
@@ -96,9 +97,15 @@ export const SetCompletionSchema = z.object({
 }).strict();
 
 // Setting the litigation degree from the reminders dialog.
-export const SetCaseDegreeSchema = z.object({
-    caseDegree: CaseDegreeEnum,
-}).strict();
+export const SetCaseDegreeSchema = z
+    .object({
+        caseDegree: CaseDegreeEnum,
+        otherDegreeText: z.string().max(200).optional(),
+    })
+    .refine(
+        (d) => d.caseDegree !== "OTHER" || (d.otherDegreeText != null && d.otherDegreeText.trim().length > 0),
+        { message: "otherDegreeText is required when degree is OTHER", path: ["otherDegreeText"] },
+    );
 
 export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;

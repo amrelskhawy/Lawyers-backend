@@ -57,6 +57,8 @@ export interface CaseListOptions {
     /** A `CaseDegree`, or the sentinel "UNASSIGNED" for cases with no degree. */
     caseDegree?: CaseDegree | "UNASSIGNED";
     lawyerId?: string;
+    /** When true, restrict to cases that have been marked completed (closedAt IS NOT NULL). */
+    onlyClosed?: boolean;
 }
 
 export class CasesService {
@@ -111,6 +113,7 @@ export class CasesService {
         if (opts.caseType) and.push({ caseType: opts.caseType });
         if (opts.caseDegree === "UNASSIGNED") and.push({ caseDegree: null });
         else if (opts.caseDegree) and.push({ caseDegree: opts.caseDegree });
+        if (opts.onlyClosed) and.push({ completedAt: { not: null } });
         if (opts.lawyerId) {
             and.push({
                 OR: [{ preferredLawyerId: opts.lawyerId }, { consultantId: opts.lawyerId }],
@@ -142,7 +145,7 @@ export class CasesService {
 
         // Table path: paginate and attach summary counts for the dashboard cards.
         const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
-        const [total, data, degreeGroups, pendingCount] = await Promise.all([
+        const [total, data, degreeGroups, pendingCount, closedCount] = await Promise.all([
             prisma.case.count({ where }),
             prisma.case.findMany({
                 where,
@@ -153,6 +156,7 @@ export class CasesService {
             }),
             prisma.case.groupBy({ by: ["caseDegree"], where, _count: { _all: true } }),
             this.countPendingForUser(requestingUser, where),
+            prisma.case.count({ where: { AND: [where as any, { completedAt: { not: null } }] } }),
         ]);
 
         const degreeCounts: Record<string, number> = {};
@@ -162,7 +166,7 @@ export class CasesService {
 
         return {
             data,
-            meta: { ...buildMeta(total, q.page, q.limit), degreeCounts, pendingCount },
+            meta: { ...buildMeta(total, q.page, q.limit), degreeCounts, pendingCount, closedCount },
         };
     }
 
@@ -556,6 +560,7 @@ export class CasesService {
             where: { id: caseId },
             data: {
                 caseDegree: payload.caseDegree,
+                otherDegreeText: payload.caseDegree === "OTHER" ? (payload.otherDegreeText ?? null) : null,
                 updatedBy: { connect: { id: userId } },
             },
             include: caseInclude,

@@ -41,6 +41,7 @@ describe("buildReportContext", () => {
         needsMemo: false,
         memoDeadline: null,
         memoType: null,
+        otherDegreeText: null,
         createdById: "user-1",
         updatedById: null,
         isDeleted: false,

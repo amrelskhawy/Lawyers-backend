@@ -306,6 +306,7 @@ enum CaseDegree {
   APPEAL
   CASSATION
   PETITION
+  OTHER
 }
 
 model Case {
@@ -314,9 +315,10 @@ model Case {
   customerId String
   customer   Customer @relation(fields: [customerId], references: [id])
 
-  caseType      CaseType
-  otherCaseType String?
-  caseDegree    CaseDegree?
+  caseType        CaseType
+  otherCaseType   String?
+  caseDegree      CaseDegree?
+  otherDegreeText String?
   caseDate      DateTime
   hijriDate     String?
   agencyNumber  String?

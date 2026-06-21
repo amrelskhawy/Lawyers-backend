@@ -44,6 +44,7 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
         caseType: asStr(req.query.caseType) as never,
         caseDegree: asStr(req.query.caseDegree) as never,
         lawyerId: asStr(req.query.lawyerId),
+        onlyClosed: req.query.onlyClosed === "true",
     });
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
