@@ -5,10 +5,12 @@ import {
     createReminder,
     updateReminder,
     deleteReminder,
+    sendMemoReminder,
+    listConsultantReminders,
 } from "./reminders.controller.js";
 import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
-import { validateCreateReminder, validateUpdateReminder } from "./reminders.validator.js";
+import { validateCreateReminder, validateUpdateReminder, validateMemoReminder } from "./reminders.validator.js";
 
 const router = express.Router();
 
@@ -36,6 +38,24 @@ router.delete(
     requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     logActivity("DELETE", "Reminder"),
     deleteReminder,
+);
+
+// ── Memo-request: notify consultant that the case needs a memo ──────────────
+router.post(
+    "/memo-request",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    validateMemoReminder,
+    logActivity("CREATE", "MemoReminder"),
+    sendMemoReminder,
+);
+
+// ── Consultant reminders list ────────────────────────────────────────────────
+router.get(
+    "/consultant",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "CONSULTANT"),
+    listConsultantReminders,
 );
 
 export default router;

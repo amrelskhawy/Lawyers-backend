@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { CreateReminderSchema, UpdateReminderSchema } from "./reminders.types.js";
+import { CreateReminderSchema, UpdateReminderSchema, MemoReminderSchema } from "./reminders.types.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 
 export const validateCreateReminder = (req: Request, res: Response, next: NextFunction) => {
@@ -15,6 +15,17 @@ export const validateCreateReminder = (req: Request, res: Response, next: NextFu
 
 export const validateUpdateReminder = (req: Request, res: Response, next: NextFunction) => {
     const result = UpdateReminderSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateMemoReminder = (req: Request, res: Response, next: NextFunction) => {
+    const result = MemoReminderSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)

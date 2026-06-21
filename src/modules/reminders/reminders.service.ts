@@ -3,7 +3,7 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { hijriToGregorian } from "../../core/utils/hijri.js";
 import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { buildMessages } from "./reminders.messages.js";
-import type { CreateReminderPayload, UpdateReminderPayload } from "./reminders.types.js";
+import type { CreateReminderPayload, MemoReminderPayload, UpdateReminderPayload } from "./reminders.types.js";
 import type { ReminderType, Role } from "@prisma/client";
 
 type NextStateInput = {
@@ -204,12 +204,136 @@ export class ReminderService {
     }
 
     /**
+     * Validate consultant assignment, send a WhatsApp memo-request message to the
+     * consultant immediately, and persist the record (SENT or FAILED). Also stamps
+     * `needsMemo` and `memoDeadline` on the case so the dialog reflects current state.
+     */
+    async sendMemoReminderToConsultant(payload: MemoReminderPayload, user: { id: string; role: Role }) {
+        const c = await prisma.case.findUnique({
+            where: { id: payload.caseId },
+            include: {
+                consultant: { select: { id: true, name: true, nameAr: true, phone: true } },
+                customer: { select: { fullName: true } },
+                sessionReports: {
+                    where: { isDeleted: false },
+                    orderBy: { createdAt: "desc" },
+                    take: 1,
+                    select: { caseNumber: true, courtName: true },
+                },
+            },
+        });
+
+        if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+
+        if (!c.consultantId || !c.consultant) {
+            throw new AppResponse(false, "MEMO_NO_CONSULTANT_ASSIGNED", null, 400);
+        }
+        if (c.consultantAssignmentStatus !== "ACCEPTED") {
+            throw new AppResponse(false, "MEMO_CONSULTANT_NOT_ACCEPTED", null, 400);
+        }
+
+        const memoDeadline = new Date(payload.memoDeadline + "T00:00:00.000Z");
+
+        // Format date as DD/MM/YYYY for the Arabic message body.
+        const dd = String(memoDeadline.getUTCDate()).padStart(2, "0");
+        const mm = String(memoDeadline.getUTCMonth() + 1).padStart(2, "0");
+        const yyyy = memoDeadline.getUTCFullYear();
+        const memoDeadlineFormatted = `${dd}/${mm}/${yyyy}`;
+
+        const latestReport = c.sessionReports[0];
+        const message = buildMessages("MEMO_REQUEST", {
+            consultantName: c.consultant.nameAr ?? c.consultant.name,
+            caseNumber: latestReport?.caseNumber ?? c.agencyNumber,
+            clientName: c.customer?.fullName,
+            court: latestReport?.courtName,
+            memoDeadline: memoDeadlineFormatted,
+        }).lawyer;
+
+        let status: "SENT" | "FAILED" = "SENT";
+        let failureReason: string | null = null;
+        let lastSentAt: Date | null = null;
+
+        if (!c.consultant.phone) {
+            status = "FAILED";
+            failureReason = "no phone on file for consultant";
+        } else {
+            try {
+                await sendWhatsAppMessage(c.consultant.phone, message);
+                lastSentAt = new Date();
+            } catch (e: any) {
+                status = "FAILED";
+                failureReason = e?.message ?? "WhatsApp send failed";
+            }
+        }
+
+        const [reminder] = await prisma.$transaction([
+            prisma.reminder.create({
+                data: {
+                    caseId: payload.caseId,
+                    type: "MEMO_REQUEST",
+                    scheduledAt: new Date(),
+                    status,
+                    lastSentAt,
+                    sentCount: status === "SENT" ? 1 : 0,
+                    failureReason,
+                    recipientId: c.consultantId,
+                    memoDeadline,
+                    createdById: user.id,
+                },
+            }),
+            prisma.case.update({
+                where: { id: payload.caseId },
+                data: { needsMemo: true, memoDeadline },
+            }),
+        ]);
+
+        return { reminder, sentSuccessfully: status === "SENT" };
+    }
+
+    /**
+     * List MEMO_REQUEST reminders. Consultants see only their own; lawyers see
+     * only cases they are assigned to; admin/moderator see all.
+     */
+    async listConsultantReminders(user: { id: string; role: Role }) {
+        const where: Record<string, unknown> = { type: "MEMO_REQUEST" };
+
+        if (user.role === "CONSULTANT") {
+            where.recipientId = user.id;
+        }
+        // ADMIN / MODERATOR: no additional filter — see all.
+
+        return prisma.reminder.findMany({
+            where,
+            orderBy: { memoDeadline: "asc" },
+            include: {
+                case: {
+                    select: {
+                        id: true,
+                        agencyNumber: true,
+                        needsMemo: true,
+                        memoDeadline: true,
+                        customer: { select: { fullName: true } },
+                        consultant: { select: { name: true, nameAr: true } },
+                        sessionReports: {
+                            where: { isDeleted: false },
+                            orderBy: { createdAt: "desc" },
+                            take: 1,
+                            select: { caseNumber: true, courtName: true },
+                        },
+                    },
+                },
+                createdBy: { select: { name: true, nameAr: true } },
+            },
+        });
+    }
+
+    /**
      * Find every due reminder and send it. Best-effort: a send failure is
      * recorded on the row and never throws out of the loop.
      */
     async processDueReminders(now: Date = new Date()) {
         const due = await prisma.reminder.findMany({
-            where: { status: "PENDING", scheduledAt: { lte: now } },
+            where: { status: "PENDING", scheduledAt: { lte: now }, type: { not: "MEMO_REQUEST" } },
             include: {
                 createdBy: { select: { role: true, phone: true } },
                 case: {

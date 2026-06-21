@@ -5,6 +5,7 @@ const ReminderTypeEnum = z.enum([
     "MEMO_REVIEW_UPLOAD",
     "URGENT_SESSION_SOON",
     "CUSTOM",
+    "MEMO_REQUEST",
 ]);
 
 // The schedule is entered as a Hijri (Umm al-Qura) date + time-of-day, mirroring
@@ -60,3 +61,11 @@ export const UpdateReminderSchema = z
 
 export type CreateReminderPayload = z.infer<typeof CreateReminderSchema>;
 export type UpdateReminderPayload = z.infer<typeof UpdateReminderSchema>;
+
+export const MemoReminderSchema = z.object({
+    caseId: z.string().uuid(),
+    // Gregorian date — YYYY-MM-DD — when the memo must be attached.
+    memoDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected date as YYYY-MM-DD"),
+});
+
+export type MemoReminderPayload = z.infer<typeof MemoReminderSchema>;

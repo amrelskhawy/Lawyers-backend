@@ -13,6 +13,10 @@ export interface ReminderContext {
     requirements?: string | null;
     /** Body for CUSTOM reminders (the reminder's own `content`). */
     content?: string | null;
+    /** Consultant's display name — used in MEMO_REQUEST messages. */
+    consultantName?: string | null;
+    /** Formatted memo deadline date — used in MEMO_REQUEST messages. */
+    memoDeadline?: string | null;
 }
 
 const PLACEHOLDER = "—";
@@ -127,6 +131,29 @@ export const REMINDER_MESSAGES: Record<
         lawyer: "{content}",
         customer: "{content}",
     },
+
+    // Sent immediately to the consultant when staff mark the case as needing a memo.
+    MEMO_REQUEST: {
+        lawyer: `السيد المستشار/ {consultantName}
+
+السلام عليكم ورحمة الله وبركاته،،
+
+نود تذكيركم بإعداد المذكرة الخاصة بالقضية التالية:
+
+• رقم القضية: {caseNumber}
+• اسم العميل: {clientName}
+• المحكمة: {court}
+• آخر موعد لإرفاق المذكرة: {memoDeadline}
+
+نأمل منكم الاطلاع على كافة المستندات والوثائق المتعلقة بالقضية، وإعداد المذكرة ورفعها على النظام الداخلي للشركة قبل (7) أيام عمل من تاريخ انتهاء المدة النظامية، مع إرسالها للعميل للاطلاع والاعتماد أو التعديل -إن وجد- قبل رفعها عبر منصة ناجز.
+
+نقدر تعاونكم وحرصكم على الالتزام بالمواعيد النظامية، ونتطلع إلى إنجاز الأعمال بالجودة المهنية المعتادة.
+
+وتفضلوا بقبول خالص التحية والتقدير.
+
+شركة سعد البقمي للمحاماة والاستشارات القانونية`,
+        customer: "", // MEMO_REQUEST is only sent to the consultant
+    },
 };
 
 /** Short Arabic description of each type's "level" — shown in the UI dropdown. */
@@ -135,7 +162,11 @@ export const REMINDER_TYPE_DESCRIPTIONS: Record<ReminderType, string> = {
     MEMO_REVIEW_UPLOAD: "تذكير بمراجعة ورفع المذكرات (قبل 7 أيام)",
     URGENT_SESSION_SOON: "تذكير عاجل بقرب موعد الجلسة (قبل ساعة)",
     CUSTOM: "تذكير مخصص",
+    MEMO_REQUEST: "طلب إعداد مذكرة للمستشار المكلف",
 };
+
+/** Types excluded from the manual-create dropdown (sent via dedicated workflows). */
+export const INTERNAL_REMINDER_TYPES: ReminderType[] = ["MEMO_REQUEST"];
 
 /** Replace every named placeholder in `template` from `values`, blanks → dash. */
 function interpolate(template: string, values: Record<string, string>): string {
@@ -158,6 +189,17 @@ export function buildMessages(
     if (type === "CUSTOM") {
         const body = (ctx.content ?? "").trim() || REMINDER_TYPE_DESCRIPTIONS.CUSTOM;
         return { lawyer: body, customer: body };
+    }
+
+    if (type === "MEMO_REQUEST") {
+        const values: Record<string, string> = {
+            consultantName: ctx.consultantName ?? "",
+            caseNumber: ctx.caseNumber ?? "",
+            clientName: ctx.clientName ?? "",
+            court: ctx.court ?? "",
+            memoDeadline: ctx.memoDeadline ?? "",
+        };
+        return { lawyer: interpolate(tpl.lawyer, values), customer: "" };
     }
 
     const values: Record<string, string> = {

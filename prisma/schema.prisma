@@ -49,7 +49,8 @@ model User {
   updatedOrganizers  Organizer[]  @relation("OrganizerUpdater")
 
   activityLogs     ActivityLog[]
-  createdReminders Reminder[] @relation("ReminderCreator")
+  createdReminders  Reminder[] @relation("ReminderCreator")
+  receivedReminders Reminder[] @relation("ReminderRecipient")
 
   completedCases       Case[]           @relation("CaseCompleter")
   uploadedAttachments  CaseAttachment[] @relation("AttachmentUploader")
@@ -139,6 +140,7 @@ enum ReminderType {
   MEMO_REVIEW_UPLOAD
   URGENT_SESSION_SOON
   CUSTOM
+  MEMO_REQUEST
 }
 
 enum ReminderStatus {
@@ -173,12 +175,20 @@ model Reminder {
   createdById String
   createdBy   User   @relation("ReminderCreator", fields: [createdById], references: [id])
 
+  // Set only for MEMO_REQUEST reminders — the consultant who was notified.
+  recipientId  String?
+  recipient    User?    @relation("ReminderRecipient", fields: [recipientId], references: [id])
+
+  // Deadline date stored on MEMO_REQUEST reminders for the consultant reminders list.
+  memoDeadline DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([caseId])
   @@index([status, scheduledAt])
   @@index([createdById])
+  @@index([recipientId])
 }
 
 enum Role {
@@ -347,6 +357,10 @@ model Case {
   reportUrl         String?
   reportGeneratedAt DateTime?
   sentToClientAt    DateTime?
+
+  // Whether the case requires a consultant memo. Set via the memo-request UI.
+  needsMemo    Boolean   @default(false)
+  memoDeadline DateTime?
 
   // Set when staff mark the case "fully completed" from the reminders dialog.
   // While non-null, the case is closed: pending reminders are cancelled and new
