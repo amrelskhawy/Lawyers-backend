@@ -66,6 +66,7 @@ export const MemoReminderSchema = z.object({
     caseId: z.string().uuid(),
     // Gregorian date — YYYY-MM-DD — when the memo must be attached.
     memoDeadline: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Expected date as YYYY-MM-DD"),
+    memoType: z.string().max(200).optional(),
 });
 
 export type MemoReminderPayload = z.infer<typeof MemoReminderSchema>;

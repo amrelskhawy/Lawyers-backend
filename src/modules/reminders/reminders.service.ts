@@ -246,6 +246,7 @@ export class ReminderService {
             caseNumber: latestReport?.caseNumber ?? c.agencyNumber,
             clientName: c.customer?.fullName,
             court: latestReport?.courtName,
+            memoType: payload.memoType,
             memoDeadline: memoDeadlineFormatted,
         }).lawyer;
 
@@ -283,7 +284,7 @@ export class ReminderService {
             }),
             prisma.case.update({
                 where: { id: payload.caseId },
-                data: { needsMemo: true, memoDeadline },
+                data: { needsMemo: true, memoDeadline, memoType: payload.memoType ?? null },
             }),
         ]);
 
@@ -312,6 +313,7 @@ export class ReminderService {
                         agencyNumber: true,
                         needsMemo: true,
                         memoDeadline: true,
+                        memoType: true,
                         customer: { select: { fullName: true } },
                         consultant: { select: { name: true, nameAr: true } },
                         sessionReports: {

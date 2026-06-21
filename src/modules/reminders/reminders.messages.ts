@@ -17,6 +17,8 @@ export interface ReminderContext {
     consultantName?: string | null;
     /** Formatted memo deadline date — used in MEMO_REQUEST messages. */
     memoDeadline?: string | null;
+    /** Type / subject of the memo — used in MEMO_REQUEST messages. */
+    memoType?: string | null;
 }
 
 const PLACEHOLDER = "—";
@@ -143,6 +145,7 @@ export const REMINDER_MESSAGES: Record<
 • رقم القضية: {caseNumber}
 • اسم العميل: {clientName}
 • المحكمة: {court}
+• نوع المذكرة: {memoType}
 • آخر موعد لإرفاق المذكرة: {memoDeadline}
 
 نأمل منكم الاطلاع على كافة المستندات والوثائق المتعلقة بالقضية، وإعداد المذكرة ورفعها على النظام الداخلي للشركة قبل (7) أيام عمل من تاريخ انتهاء المدة النظامية، مع إرسالها للعميل للاطلاع والاعتماد أو التعديل -إن وجد- قبل رفعها عبر منصة ناجز.
@@ -197,6 +200,7 @@ export function buildMessages(
             caseNumber: ctx.caseNumber ?? "",
             clientName: ctx.clientName ?? "",
             court: ctx.court ?? "",
+            memoType: ctx.memoType ?? "",
             memoDeadline: ctx.memoDeadline ?? "",
         };
         return { lawyer: interpolate(tpl.lawyer, values), customer: "" };

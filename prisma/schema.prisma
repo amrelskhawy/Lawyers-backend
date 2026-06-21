@@ -361,6 +361,7 @@ model Case {
   // Whether the case requires a consultant memo. Set via the memo-request UI.
   needsMemo    Boolean   @default(false)
   memoDeadline DateTime?
+  memoType     String?
 
   // Set when staff mark the case "fully completed" from the reminders dialog.
   // While non-null, the case is closed: pending reminders are cancelled and new
