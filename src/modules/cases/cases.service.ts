@@ -193,7 +193,7 @@ export class CasesService {
     async listLawyers() {
         return prisma.user.findMany({
             where: { role: { in: ["LAWYER", "CONSULTANT"] } },
-            select: { id: true, name: true, email: true },
+            select: { id: true, name: true, email: true, role: true },
             orderBy: { name: "asc" },
         });
     }
