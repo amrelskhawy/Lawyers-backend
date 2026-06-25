@@ -314,6 +314,7 @@ export class ReminderService {
                         needsMemo: true,
                         memoDeadline: true,
                         memoType: true,
+                        consultantId: true,
                         customer: { select: { fullName: true } },
                         consultant: { select: { name: true, nameAr: true } },
                         sessionReports: {
