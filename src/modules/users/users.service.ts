@@ -29,7 +29,8 @@ export class UsersService {
 
     /**
      * Attach per-user accepted-case assignment counts (total + by litigation
-     * degree) to a set of selected user rows.
+     * degree) to a set of selected user rows. Closed cases (completedAt set)
+     * are excluded so counts reflect only open accepted cases.
      */
     private async enrichWithCaseCounts<T extends { id: string }>(users: T[]) {
         const userIds = users.map((u) => u.id);
@@ -45,6 +46,7 @@ export class UsersService {
                 where: {
                     preferredLawyerId: { in: userIds },
                     assignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                    completedAt: null,
                 },
                 _count: { _all: true },
             }),
@@ -53,6 +55,7 @@ export class UsersService {
                 where: {
                     consultantId: { in: userIds },
                     consultantAssignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                    completedAt: null,
                 },
                 _count: { _all: true },
             }),
