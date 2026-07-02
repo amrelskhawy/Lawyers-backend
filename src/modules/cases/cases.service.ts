@@ -113,7 +113,6 @@ export class CasesService {
         if (opts.caseType) and.push({ caseType: opts.caseType });
         if (opts.caseDegree === "UNASSIGNED") and.push({ caseDegree: null });
         else if (opts.caseDegree) and.push({ caseDegree: opts.caseDegree });
-        if (opts.onlyClosed) and.push({ completedAt: { not: null } });
         if (opts.lawyerId) {
             and.push({
                 OR: [{ preferredLawyerId: opts.lawyerId }, { consultantId: opts.lawyerId }],
@@ -144,12 +143,22 @@ export class CasesService {
         }
 
         // Table path: paginate and attach summary counts for the dashboard cards.
+        // `where` carries the role/search/degree/lawyer filters only. With no filter
+        // active at all, the table shows everything (open + closed). Activating the
+        // "closed" toggle narrows to closed cases; activating a degree card narrows
+        // to open cases in that degree — matching the (always open-only) card counts,
+        // so a closed case is never shown under a degree it's no longer counted in.
         const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
         const openWhere: Prisma.CaseWhereInput = { AND: [where, { completedAt: null }] };
+        const listWhere: Prisma.CaseWhereInput = opts.onlyClosed
+            ? { AND: [where, { completedAt: { not: null } }] }
+            : opts.caseDegree
+              ? openWhere
+              : where;
         const [total, data, degreeGroups, pendingCount, closedCount] = await Promise.all([
-            prisma.case.count({ where: openWhere }),
+            prisma.case.count({ where: listWhere }),
             prisma.case.findMany({
-                where,
+                where: listWhere,
                 include: caseInclude,
                 orderBy: { createdAt: "desc" },
                 skip: q.skip,
@@ -157,7 +166,7 @@ export class CasesService {
             }),
             prisma.case.groupBy({ by: ["caseDegree"], where: openWhere, _count: { _all: true } }),
             this.countPendingForUser(requestingUser, where),
-            prisma.case.count({ where: { AND: [where as any, { completedAt: { not: null } }] } }),
+            prisma.case.count({ where: { AND: [where, { completedAt: { not: null } }] } }),
         ]);
 
         const degreeCounts: Record<string, number> = {};
@@ -309,20 +318,20 @@ export class CasesService {
         const data: Prisma.CaseUpdateInput =
             kind === "CONSULTANT"
                 ? {
-                      consultant: { connect: { id: payload.lawyerId } },
-                      consultantName: payload.lawyerName ?? user.name,
-                      consultantAssignmentStatus: "PENDING",
-                      consultantAssignmentRejectedAt: null,
-                      consultantAssignmentRejectionReason: null,
-                  }
+                    consultant: { connect: { id: payload.lawyerId } },
+                    consultantName: payload.lawyerName ?? user.name,
+                    consultantAssignmentStatus: "PENDING",
+                    consultantAssignmentRejectedAt: null,
+                    consultantAssignmentRejectionReason: null,
+                }
                 : {
-                      wantsSpecificLawyer: true,
-                      preferredLawyer: { connect: { id: payload.lawyerId } },
-                      preferredLawyerName: payload.lawyerName ?? user.name,
-                      assignmentStatus: "PENDING",
-                      assignmentRejectedAt: null,
-                      assignmentRejectionReason: null,
-                  };
+                    wantsSpecificLawyer: true,
+                    preferredLawyer: { connect: { id: payload.lawyerId } },
+                    preferredLawyerName: payload.lawyerName ?? user.name,
+                    assignmentStatus: "PENDING",
+                    assignmentRejectedAt: null,
+                    assignmentRejectionReason: null,
+                };
 
         return prisma.case.update({
             where: { id: caseId },
@@ -374,20 +383,20 @@ export class CasesService {
         const data: Prisma.CaseUpdateInput =
             kind === "CONSULTANT"
                 ? {
-                      consultantAssignmentStatus: "REJECTED",
-                      consultantAssignmentRejectedAt: new Date(),
-                      consultantAssignmentRejectionReason: reason,
-                      consultant: { disconnect: true },
-                      consultantName: null,
-                  }
+                    consultantAssignmentStatus: "REJECTED",
+                    consultantAssignmentRejectedAt: new Date(),
+                    consultantAssignmentRejectionReason: reason,
+                    consultant: { disconnect: true },
+                    consultantName: null,
+                }
                 : {
-                      assignmentStatus: "REJECTED",
-                      assignmentRejectedAt: new Date(),
-                      assignmentRejectionReason: reason,
-                      preferredLawyer: { disconnect: true },
-                      preferredLawyerName: null,
-                      wantsSpecificLawyer: false,
-                  };
+                    assignmentStatus: "REJECTED",
+                    assignmentRejectedAt: new Date(),
+                    assignmentRejectionReason: reason,
+                    preferredLawyer: { disconnect: true },
+                    preferredLawyerName: null,
+                    wantsSpecificLawyer: false,
+                };
 
         return prisma.case.update({
             where: { id: caseId },
@@ -409,20 +418,20 @@ export class CasesService {
         const data: Prisma.CaseUpdateInput =
             kind === "CONSULTANT"
                 ? {
-                      consultantAssignmentStatus: "UNASSIGNED",
-                      consultantAssignmentRejectedAt: null,
-                      consultantAssignmentRejectionReason: null,
-                      consultant: { disconnect: true },
-                      consultantName: null,
-                  }
+                    consultantAssignmentStatus: "UNASSIGNED",
+                    consultantAssignmentRejectedAt: null,
+                    consultantAssignmentRejectionReason: null,
+                    consultant: { disconnect: true },
+                    consultantName: null,
+                }
                 : {
-                      assignmentStatus: "UNASSIGNED",
-                      assignmentRejectedAt: null,
-                      assignmentRejectionReason: null,
-                      preferredLawyer: { disconnect: true },
-                      preferredLawyerName: null,
-                      wantsSpecificLawyer: false,
-                  };
+                    assignmentStatus: "UNASSIGNED",
+                    assignmentRejectedAt: null,
+                    assignmentRejectionReason: null,
+                    preferredLawyer: { disconnect: true },
+                    preferredLawyerName: null,
+                    wantsSpecificLawyer: false,
+                };
 
         return prisma.case.update({
             where: { id: caseId },
