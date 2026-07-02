@@ -145,8 +145,9 @@ export class CasesService {
 
         // Table path: paginate and attach summary counts for the dashboard cards.
         const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
+        const openWhere: Prisma.CaseWhereInput = { AND: [where, { completedAt: null }] };
         const [total, data, degreeGroups, pendingCount, closedCount] = await Promise.all([
-            prisma.case.count({ where }),
+            prisma.case.count({ where: openWhere }),
             prisma.case.findMany({
                 where,
                 include: caseInclude,
@@ -154,7 +155,7 @@ export class CasesService {
                 skip: q.skip,
                 take: q.take,
             }),
-            prisma.case.groupBy({ by: ["caseDegree"], where, _count: { _all: true } }),
+            prisma.case.groupBy({ by: ["caseDegree"], where: openWhere, _count: { _all: true } }),
             this.countPendingForUser(requestingUser, where),
             prisma.case.count({ where: { AND: [where as any, { completedAt: { not: null } }] } }),
         ]);
