@@ -40,7 +40,7 @@ export class UsersService {
         // (preferredLawyer/assignmentStatus) and the consultant slot
         // (consultant/consultantAssignmentStatus), broken down by litigation
         // degree (caseDegree, null = not set yet).
-        const [lawyerCounts, consultantCounts] = await Promise.all([
+        const [lawyerCounts, consultantCounts, lawyerClosed, consultantClosed] = await Promise.all([
             prisma.case.groupBy({
                 by: ["preferredLawyerId", "caseDegree"],
                 where: {
@@ -56,6 +56,26 @@ export class UsersService {
                     consultantId: { in: userIds },
                     consultantAssignmentStatus: CaseAssignmentStatus.ACCEPTED,
                     completedAt: null,
+                },
+                _count: { _all: true },
+            }),
+            // Closed (completed) accepted cases per user — counterpart to the open
+            // counts above, surfaced as its own badge.
+            prisma.case.groupBy({
+                by: ["preferredLawyerId"],
+                where: {
+                    preferredLawyerId: { in: userIds },
+                    assignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                    completedAt: { not: null },
+                },
+                _count: { _all: true },
+            }),
+            prisma.case.groupBy({
+                by: ["consultantId"],
+                where: {
+                    consultantId: { in: userIds },
+                    consultantAssignmentStatus: CaseAssignmentStatus.ACCEPTED,
+                    completedAt: { not: null },
                 },
                 _count: { _all: true },
             }),
@@ -78,10 +98,19 @@ export class UsersService {
             add(row.consultantId, row.caseDegree, row._count._all);
         }
 
+        const closedMap = new Map<string, number>();
+        const addClosed = (userId: string | null, count: number) => {
+            if (!userId) return;
+            closedMap.set(userId, (closedMap.get(userId) ?? 0) + count);
+        };
+        for (const row of lawyerClosed) addClosed(row.preferredLawyerId, row._count._all);
+        for (const row of consultantClosed) addClosed(row.consultantId, row._count._all);
+
         return users.map((u) => ({
             ...u,
             acceptedCasesCount: countMap.get(u.id) ?? 0,
             acceptedCasesByDegree: degreeMap.get(u.id) ?? {},
+            closedCasesCount: closedMap.get(u.id) ?? 0,
         }));
     }
 

@@ -1,6 +1,6 @@
 import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
-import { hijriToGregorian } from "../../core/utils/hijri.js";
+import { hijriToGregorian, gregorianToDisplayHijri } from "../../core/utils/hijri.js";
 import { sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { buildMessages } from "./reminders.messages.js";
 import type { CreateReminderPayload, MemoReminderPayload, UpdateReminderPayload } from "./reminders.types.js";
@@ -234,11 +234,9 @@ export class ReminderService {
 
         const memoDeadline = new Date(payload.memoDeadline + "T00:00:00.000Z");
 
-        // Format date as DD/MM/YYYY for the Arabic message body.
-        const dd = String(memoDeadline.getUTCDate()).padStart(2, "0");
-        const mm = String(memoDeadline.getUTCMonth() + 1).padStart(2, "0");
-        const yyyy = memoDeadline.getUTCFullYear();
-        const memoDeadlineFormatted = `${dd}/${mm}/${yyyy}`;
+        // Format the deadline as a Hijri "DD / MM / YYYY" date for the Arabic
+        // message body (the stored `memoDeadline` stays the Gregorian instant).
+        const memoDeadlineFormatted = gregorianToDisplayHijri(memoDeadline);
 
         const latestReport = c.sessionReports[0];
         const message = buildMessages("MEMO_REQUEST", {
