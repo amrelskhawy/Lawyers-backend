@@ -4,6 +4,8 @@ import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { buildMeta, parseListQuery, PageMeta } from "../../core/utils/pagination.js";
 import { CreateUserPayload, UpdateUserPayload } from "./users.types.js";
+import { driveService } from "../../core/services/google/drive.js";
+import { ensureProfileImagesFolder } from "../../core/services/google/profile-images-folder.js";
 
 const USER_SELECT = {
     id: true,
@@ -21,6 +23,37 @@ const USER_SELECT = {
 } as const;
 
 export class UsersService {
+    /**
+     * Upload a profile image to the shared Drive folder, make it public, and
+     * return a URL that renders inline in an `<img>`. The returned URL is what
+     * the caller stores on `User.picture`.
+     */
+    async uploadProfileImage(file: Express.Multer.File) {
+        if (!file.mimetype.startsWith("image/")) {
+            throw new AppResponse(false, "IMAGE_INVALID_TYPE", null, 400);
+        }
+
+        const folderId = await ensureProfileImagesFolder();
+        const safeName = file.originalname.replace(/[^\w.\-]+/g, "_").slice(-80);
+        const fileName = `profile-${Date.now()}-${safeName}`;
+
+        const uploaded = await driveService.uploadBuffer(
+            fileName,
+            file.buffer,
+            folderId,
+            file.mimetype,
+        );
+        if (!uploaded.id) {
+            throw new AppResponse(false, "DRIVE_UPLOAD_FAILED", null, 500);
+        }
+
+        await driveService.makePublic(uploaded.id);
+        // The thumbnail endpoint serves the image inline (the uc?export=download
+        // link prompts a download / is blocked for hotlinking in <img>).
+        const url = `https://drive.google.com/thumbnail?id=${uploaded.id}&sz=w512`;
+        return { url, fileId: uploaded.id };
+    }
+
     async getUserById(id: string) {
         const user = await prisma.user.findUnique({ where: { id }, select: USER_SELECT });
         if (!user) throw new AppResponse(false, "USER_NOT_FOUND", null, 404);

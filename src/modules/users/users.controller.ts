@@ -33,6 +33,16 @@ export const updateUser = asyncHandler(async (req: Request, res: Response) => {
     res.status(200).json(new AppResponse(true, "USER_UPDATED_SUCCESS", user));
 });
 
+export const uploadUserImage = asyncHandler(async (req: Request, res: Response) => {
+    const file = (req as Request & { file?: Express.Multer.File }).file;
+    if (!file) {
+        res.status(400).json(new AppResponse(false, "IMAGE_FILE_REQUIRED", null, 400));
+        return;
+    }
+    const data = await usersService.uploadProfileImage(file);
+    res.status(201).json(new AppResponse(true, "IMAGE_UPLOADED_SUCCESS", data));
+});
+
 export const deleteUser = asyncHandler(async (req: Request, res: Response) => {
     await usersService.deleteUser(req.params["id"] as string);
     res.status(200).json(new AppResponse(true, "USER_DELETED_SUCCESS"));
