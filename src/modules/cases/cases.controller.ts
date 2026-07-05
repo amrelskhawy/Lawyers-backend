@@ -49,6 +49,20 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
+export const listUnscheduledCases = asyncHandler(async (req: AuthRequest, res: Response) => {
+    // Cases with no session date/time set yet — for staff to find and schedule.
+    const asStr = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
+
+    const { data, meta } = await cases.listUnscheduled(req.user, {
+        query: req.query,
+        search: asStr(req.query.search),
+        caseType: asStr(req.query.caseType) as never,
+        caseDegree: asStr(req.query.caseDegree) as never,
+        lawyerId: asStr(req.query.lawyerId),
+    });
+    res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
+});
+
 export const listLawyers = asyncHandler(async (_req: AuthRequest, res: Response) => {
     const data = await cases.listLawyers();
     res.status(200).json(new AppResponse(true, "LAWYERS_RETRIEVED_SUCCESS", data));

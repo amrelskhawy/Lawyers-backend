@@ -180,6 +180,43 @@ export class CasesService {
         };
     }
 
+    /**
+     * List cases that have no session scheduled yet (`sessionDate` is null) so
+     * staff can find and schedule them. Reuses the standard list filters
+     * (role scoping, search, caseType, caseDegree, lawyerId). Paginates when
+     * `page`/`limit` are supplied; otherwise returns the full array (meta: null),
+     * mirroring {@link CasesService.list}.
+     */
+    async listUnscheduled(requestingUser: RequestingUser, opts: CaseListOptions = {}) {
+        const where: Prisma.CaseWhereInput = {
+            AND: [this.buildListWhere(requestingUser, opts), { sessionDate: null }],
+        };
+
+        const wantsPage =
+            opts.query != null && (opts.query.page != null || opts.query.limit != null);
+        if (!wantsPage) {
+            const data = await prisma.case.findMany({
+                where,
+                include: caseInclude,
+                orderBy: { createdAt: "desc" },
+            });
+            return { data, meta: null };
+        }
+
+        const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
+        const [total, data] = await Promise.all([
+            prisma.case.count({ where }),
+            prisma.case.findMany({
+                where,
+                include: caseInclude,
+                orderBy: { createdAt: "desc" },
+                skip: q.skip,
+                take: q.take,
+            }),
+        ]);
+        return { data, meta: buildMeta(total, q.page, q.limit) };
+    }
+
     /** Cases still awaiting accept/reject in the requesting user's own slot. */
     private async countPendingForUser(
         requestingUser: RequestingUser,

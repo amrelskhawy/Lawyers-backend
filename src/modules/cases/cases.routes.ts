@@ -1,6 +1,7 @@
 import express from "express";
 import {
     listCases,
+    listUnscheduledCases,
     listLawyers,
     getCase,
     createCase,
@@ -36,6 +37,14 @@ router.get(
     protect,
     requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"),
     listCases,
+);
+// Cases with no session date/time set yet — admin/moderator only.
+// Declared before "/:id" so "unscheduled" isn't captured as a case id.
+router.get(
+    "/unscheduled",
+    protect,
+    requireRole("ADMIN", "MODERATOR"),
+    listUnscheduledCases,
 );
 router.get(
     "/lawyers",
