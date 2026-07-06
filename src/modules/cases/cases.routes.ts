@@ -38,12 +38,13 @@ router.get(
     requireRole("ADMIN", "MODERATOR", "RECEPTIONIST", "LAWYER", "CONSULTANT"),
     listCases,
 );
-// Cases with no session date/time set yet — admin/moderator only.
+// Cases with no session date/time set yet. ADMIN/MODERATOR see all;
+// LAWYER/CONSULTANT see only their own (scoped in CasesService.buildListWhere).
 // Declared before "/:id" so "unscheduled" isn't captured as a case id.
 router.get(
     "/unscheduled",
     protect,
-    requireRole("ADMIN", "MODERATOR"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     listUnscheduledCases,
 );
 router.get(
