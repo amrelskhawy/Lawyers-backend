@@ -188,6 +188,15 @@ export class CasesService {
      * mirroring {@link CasesService.list}.
      */
     async listUnscheduled(requestingUser: RequestingUser, opts: CaseListOptions = {}) {
+        // The list honours the active degree filter; the degree cards, however, are
+        // counted over the same unscheduled scope WITHOUT that filter so every card
+        // keeps showing its full total while one is selected.
+        const baseWhere: Prisma.CaseWhereInput = {
+            AND: [
+                this.buildListWhere(requestingUser, { ...opts, caseDegree: undefined }),
+                { sessionDate: null },
+            ],
+        };
         const where: Prisma.CaseWhereInput = {
             AND: [this.buildListWhere(requestingUser, opts), { sessionDate: null }],
         };
@@ -204,7 +213,7 @@ export class CasesService {
         }
 
         const q = parseListQuery(opts.query ?? {}, { defaultLimit: 10 });
-        const [total, data] = await Promise.all([
+        const [total, data, degreeGroups] = await Promise.all([
             prisma.case.count({ where }),
             prisma.case.findMany({
                 where,
@@ -213,8 +222,15 @@ export class CasesService {
                 skip: q.skip,
                 take: q.take,
             }),
+            prisma.case.groupBy({ by: ["caseDegree"], where: baseWhere, _count: { _all: true } }),
         ]);
-        return { data, meta: buildMeta(total, q.page, q.limit) };
+
+        const degreeCounts: Record<string, number> = {};
+        for (const g of degreeGroups) {
+            degreeCounts[g.caseDegree ?? "UNASSIGNED"] = g._count._all;
+        }
+
+        return { data, meta: { ...buildMeta(total, q.page, q.limit), degreeCounts } };
     }
 
     /** Cases still awaiting accept/reject in the requesting user's own slot. */
