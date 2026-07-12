@@ -131,6 +131,21 @@ export class SessionReportsService {
             }
         }
 
+        // Court + case number live canonically on the Case (single source of
+        // truth for reminders + PDFs). When they're edited here, mirror any
+        // non-empty value up to the Case so both editors stay in sync. Blank
+        // values are ignored so a stray empty save can't wipe the case's copy.
+        const caseData: Prisma.CaseUpdateInput = {};
+        if (typeof payload.courtName === "string" && payload.courtName.trim()) {
+            caseData.courtName = payload.courtName.trim();
+        }
+        if (typeof payload.caseNumber === "string" && payload.caseNumber.trim()) {
+            caseData.caseNumber = payload.caseNumber.trim();
+        }
+        if (Object.keys(caseData).length > 0) {
+            await prisma.case.update({ where: { id: existing.caseId }, data: caseData });
+        }
+
         return prisma.sessionReport.update({
             where: { id },
             data,

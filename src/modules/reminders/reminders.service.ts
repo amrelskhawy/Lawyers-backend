@@ -222,6 +222,7 @@ export class ReminderService {
             include: {
                 consultant: { select: { id: true, name: true, nameAr: true, phone: true } },
                 customer: { select: { fullName: true } },
+                // Fallback source for legacy cases without Case-level court/number.
                 sessionReports: {
                     where: { isDeleted: false },
                     orderBy: { createdAt: "desc" },
@@ -249,9 +250,9 @@ export class ReminderService {
         const latestReport = c.sessionReports[0];
         const message = buildMessages("MEMO_REQUEST", {
             consultantName: c.consultant.nameAr ?? c.consultant.name,
-            caseNumber: latestReport?.caseNumber ?? c.agencyNumber,
+            caseNumber: c.caseNumber ?? latestReport?.caseNumber ?? c.agencyNumber,
             clientName: c.customer?.fullName,
-            court: latestReport?.courtName,
+            court: c.courtName ?? latestReport?.courtName,
             memoType: payload.memoType,
             memoDeadline: memoDeadlineFormatted,
         }).lawyer;
@@ -317,12 +318,15 @@ export class ReminderService {
                     select: {
                         id: true,
                         agencyNumber: true,
+                        courtName: true,
+                        caseNumber: true,
                         needsMemo: true,
                         memoDeadline: true,
                         memoType: true,
                         consultantId: true,
                         customer: { select: { fullName: true } },
                         consultant: { select: { name: true, nameAr: true } },
+                        // Fallback source for legacy cases without Case-level court/number.
                         sessionReports: {
                             where: { isDeleted: false },
                             orderBy: { createdAt: "desc" },
