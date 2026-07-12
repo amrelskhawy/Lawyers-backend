@@ -213,5 +213,38 @@
  *                 enum: [FIRST_INSTANCE, APPEAL, CASSATION, PETITION]
  *     responses:
  *       200: { description: Case degree set }
+ *
+ * /cases/{id}/court-info:
+ *   patch:
+ *     tags: [Cases]
+ *     summary: Set the court (المحكمة) + case number (رقم القضية)
+ *     description: >
+ *       Persists the court and case number shown in the reminders dialog. Both
+ *       feed the client-facing reminder messages and gate reminder dispatch —
+ *       reminders are not sent while either is missing. Empty strings clear the
+ *       field.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               courtName:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "المحكمة العامة بالرياض"
+ *               caseNumber:
+ *                 type: string
+ *                 nullable: true
+ *                 example: "1447/123"
+ *     responses:
+ *       200: { description: Court info saved }
  */
 export {};

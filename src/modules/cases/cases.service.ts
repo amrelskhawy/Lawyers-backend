@@ -16,6 +16,7 @@ import type {
     AssignCasePayload,
     SetSessionDatePayload,
     SetCaseDegreePayload,
+    SetCourtInfoPayload,
 } from "./cases.validator.js";
 
 const caseInclude = {
@@ -641,6 +642,48 @@ export class CasesService {
             data: {
                 caseDegree: payload.caseDegree,
                 otherDegreeText: payload.caseDegree === "OTHER" ? (payload.otherDegreeText ?? null) : null,
+                updatedBy: { connect: { id: userId } },
+            },
+            include: caseInclude,
+        });
+    }
+
+    /**
+     * Persist the court (المحكمة) + case number (رقم القضية) from the reminders
+     * dialog. Both feed the reminder messages and gate reminder dispatch — a
+     * reminder is never sent to the client while either is missing. Empty input
+     * is normalised to null (cleared).
+     */
+    async setCourtInfo(
+        caseId: string,
+        payload: SetCourtInfoPayload,
+        userId: string,
+        userRole: string,
+    ) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+        if (existing.completedAt) {
+            throw new AppResponse(false, "CASE_COMPLETED", null, 400);
+        }
+        if (userRole === "LAWYER" || userRole === "CONSULTANT") {
+            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+                throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
+            }
+        }
+
+        const norm = (v: string | null | undefined): string | null | undefined => {
+            if (v === undefined) return undefined;
+            const trimmed = v?.trim();
+            return trimmed ? trimmed : null;
+        };
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: {
+                ...(payload.courtName !== undefined ? { courtName: norm(payload.courtName) } : {}),
+                ...(payload.caseNumber !== undefined ? { caseNumber: norm(payload.caseNumber) } : {}),
                 updatedBy: { connect: { id: userId } },
             },
             include: caseInclude,

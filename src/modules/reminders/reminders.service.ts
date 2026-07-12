@@ -96,6 +96,8 @@ async function assertCaseAccess(caseId: string, user: { id: string; role: Role }
             sessionReceiverId: true,
             isDeleted: true,
             completedAt: true,
+            courtName: true,
+            caseNumber: true,
         },
     });
     if (!c || c.isDeleted) throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
@@ -127,6 +129,12 @@ export class ReminderService {
         const c = await assertCaseAccess(payload.caseId, user);
         if (c.completedAt) {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
+        }
+        // The court (المحكمة) + case number (رقم القضية) must be filled before any
+        // reminder is created — they identify the case in the client-facing message,
+        // so we never let a reminder be scheduled without them.
+        if (!c.courtName || !c.caseNumber) {
+            throw new AppResponse(false, "REMINDER_CASE_INFO_REQUIRED", null, 400);
         }
         // CUSTOM reminders stand alone and need no session to anchor to; every
         // other type is scheduled relative to the case session.
@@ -334,7 +342,15 @@ export class ReminderService {
      */
     async processDueReminders(now: Date = new Date()) {
         const due = await prisma.reminder.findMany({
-            where: { status: "PENDING", scheduledAt: { lte: now }, type: { not: "MEMO_REQUEST" } },
+            // Ignore reminders whose case is missing the court/case number — they
+            // stay PENDING and are picked up automatically once both are filled,
+            // so nothing reaches the client without them.
+            where: {
+                status: "PENDING",
+                scheduledAt: { lte: now },
+                type: { not: "MEMO_REQUEST" },
+                case: { courtName: { not: null }, caseNumber: { not: null } },
+            },
             include: {
                 createdBy: { select: { role: true, phone: true } },
                 case: {
@@ -343,11 +359,13 @@ export class ReminderService {
                         sessionHijriDate: true,
                         sessionTime: true,
                         agencyNumber: true,
+                        courtName: true,
+                        caseNumber: true,
                         customer: { select: { fullName: true, phone: true } },
                         preferredLawyer: { select: { phone: true } },
                         sessionReceiver: { select: { phone: true } },
                         consultant: { select: { phone: true } },
-                        // Case number + court live on the latest session report.
+                        // Fallback source: court + case number on the latest session report.
                         sessionReports: {
                             where: { isDeleted: false },
                             orderBy: { createdAt: "desc" },
@@ -370,8 +388,8 @@ export class ReminderService {
             const latestReport = r.case.sessionReports[0];
             const { lawyer, customer } = buildMessages(r.type, {
                 clientName: r.case.customer?.fullName,
-                caseNumber: latestReport?.caseNumber ?? r.case.agencyNumber,
-                court: latestReport?.courtName,
+                caseNumber: r.case.caseNumber ?? latestReport?.caseNumber ?? r.case.agencyNumber,
+                court: r.case.courtName ?? latestReport?.courtName,
                 sessionDate: r.case.sessionHijriDate,
                 sessionTime: r.case.sessionTime,
                 content: r.content,

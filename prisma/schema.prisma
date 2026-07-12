@@ -349,6 +349,11 @@ model Case {
   sessionTime         String?
   sessionDate         DateTime?
 
+  // Court (المحكمة) + case number (رقم القضية), entered from the reminders dialog.
+  // Reminders are not dispatched to the client until BOTH are present.
+  courtName  String?
+  caseNumber String?
+
   hasStructuredNotes Boolean  @default(true)
   weaknesses         String[] @default([])
   strengths          String[] @default([])

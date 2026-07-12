@@ -100,6 +100,15 @@ export const SetSessionDateSchema = z
         path: ["sessionHijriDate"],
     });
 
+// Setting the court (المحكمة) + case number (رقم القضية) from the reminders dialog.
+// Empty strings are treated as "clear" by the service.
+export const SetCourtInfoSchema = z
+    .object({
+        courtName: z.string().trim().max(200).nullable().optional(),
+        caseNumber: z.string().trim().max(100).nullable().optional(),
+    })
+    .strict();
+
 // Toggling the "fully completed" state of a case.
 export const SetCompletionSchema = z.object({
     completed: z.boolean(),
@@ -124,6 +133,7 @@ export type AssignmentKind = z.infer<typeof AssignmentKindEnum>;
 export type RejectAssignmentPayload = z.infer<typeof RejectAssignmentSchema>;
 export type SetSessionDatePayload = z.infer<typeof SetSessionDateSchema>;
 export type SetCaseDegreePayload = z.infer<typeof SetCaseDegreeSchema>;
+export type SetCourtInfoPayload = z.infer<typeof SetCourtInfoSchema>;
 
 export const validateCreateCase = (req: Request, res: Response, next: NextFunction) => {
     const result = CreateCaseSchema.safeParse(req.body);
@@ -204,6 +214,17 @@ export const validateSetCompletion = (req: Request, res: Response, next: NextFun
 
 export const validateSetCaseDegree = (req: Request, res: Response, next: NextFunction) => {
     const result = SetCaseDegreeSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateSetCourtInfo = (req: Request, res: Response, next: NextFunction) => {
+    const result = SetCourtInfoSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)
