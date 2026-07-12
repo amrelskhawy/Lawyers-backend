@@ -14,6 +14,7 @@ import {
     setCaseSessionDate,
     setCaseCompletion,
     setCaseDegree,
+    setCaseCourtInfo,
     generateCasePdf,
     sendCaseToClient,
 } from "./cases.controller.js";
@@ -28,6 +29,7 @@ import {
     validateSetSessionDate,
     validateSetCompletion,
     validateSetCaseDegree,
+    validateSetCourtInfo,
 } from "./cases.validator.js";
 
 const router = express.Router();
@@ -133,6 +135,16 @@ router.patch(
     validateSetCaseDegree,
     logActivity("SET_CASE_DEGREE", "Case"),
     setCaseDegree,
+);
+
+// Set the court + case number (المحكمة / رقم القضية) — from the reminders dialog
+router.patch(
+    "/:id/court-info",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
+    validateSetCourtInfo,
+    logActivity("SET_CASE_COURT_INFO", "Case"),
+    setCaseCourtInfo,
 );
 
 // Toggle "fully completed" — cancels pending reminders, blocks new ones

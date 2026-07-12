@@ -27,6 +27,8 @@ describe("buildReportContext", () => {
         sessionHijriDate: "1447-12-15",
         sessionTime: "09:00",
         sessionDate: new Date("2026-06-04T06:00:00.000Z"),
+        courtName: null,
+        caseNumber: null,
         hasStructuredNotes: false,
         weaknesses: [],
         strengths: [],

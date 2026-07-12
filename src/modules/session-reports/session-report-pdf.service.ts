@@ -66,11 +66,13 @@ export function buildSessionReportContext(r: SessionReportWithRelations) {
         case_date: formatDate(r.case?.caseDate ?? null),
         preferred_lawyer: r.case?.preferredLawyer?.name ?? "",
 
-        court_name: r.courtName ?? "",
+        // Court + case number are owned by the Case (set in the reminders dialog);
+        // fall back to the report's own copy for legacy reports created before that.
+        court_name: r.case?.courtName ?? r.courtName ?? "",
         court_circuit: r.courtCircuit ?? "",
         case_charge: r.caseCharge ?? "",
         opponent_name: r.opponentName ?? "",
-        case_number: r.caseNumber ?? "",
+        case_number: r.case?.caseNumber ?? r.caseNumber ?? "",
         case_data: r.caseData ?? "",
         session_ordinal: r.sessionOrdinal ?? "",
         attendance_ordinal: r.attendanceOrdinal ?? "",

@@ -144,6 +144,16 @@ export const setCaseDegree = asyncHandler(async (req: AuthRequest, res: Response
     res.status(200).json(new AppResponse(true, "CASE_DEGREE_SET_SUCCESS", data));
 });
 
+export const setCaseCourtInfo = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await cases.setCourtInfo(
+        req.params.id as string,
+        req.body,
+        req.user.id,
+        req.user.role,
+    );
+    res.status(200).json(new AppResponse(true, "CASE_COURT_INFO_SET_SUCCESS", data));
+});
+
 export const generateCasePdf = asyncHandler(async (req: AuthRequest, res: Response) => {
     const { data, regenerated } = await cases.generateAndUploadPdf(req.params.id as string);
     const messageKey = regenerated
