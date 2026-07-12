@@ -81,3 +81,15 @@ export async function scheduleSessionReminders(
 
     return { created: toCreate.length, skipped };
 }
+
+/**
+ * Cancel the auto-scheduled session reminders for a case — used when the session
+ * date is removed. Only still-PENDING auto reminders are deleted; already-sent
+ * ones are kept as history (mirrors `scheduleSessionReminders`' replace logic).
+ */
+export async function cancelSessionReminders(caseId: string): Promise<{ deleted: number }> {
+    const { count } = await prisma.reminder.deleteMany({
+        where: { caseId, autoScheduled: true, status: "PENDING" },
+    });
+    return { deleted: count };
+}

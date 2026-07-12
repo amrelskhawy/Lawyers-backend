@@ -80,16 +80,25 @@ export const RejectAssignmentSchema = z.object({
 
 // Setting the (Hijri) session date — triggers auto-scheduling of the 3 reminders.
 // `sessionHijriDate` is iYYYY-iMM-iDD (e.g. "1447-12-15"); `sessionTime` is HH:mm.
-export const SetSessionDateSchema = z.object({
-    sessionHijriDate: z
-        .string()
-        .trim()
-        .regex(/^\d{4}-\d{1,2}-\d{1,2}$/, "Expected Hijri date as iYYYY-iMM-iDD"),
-    sessionTime: z
-        .string()
-        .trim()
-        .regex(/^\d{1,2}:\d{2}$/, "Expected time as HH:mm"),
-}).strict();
+// Passing both as `null` clears the session date and cancels the pending reminders.
+export const SetSessionDateSchema = z
+    .object({
+        sessionHijriDate: z
+            .string()
+            .trim()
+            .regex(/^\d{4}-\d{1,2}-\d{1,2}$/, "Expected Hijri date as iYYYY-iMM-iDD")
+            .nullable(),
+        sessionTime: z
+            .string()
+            .trim()
+            .regex(/^\d{1,2}:\d{2}$/, "Expected time as HH:mm")
+            .nullable(),
+    })
+    .strict()
+    .refine((d) => (d.sessionHijriDate == null) === (d.sessionTime == null), {
+        message: "sessionHijriDate and sessionTime must be set or cleared together",
+        path: ["sessionHijriDate"],
+    });
 
 // Toggling the "fully completed" state of a case.
 export const SetCompletionSchema = z.object({

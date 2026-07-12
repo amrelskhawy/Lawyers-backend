@@ -154,12 +154,14 @@
  * /cases/{id}/session:
  *   patch:
  *     tags: [Cases]
- *     summary: Set the (Hijri) session date and time; auto-schedules the 3 session reminders
+ *     summary: Set or clear the (Hijri) session date and time; (re)schedules the session reminders
  *     description: >
  *       Stores the Hijri session date as the canonical value and derives the Gregorian
  *       instant used for reminder scheduling. (Re)schedules the SESSION_DETAILS_REVIEW
  *       (15 days before), MEMO_REVIEW_UPLOAD (7 days before) and URGENT_SESSION_SOON
  *       (1 hour before) reminders, replacing any still-pending auto reminders.
+ *       Passing both fields as null clears the session date and cancels the pending
+ *       auto reminders. Both fields must be set or cleared together.
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -176,14 +178,16 @@
  *             properties:
  *               sessionHijriDate:
  *                 type: string
+ *                 nullable: true
  *                 example: "1447-12-15"
- *                 description: Hijri date as iYYYY-iMM-iDD
+ *                 description: Hijri date as iYYYY-iMM-iDD, or null to clear
  *               sessionTime:
  *                 type: string
+ *                 nullable: true
  *                 example: "14:30"
- *                 description: 24h time-of-day as HH:mm
+ *                 description: 24h time-of-day as HH:mm, or null to clear
  *     responses:
- *       200: { description: Session date set and reminders scheduled }
+ *       200: { description: Session date set/cleared and reminders (re)scheduled }
  *       400: { description: Invalid Hijri date or date in the past }
  *
  * /cases/{id}/degree:

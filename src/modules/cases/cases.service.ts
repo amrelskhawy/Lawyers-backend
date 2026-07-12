@@ -8,7 +8,7 @@ import { renderCaseReportPdf } from "./case-pdf.service.js";
 import { hijriToGregorian, hijriMonthRange } from "../../core/utils/hijri.js";
 import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
 import type { CaseType, CaseDegree } from "@prisma/client";
-import { scheduleSessionReminders } from "../reminders/reminders.scheduler.js";
+import { scheduleSessionReminders, cancelSessionReminders } from "../reminders/reminders.scheduler.js";
 import { ensureCustomerFolder } from "../../core/services/google/customer-folder.js";
 import type {
     CreateCasePayload,
@@ -519,6 +519,23 @@ export class CasesService {
             if (existing.assignmentStatus !== "ACCEPTED") {
                 throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_ACCEPTED", null, 403);
             }
+        }
+
+        // Clearing the session date (both fields null) — wipe it and cancel the
+        // still-pending auto reminders that were scheduled against it.
+        if (payload.sessionHijriDate == null || payload.sessionTime == null) {
+            const cleared = await prisma.case.update({
+                where: { id: caseId },
+                data: {
+                    sessionHijriDate: null,
+                    sessionTime: null,
+                    sessionDate: null,
+                    updatedBy: { connect: { id: userId } },
+                },
+                include: caseInclude,
+            });
+            await cancelSessionReminders(caseId);
+            return cleared;
         }
 
         let sessionDate: Date;
