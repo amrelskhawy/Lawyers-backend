@@ -5,10 +5,12 @@ export interface BookingPayload {
     clientEmail: string;
     name: string;
     phone: string;
-    date: string;
-    startTime: string;
-    endTime: string;
+    // null for installment-plan bookings, which carry no scheduled date/time.
+    date: string | null;
+    startTime: string | null;
+    endTime: string | null;
     totalAmount: string;
+    isInstallmentPlan?: boolean;
 }
 
 // ── Result types (kept for stripe.provider.ts compatibility) 

@@ -18,7 +18,7 @@ export class AvailabilityQueries {
         });
     }
 
-    async getExistingBookings(date: Date): Promise<{ date: Date; startTime: string; endTime: string }[]> {
+    async getExistingBookings(date: Date): Promise<{ date: Date | null; startTime: string | null; endTime: string | null }[]> {
         const start = startOfDay(date);
         const end = endOfDay(date);
 
@@ -97,7 +97,7 @@ export class AvailabilityQueries {
         });
     }
 
-    async getMonthBookings(start: Date, end: Date): Promise<{ date: Date; startTime: string; endTime: string }[]> {
+    async getMonthBookings(start: Date, end: Date): Promise<{ date: Date | null; startTime: string | null; endTime: string | null }[]> {
         return await prisma.booking.findMany({
             where: {
                 date: { gte: start, lte: end },

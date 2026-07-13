@@ -222,18 +222,22 @@ export class StripeProvider implements IPaymentProvider {
             return;
         }
 
-        const bookingDay = startOfDay(new Date(m.date));
+        // Installment-plan bookings carry no date/time. Stripe stringifies metadata.
+        const isInstallmentPlan = m.isInstallmentPlan === "true" || m.isInstallmentPlan === true;
+        const bookingDay = isInstallmentPlan || !m.date ? null : startOfDay(new Date(m.date));
 
-        // Race condition guard — re-check slot availability at payment time
-        const conflict = await prisma.booking.findFirst({
-            where: {
-                serviceId: m.serviceId,
-                date: bookingDay,
-                status: { not: "CANCELLED" },
-                startTime: { lt: m.endTime },
-                endTime: { gt: m.startTime },
-            },
-        });
+        // Race condition guard — re-check slot availability at payment time (dated only)
+        const conflict = bookingDay
+            ? await prisma.booking.findFirst({
+                where: {
+                    serviceId: m.serviceId,
+                    date: bookingDay,
+                    status: { not: "CANCELLED" },
+                    startTime: { lt: m.endTime },
+                    endTime: { gt: m.startTime },
+                },
+            })
+            : null;
 
         if (conflict) {
             console.warn(`[Stripe] Slot conflict for session ${session.id} — cancelling PI`);
@@ -253,8 +257,9 @@ export class StripeProvider implements IPaymentProvider {
                     customerId,
                     serviceId: m.serviceId,
                     date: bookingDay,
-                    startTime: m.startTime,
-                    endTime: m.endTime,
+                    startTime: bookingDay ? m.startTime : null,
+                    endTime: bookingDay ? m.endTime : null,
+                    isInstallmentPlan,
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",
                     paymentIntentId: session.payment_intent as string,

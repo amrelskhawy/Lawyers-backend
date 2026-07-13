@@ -72,12 +72,15 @@ model Booking {
   customer    Customer      @relation(fields: [customerId], references: [id])
   serviceId   String
   service     Service       @relation(fields: [serviceId], references: [id])
-  date        DateTime
-  startTime   String
-  endTime     String
+  date        DateTime?
+  startTime   String?
+  endTime     String?
   status      BookingStatus @default(PENDING)
   meetLink    String?
   calendarUrl String?
+
+  // Installment-plan bookings carry no scheduled date/time; flagged here for future retrieval.
+  isInstallmentPlan Boolean @default(false)
 
   paymentIntentId String?
   stripeSessionId String?

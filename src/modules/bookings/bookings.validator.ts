@@ -8,12 +8,27 @@ const availabilityEngine = new AvailabilityEngine();
 export class BookingValidator {
 
     static async validateCreateBooking(payload: any): Promise<{
-        bookingDay: Date;
-        cleanStartTime: string;
-        endTime: string;
+        bookingDay: Date | null;
+        cleanStartTime: string | null;
+        endTime: string | null;
         service: any;
     }> {
         const { serviceId, date, startTime, endTime: providedEndTime } = payload;
+
+        const service = await prisma.service.findUnique({ where: { id: serviceId } });
+        if (!service) throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
+
+        // Installment-plan services are booked without a scheduled date/time — skip every
+        // date/working-hours/slot check. "Installment" is derived from the service itself,
+        // never trusted from the client payload.
+        if (service.isInstallmentPlans) {
+            return { bookingDay: null, cleanStartTime: null, endTime: null, service };
+        }
+
+        // Non-installment services require both a date and a start time.
+        if (!date || !startTime) {
+            throw new AppResponse(false, "DATE_AND_TIME_REQUIRED", null, 400);
+        }
 
         const bookingDate = new Date(date);
         if (isNaN(bookingDate.getTime())) {
@@ -26,9 +41,6 @@ export class BookingValidator {
         if (isBefore(bookingDay, today)) {
             throw new AppResponse(false, "DATE_IN_PAST", null, 400);
         }
-
-        const service = await prisma.service.findUnique({ where: { id: serviceId } });
-        if (!service) throw new AppResponse(false, "SERVICE_NOT_FOUND", null, 404);
 
         let cleanStartTime = startTime;
         if (cleanStartTime.includes(".")) {

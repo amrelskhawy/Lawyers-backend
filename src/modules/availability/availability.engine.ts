@@ -12,6 +12,18 @@ import {
 } from "date-fns";
 import { parseTimeTo24h } from "../holidays/holidays.types.js";
 
+/**
+ * Narrow booking rows to those with a scheduled date/time. Installment-plan
+ * bookings carry null date/time and never occupy an availability slot.
+ */
+type DatedBooking = { date: Date; startTime: string; endTime: string };
+const onlyDatedBookings = (
+    rows: { date: Date | null; startTime: string | null; endTime: string | null }[]
+): DatedBooking[] =>
+    rows.filter(
+        (b): b is DatedBooking => b.date != null && b.startTime != null && b.endTime != null
+    );
+
 export enum SlotStatus {
     AVAILABLE = "AVAILABLE",
     BOOKED = "BOOKED",
@@ -111,7 +123,7 @@ export class AvailabilityEngine {
             status: SlotStatus.AVAILABLE
         }));
 
-        const existingBookings = await this.queries.getExistingBookings(date);
+        const existingBookings = onlyDatedBookings(await this.queries.getExistingBookings(date));
 
         return this.slots.calculateDailySlotStatuses(
             detailedSlots,
@@ -127,11 +139,12 @@ export class AvailabilityEngine {
         const days = eachDayOfInterval({ start, end });
         const today = startOfDay(new Date());
 
-        const [monthHolidays, monthBookings, workingDaysConfig] = await Promise.all([
+        const [monthHolidays, monthBookingsRaw, workingDaysConfig] = await Promise.all([
             this.queries.getMonthHolidays(start, end),
             this.queries.getMonthBookings(start, end),
             this.queries.getWorkingDaysConfig(),
         ]);
+        const monthBookings = onlyDatedBookings(monthBookingsRaw);
 
         const results = [];
 
@@ -197,11 +210,12 @@ export class AvailabilityEngine {
         const startDate = new Date(startDateStr);
         const endDate = new Date(endDateStr);
 
-        const [workingDays, holidays, bookings] = await Promise.all([
+        const [workingDays, holidays, bookingsRaw] = await Promise.all([
             this.queries.getWorkingDaysConfig(),
             this.queries.getMonthHolidays(startOfDay(startDate), startOfDay(endDate)),
             this.queries.getMonthBookings(startOfDay(startDate), startOfDay(endDate)),
         ]);
+        const bookings = onlyDatedBookings(bookingsRaw);
 
         const bookedDates = Array.from(new Set(bookings.map(b => format(b.date, "yyyy-MM-dd"))));
 

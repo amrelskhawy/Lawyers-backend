@@ -8,9 +8,10 @@ import { parseListQuery, buildMeta, type PageMeta } from "../../core/utils/pagin
 type BookingEvent = "booked" | "confirmed" | "cancelled";
 
 interface BookingNotificationPayload {
-    date: string | Date;
-    startTime: string;
-    endTime: string;
+    // null for installment-plan bookings, which carry no scheduled date/time.
+    date: string | Date | null;
+    startTime: string | null;
+    endTime: string | null;
     status: string;
     meetLink?: string | null;
     customer?: { fullName: string; email: string | null } | null;
@@ -161,8 +162,11 @@ export class OrganizerService {
         const serviceName = booking.service?.name_en || "Service";
         const subject = `${SUBJECT_PREFIXES[event]} — ${serviceName}`;
 
-        const parsedDate = new Date(booking.date);
-        const formattedDate = isNaN(parsedDate.getTime()) ? "Invalid date" : format(parsedDate, "yyyy-MM-dd");
+        // Installment-plan bookings have no scheduled date/time.
+        const parsedDate = booking.date ? new Date(booking.date) : null;
+        const formattedDate = !parsedDate
+            ? "Installment plan"
+            : isNaN(parsedDate.getTime()) ? "Invalid date" : format(parsedDate, "yyyy-MM-dd");
 
         const context = {
             event,
@@ -171,8 +175,8 @@ export class OrganizerService {
             customer_email: booking.customer?.email || booking.clientEmail || "N/A",
             service_name: serviceName,
             date: formattedDate,
-            start_time: booking.startTime,
-            end_time: booking.endTime,
+            start_time: booking.startTime || "—",
+            end_time: booking.endTime || "—",
             meet_link: booking.meetLink || null,
             status: booking.status,
         };

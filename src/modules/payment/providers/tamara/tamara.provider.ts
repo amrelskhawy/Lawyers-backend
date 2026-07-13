@@ -69,6 +69,7 @@ export class TamaraProvider implements IPaymentProvider {
             payload.startTime,
             payload.endTime,
             payload.totalAmount,
+            payload.isInstallmentPlan ? "1" : "0",
         ].join("|");
 
         const [firstName, ...rest] = (payload.name || "").trim().split(/\s+/);
@@ -77,14 +78,16 @@ export class TamaraProvider implements IPaymentProvider {
         const body = {
             order_reference_id: referenceId,
             total_amount: { amount: amount.toFixed(2), currency },
-            description: `Booking: ${payload.date} ${payload.startTime}–${payload.endTime}`,
+            description: payload.date
+                ? `Booking: ${payload.date} ${payload.startTime}–${payload.endTime}`
+                : "Booking: Installment plan",
             country_code: countryCode,
             payment_type: "PAY_BY_INSTALMENTS",
             locale: "en_US",
             items: [{
                 reference_id: payload.serviceId,
                 type: "Digital",
-                name: `Service Booking – ${payload.date}`,
+                name: payload.date ? `Service Booking – ${payload.date}` : "Service Booking",
                 sku: payload.serviceId,
                 quantity: 1,
                 unit_price: { amount: amount.toFixed(2), currency },
@@ -299,24 +302,29 @@ export class TamaraProvider implements IPaymentProvider {
             return;
         }
 
-        const [serviceId, clientEmail, name, phone, date, startTime, endTime, totalAmount] =
+        const [serviceId, clientEmail, name, phone, date, startTime, endTime, totalAmount, installmentFlag] =
             referenceId.split("|");
 
-        if (!serviceId || !clientEmail || !date || !startTime) {
+        const isInstallmentPlan = installmentFlag === "1";
+
+        // Installment-plan bookings legitimately carry no date/startTime.
+        if (!serviceId || !clientEmail || (!isInstallmentPlan && (!date || !startTime))) {
             console.error(`[Tamara] order_approved incomplete reference_id: ${referenceId}`);
             return;
         }
 
-        // ── Race condition: slot already booked by someone else? ─────────────
-        const conflict = await prisma.booking.findFirst({
-            where: {
-                serviceId,
-                date: new Date(date),
-                startTime,
-                endTime,
-                status: { not: "CANCELLED" },
-            },
-        });
+        // ── Race condition: slot already booked by someone else? (dated only) ─
+        const conflict = isInstallmentPlan
+            ? null
+            : await prisma.booking.findFirst({
+                where: {
+                    serviceId,
+                    date: new Date(date),
+                    startTime,
+                    endTime,
+                    status: { not: "CANCELLED" },
+                },
+            });
 
         if (conflict) {
             console.error(
@@ -345,9 +353,10 @@ export class TamaraProvider implements IPaymentProvider {
                 data: {
                     customerId,
                     serviceId,
-                    date: new Date(date),
-                    startTime,
-                    endTime,
+                    date: date ? new Date(date) : null,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    isInstallmentPlan,
                     totalAmount: parseFloat(totalAmount || "0"),
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",

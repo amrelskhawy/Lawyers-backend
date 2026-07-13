@@ -92,6 +92,7 @@ export class PaymobProvider implements IPaymentProvider {
       payload.startTime,
       payload.endTime,
       payload.totalAmount,
+      payload.isInstallmentPlan ? "1" : "0",
     ].join("|");
 
     const amountCents = Math.round(amount * 100);
@@ -115,9 +116,12 @@ export class PaymobProvider implements IPaymentProvider {
           .filter((n) => !Number.isNaN(n)),
         items: [
           {
-            name: `Service Booking – ${payload.date}`,
+            name: payload.date ? `Service Booking – ${payload.date}` : "Service Booking",
             amount: amountCents,
-            description: `${payload.startTime}–${payload.endTime}`,
+            description:
+              payload.startTime && payload.endTime
+                ? `${payload.startTime}–${payload.endTime}`
+                : "Installment plan",
             quantity: 1,
           },
         ],
@@ -408,25 +412,31 @@ export class PaymobProvider implements IPaymentProvider {
       startTime,
       endTime,
       totalAmount,
+      installmentFlag,
     ] = merchantOrderId.split("|");
 
-    if (!serviceId || !clientEmail || !date || !startTime) {
+    const isInstallmentPlan = installmentFlag === "1";
+
+    // Installment-plan bookings legitimately carry no date/startTime.
+    if (!serviceId || !clientEmail || (!isInstallmentPlan && (!date || !startTime))) {
       console.error(
         `[Paymob] Incomplete merchant_order_id: ${merchantOrderId}`,
       );
       return;
     }
 
-    // ── Race condition: slot already taken? ───────────────────────────────
-    const conflict = await prisma.booking.findFirst({
-      where: {
-        serviceId,
-        date: new Date(date),
-        startTime,
-        endTime,
-        status: { not: "CANCELLED" },
-      },
-    });
+    // ── Race condition: slot already taken? (dated bookings only) ─────────
+    const conflict = isInstallmentPlan
+      ? null
+      : await prisma.booking.findFirst({
+        where: {
+          serviceId,
+          date: new Date(date),
+          startTime,
+          endTime,
+          status: { not: "CANCELLED" },
+        },
+      });
 
     if (conflict) {
       console.error(
@@ -465,9 +475,10 @@ export class PaymobProvider implements IPaymentProvider {
         data: {
           customerId,
           serviceId,
-          date: new Date(date),
-          startTime,
-          endTime,
+          date: date ? new Date(date) : null,
+          startTime: startTime || null,
+          endTime: endTime || null,
+          isInstallmentPlan,
           totalAmount: parseFloat(totalAmount || "0"),
           status: "PENDING",
           paymentStatus: "AUTHORIZED",

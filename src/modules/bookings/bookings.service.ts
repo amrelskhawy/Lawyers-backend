@@ -31,6 +31,10 @@ export class BookingService {
         const { bookingDay, cleanStartTime, endTime, service } =
             await BookingValidator.validateCreateBooking(payload);
 
+        // Installment-plan bookings have no scheduled date/time.
+        const isInstallmentPlan = !!service.isInstallmentPlans;
+        const dateStr = bookingDay ? format(bookingDay, "yyyy-MM-dd") : null;
+
         const provider = PaymentFactory.resolveProvider(payload.provider || "STRIPE");
         console.log("PROVIDER RESOLVED:", provider);
         // Stripe requires a customer object. Tabby and other providers do not.
@@ -50,10 +54,11 @@ export class BookingService {
                 clientEmail,
                 name: payload.name,
                 phone: payload.phone_number,
-                date: format(bookingDay, "yyyy-MM-dd"),
+                date: dateStr,
                 startTime: cleanStartTime,
                 endTime,
                 totalAmount: String(service.price),
+                isInstallmentPlan,
             },
             provider
         );
@@ -73,9 +78,10 @@ export class BookingService {
                     name: payload.name,
                     payment_link: paymentResult.url,
                     service_name: service.name_en,
-                    date: format(bookingDay, "yyyy-MM-dd"),
+                    date: dateStr,
                     start_time: cleanStartTime,
                     end_time: endTime,
+                    is_installment_plan: isInstallmentPlan,
                     expires_in_minutes: 30,
                     provider,
                 }
@@ -109,6 +115,7 @@ export class BookingService {
                 date: bookingDay,
                 startTime: cleanStartTime,
                 endTime,
+                isInstallmentPlan: !!service.isInstallmentPlans,
                 status: "PENDING",
                 paymentStatus: "AUTHORIZED",
                 totalAmount: service.price ? new Prisma.Decimal(String(service.price)) : new Prisma.Decimal(0),
@@ -166,7 +173,12 @@ export class BookingService {
         // }
 
         try {
-            const { calendarUrl, meetLink } = await createGoogleEvent(booking, booking.service.name_en);
+            // Installment-plan / dateless bookings have no scheduled slot — no Google
+            // Meet event or calendar entry is created for them.
+            const skipCalendar = (booking as any).isInstallmentPlan || !booking.date;
+            const meetLink = skipCalendar
+                ? null
+                : (await createGoogleEvent(booking, booking.service.name_en)).meetLink;
             const updatedBooking = await prisma.booking.update({
                 where: { id: booking.id },
                 data: {

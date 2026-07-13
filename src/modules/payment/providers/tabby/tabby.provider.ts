@@ -67,13 +67,16 @@ export class TabbyProvider implements IPaymentProvider {
             payload.startTime,
             payload.endTime,
             payload.totalAmount,
+            payload.isInstallmentPlan ? "1" : "0",
         ].join("|");
 
         const body = {
             payment: {
                 amount: amount.toFixed(2),
                 currency,
-                description: `Booking: ${payload.date} ${payload.startTime}–${payload.endTime}`,
+                description: payload.date
+                    ? `Booking: ${payload.date} ${payload.startTime}–${payload.endTime}`
+                    : "Booking: Installment plan",
                 buyer: {
                     phone: payload.phone,
                     email: payload.clientEmail,
@@ -91,7 +94,7 @@ export class TabbyProvider implements IPaymentProvider {
                     updated_at: new Date().toISOString(),
                     reference_id: referenceId,
                     items: [{
-                        title: `Service Booking – ${payload.date}`,
+                        title: payload.date ? `Service Booking – ${payload.date}` : "Service Booking",
                         quantity: 1,
                         unit_price: amount.toFixed(2),
                         reference_id: payload.serviceId,
@@ -304,24 +307,29 @@ export class TabbyProvider implements IPaymentProvider {
             return;
         }
 
-        const [serviceId, clientEmail, name, phone, date, startTime, endTime, totalAmount] =
+        const [serviceId, clientEmail, name, phone, date, startTime, endTime, totalAmount, installmentFlag] =
             referenceId.split("|");
 
-        if (!serviceId || !clientEmail || !date || !startTime) {
+        const isInstallmentPlan = installmentFlag === "1";
+
+        // Installment-plan bookings legitimately carry no date/startTime.
+        if (!serviceId || !clientEmail || (!isInstallmentPlan && (!date || !startTime))) {
             console.error(`[Tabby] payment.authorized incomplete reference_id: ${referenceId}`);
             return;
         }
 
-        // ── Race condition: slot already booked by someone else? ─────────────
-        const conflict = await prisma.booking.findFirst({
-            where: {
-                serviceId,
-                date: new Date(date),
-                startTime,
-                endTime,
-                status: { not: "CANCELLED" },
-            },
-        });
+        // ── Race condition: slot already booked by someone else? (dated only) ─
+        const conflict = isInstallmentPlan
+            ? null
+            : await prisma.booking.findFirst({
+                where: {
+                    serviceId,
+                    date: new Date(date),
+                    startTime,
+                    endTime,
+                    status: { not: "CANCELLED" },
+                },
+            });
 
         if (conflict) {
             console.error(
@@ -347,9 +355,10 @@ export class TabbyProvider implements IPaymentProvider {
                 data: {
                     customerId,
                     serviceId,
-                    date: new Date(date),
-                    startTime,
-                    endTime,
+                    date: date ? new Date(date) : null,
+                    startTime: startTime || null,
+                    endTime: endTime || null,
+                    isInstallmentPlan,
                     totalAmount: parseFloat(totalAmount || "0"),
                     status: "PENDING",
                     paymentStatus: "AUTHORIZED",

@@ -9,10 +9,12 @@ export class EmailService {
             "Booking Confirmation",
             "bookingConfirmation",
             {
+                // Installment-plan bookings have no scheduled date/time.
+                isInstallmentPlan: !!booking.isInstallmentPlan,
                 serviceName: booking.service.name_en,
-                date: format(new Date(booking.date), "yyyy-MM-dd"),
-                startTime: booking.startTime,
-                endTime: booking.endTime,
+                date: booking.date ? format(new Date(booking.date), "yyyy-MM-dd") : "Installment plan",
+                startTime: booking.startTime || "—",
+                endTime: booking.endTime || "—",
                 meetLink: booking.meetLink || "Link to be sent later",
                 calendarUrl: booking.calendarUrl || "#"
             }
