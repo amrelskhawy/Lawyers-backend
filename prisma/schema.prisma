@@ -403,6 +403,18 @@ model Case {
 /// A document uploaded from a device into the customer's Drive folder and
 /// surfaced in the reminders dialog. Staff can send it to the client manually
 /// via WhatsApp; `sentAt` records the last successful send.
+// A reusable signature image uploaded once and restamped on later documents.
+// Shared app-wide (a settings-level asset, not per user); the image lives in
+// the shared "signatures" Drive folder and this row holds the driveFileId.
+model Signature {
+  id          String @id @default(uuid())
+  fileName    String
+  mimeType    String
+  driveFileId String
+
+  createdAt DateTime @default(now())
+}
+
 model CaseAttachment {
   id     String @id @default(uuid())
   caseId String

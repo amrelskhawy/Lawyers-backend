@@ -3,30 +3,16 @@ import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { ensureCustomerFolder } from "../../core/services/google/customer-folder.js";
 import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
+import {
+    ALLOWED_WA_EXTENSIONS,
+    fileExtension,
+    fixFileNameEncoding,
+} from "../../core/utils/wa-file.js";
 import type { Role } from "@prisma/client";
 
 type Actor = { id: string; role: Role };
 
 const STAFF: Role[] = ["ADMIN", "MODERATOR"];
-
-// WhatsApp (WAAPI) only accepts these file types for document/media messages.
-// We restrict uploads to the same set so an attachment is always sendable.
-const ALLOWED_EXTENSIONS = ["jpg", "jpeg", "png", "webp", "pdf", "docx", "xlsx", "csv", "txt"];
-
-function fileExtension(name: string): string {
-    const dot = name.lastIndexOf(".");
-    return dot >= 0 ? name.slice(dot + 1).toLowerCase() : "";
-}
-
-/**
- * Multer decodes multipart filenames as latin1, so UTF-8 names (Arabic)
- * arrive mangled ("انذار.pdf" → "Ø§ÙØ°Ø§Ø±.pdf"). Re-decode as UTF-8;
- * keep the original if the result isn't valid UTF-8 (it was real latin1).
- */
-function fixFileNameEncoding(name: string): string {
-    const decoded = Buffer.from(name, "latin1").toString("utf8");
-    return decoded.includes("�") ? name : decoded;
-}
 
 /**
  * Throw 404/403 unless the case exists and the actor may manage its files.
@@ -79,11 +65,11 @@ export class AttachmentService {
         const c = await assertCaseAccess(caseId, user);
 
         const fileName = fixFileNameEncoding(file.originalname);
-        if (!ALLOWED_EXTENSIONS.includes(fileExtension(fileName))) {
+        if (!ALLOWED_WA_EXTENSIONS.includes(fileExtension(fileName))) {
             throw new AppResponse(
                 false,
                 "ATTACHMENT_UNSUPPORTED_TYPE",
-                { allowed: ALLOWED_EXTENSIONS },
+                { allowed: ALLOWED_WA_EXTENSIONS },
                 400,
             );
         }

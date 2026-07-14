@@ -33,6 +33,15 @@ export const deleteCustomer = asyncHandler(async (req: Request, res: Response) =
     res.status(200).json(new AppResponse(true, result.message));
 });
 
+export const sendCustomerDocument = asyncHandler(async (req: Request, res: Response) => {
+    const id = req.params.id as string;
+    if (!req.file) {
+        throw new AppResponse(false, "DOCUMENT_FILE_REQUIRED", null, 400);
+    }
+    const result = await customerService.sendDocument(id, req.file, req.body?.caption);
+    res.status(200).json(new AppResponse(true, "DOCUMENT_SENT", result));
+});
+
 export const deleteMultipleCustomers = asyncHandler(async (req: Request, res: Response) => {
     const { ids } = req.body;
     const result = await customerService.deleteMultipleCustomers(ids);
