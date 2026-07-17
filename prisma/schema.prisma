@@ -326,6 +326,11 @@ model Case {
   hijriDate     String?
   agencyNumber  String?
 
+  // When true, the case is a real customer's case (shown in "Client Cases").
+  // When false (default), it is only a "Customer Meeting" — surfaced in the
+  // separate Customer Meetings list until staff flip this switch on.
+  isRealCustomer Boolean @default(false)
+
   // Lawyer slot
   wantsSpecificLawyer  Boolean              @default(false)
   preferredLawyerId    String?

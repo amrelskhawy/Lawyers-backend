@@ -33,6 +33,7 @@ export const CreateCaseSchema = z.object({
     caseDate: isoDate,
     hijriDate: z.string().optional(),
     agencyNumber: z.string().optional(),
+    isRealCustomer: z.boolean().optional(),
 });
 
 // General case update — assignment fields are excluded (use /assign endpoint)
@@ -49,6 +50,7 @@ export const UpdateCaseSchema = z
         sessionReceiverId: z.string().uuid().nullable().optional(),
         sessionReceiverName: z.string().nullable().optional(),
 
+        isRealCustomer: z.boolean().optional(),
         hasStructuredNotes: z.boolean().optional(),
         weaknesses: z.array(z.string()).optional(),
         strengths: z.array(z.string()).optional(),

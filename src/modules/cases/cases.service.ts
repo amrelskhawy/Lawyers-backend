@@ -60,6 +60,8 @@ export interface CaseListOptions {
     lawyerId?: string;
     /** When true, restrict to cases that have been marked completed (closedAt IS NOT NULL). */
     onlyClosed?: boolean;
+    /** Split the case list by the real-customer flag: true → Client Cases, false → Customer Meetings. */
+    isRealCustomer?: boolean;
 }
 
 export class CasesService {
@@ -111,6 +113,7 @@ export class CasesService {
             });
         }
 
+        if (opts.isRealCustomer !== undefined) and.push({ isRealCustomer: opts.isRealCustomer });
         if (opts.caseType) and.push({ caseType: opts.caseType });
         if (opts.caseDegree === "UNASSIGNED") and.push({ caseDegree: null });
         else if (opts.caseDegree) and.push({ caseDegree: opts.caseDegree });
@@ -297,6 +300,7 @@ export class CasesService {
                 caseDate: new Date(payload.caseDate),
                 hijriDate: payload.hijriDate ?? null,
                 agencyNumber: payload.agencyNumber ?? null,
+                isRealCustomer: payload.isRealCustomer ?? false,
                 createdById,
             },
             include: caseInclude,
@@ -328,6 +332,7 @@ export class CasesService {
         if (payload.caseDate !== undefined) data.caseDate = new Date(payload.caseDate);
         if (payload.hijriDate !== undefined) data.hijriDate = payload.hijriDate;
         if (payload.agencyNumber !== undefined) data.agencyNumber = payload.agencyNumber;
+        if (payload.isRealCustomer !== undefined) data.isRealCustomer = payload.isRealCustomer;
         if (payload.sessionReceiverId !== undefined) {
             data.sessionReceiver = payload.sessionReceiverId
                 ? { connect: { id: payload.sessionReceiverId } }

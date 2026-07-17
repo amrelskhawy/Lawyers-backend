@@ -34,6 +34,15 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
         throw new AppResponse(false, "INVALID_DATE_RANGE", null, 400);
     }
 
+    // Optional `?isRealCustomer=true|false` splits Client Cases (true) from
+    // Customer Meetings (false). Omitted → undefined (no filter).
+    const realCustomer =
+        req.query.isRealCustomer === "true"
+            ? true
+            : req.query.isRealCustomer === "false"
+              ? false
+              : undefined;
+
     const { data, meta } = await cases.list(req.user, {
         hijriYear,
         hijriMonth,
@@ -45,6 +54,7 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
         caseDegree: asStr(req.query.caseDegree) as never,
         lawyerId: asStr(req.query.lawyerId),
         onlyClosed: req.query.onlyClosed === "true",
+        isRealCustomer: realCustomer,
     });
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
@@ -53,12 +63,20 @@ export const listUnscheduledCases = asyncHandler(async (req: AuthRequest, res: R
     // Cases with no session date/time set yet — for staff to find and schedule.
     const asStr = (v: unknown) => (typeof v === "string" && v.trim() ? v.trim() : undefined);
 
+    const realCustomer =
+        req.query.isRealCustomer === "true"
+            ? true
+            : req.query.isRealCustomer === "false"
+              ? false
+              : undefined;
+
     const { data, meta } = await cases.listUnscheduled(req.user, {
         query: req.query,
         search: asStr(req.query.search),
         caseType: asStr(req.query.caseType) as never,
         caseDegree: asStr(req.query.caseDegree) as never,
         lawyerId: asStr(req.query.lawyerId),
+        isRealCustomer: realCustomer,
     });
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
