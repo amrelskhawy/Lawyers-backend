@@ -185,24 +185,36 @@ export class CasesService {
     }
 
     /**
-     * List cases that have no session scheduled yet (`sessionDate` is null) so
-     * staff can find and schedule them. Reuses the standard list filters
-     * (role scoping, search, caseType, caseDegree, lawyerId). Paginates when
-     * `page`/`limit` are supplied; otherwise returns the full array (meta: null),
-     * mirroring {@link CasesService.list}.
+     * List cases that need a session scheduled: either none was ever set
+     * (`sessionDate` is null), or the one that was set has already elapsed
+     * (`sessionDate` < now — the stored Gregorian instant carries the time, so
+     * this is a full datetime comparison). Elapsed sessions only count while the
+     * case is still open; a closed case is done and never needs re-scheduling.
+     *
+     * Reuses the standard list filters (role scoping, search, caseType,
+     * caseDegree, lawyerId). Paginates when `page`/`limit` are supplied;
+     * otherwise returns the full array (meta: null), mirroring
+     * {@link CasesService.list}.
      */
     async listUnscheduled(requestingUser: RequestingUser, opts: CaseListOptions = {}) {
+        const needsScheduling: Prisma.CaseWhereInput = {
+            OR: [
+                { sessionDate: null },
+                { sessionDate: { lt: new Date() }, completedAt: null },
+            ],
+        };
+
         // The list honours the active degree filter; the degree cards, however, are
         // counted over the same unscheduled scope WITHOUT that filter so every card
         // keeps showing its full total while one is selected.
         const baseWhere: Prisma.CaseWhereInput = {
             AND: [
                 this.buildListWhere(requestingUser, { ...opts, caseDegree: undefined }),
-                { sessionDate: null },
+                needsScheduling,
             ],
         };
         const where: Prisma.CaseWhereInput = {
-            AND: [this.buildListWhere(requestingUser, opts), { sessionDate: null }],
+            AND: [this.buildListWhere(requestingUser, opts), needsScheduling],
         };
 
         const wantsPage =
