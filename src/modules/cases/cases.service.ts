@@ -188,8 +188,8 @@ export class CasesService {
      * List cases that need a session scheduled: either none was ever set
      * (`sessionDate` is null), or the one that was set has already elapsed
      * (`sessionDate` < now — the stored Gregorian instant carries the time, so
-     * this is a full datetime comparison). Elapsed sessions only count while the
-     * case is still open; a closed case is done and never needs re-scheduling.
+     * this is a full datetime comparison). Closed cases (`completedAt` set) are
+     * always excluded — a closed case is done and never needs (re)scheduling.
      *
      * Reuses the standard list filters (role scoping, search, caseType,
      * caseDegree, lawyerId). Paginates when `page`/`limit` are supplied;
@@ -197,11 +197,11 @@ export class CasesService {
      * {@link CasesService.list}.
      */
     async listUnscheduled(requestingUser: RequestingUser, opts: CaseListOptions = {}) {
+        // A closed case is done and never needs (re)scheduling, so exclude it
+        // regardless of whether a session was ever set.
         const needsScheduling: Prisma.CaseWhereInput = {
-            OR: [
-                { sessionDate: null },
-                { sessionDate: { lt: new Date() }, completedAt: null },
-            ],
+            completedAt: null,
+            OR: [{ sessionDate: null }, { sessionDate: { lt: new Date() } }],
         };
 
         // The list honours the active degree filter; the degree cards, however, are
