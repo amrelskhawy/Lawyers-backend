@@ -34,6 +34,9 @@ export const CreateCaseSchema = z.object({
     hijriDate: z.string().optional(),
     agencyNumber: z.string().optional(),
     isRealCustomer: z.boolean().optional(),
+    isCompany: z.boolean().optional(),
+    // Only meaningful when isCompany is false — the lawyer who brought the client.
+    sourceLawyerId: z.string().uuid().nullable().optional(),
 });
 
 // General case update — assignment fields are excluded (use /assign endpoint)
@@ -51,6 +54,8 @@ export const UpdateCaseSchema = z
         sessionReceiverName: z.string().nullable().optional(),
 
         isRealCustomer: z.boolean().optional(),
+        isCompany: z.boolean().optional(),
+        sourceLawyerId: z.string().uuid().nullable().optional(),
         hasStructuredNotes: z.boolean().optional(),
         weaknesses: z.array(z.string()).optional(),
         strengths: z.array(z.string()).optional(),

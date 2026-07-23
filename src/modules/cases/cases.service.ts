@@ -26,8 +26,22 @@ const caseInclude = {
     preferredLawyer: { select: { id: true, name: true } },
     consultant: { select: { id: true, name: true } },
     sessionReceiver: { select: { id: true, name: true } },
+    sourceLawyer: { select: { id: true, name: true } },
     createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.CaseInclude;
+
+/**
+ * The source lawyer only exists for non-company clients. A company client never
+ * keeps one (toggling `isCompany` back on clears it), and a lawyer-sourced client
+ * must name the lawyer who brought them.
+ */
+function resolveSourceLawyer(isCompany: boolean, sourceLawyerId: string | null): string | null {
+    if (isCompany) return null;
+    if (!sourceLawyerId) {
+        throw new AppResponse(false, "CASE_SOURCE_LAWYER_REQUIRED", null, 400);
+    }
+    return sourceLawyerId;
+}
 
 type AssignmentKind = "LAWYER" | "CONSULTANT";
 
@@ -304,15 +318,20 @@ export class CasesService {
             throw new AppResponse(false, "CUSTOMER_NOT_FOUND", null, 404);
         }
 
+        const isCompany = payload.isCompany ?? true;
+        const sourceLawyerId = resolveSourceLawyer(isCompany, payload.sourceLawyerId ?? null);
+
         return prisma.case.create({
             data: {
                 customerId: payload.customerId,
+                sourceLawyerId,
                 caseType: payload.caseType,
                 otherCaseType: payload.caseType === "OTHER" ? payload.otherCaseType : null,
                 caseDate: new Date(payload.caseDate),
                 hijriDate: payload.hijriDate ?? null,
                 agencyNumber: payload.agencyNumber ?? null,
                 isRealCustomer: payload.isRealCustomer ?? false,
+                isCompany,
                 createdById,
             },
             include: caseInclude,
@@ -345,6 +364,21 @@ export class CasesService {
         if (payload.hijriDate !== undefined) data.hijriDate = payload.hijriDate;
         if (payload.agencyNumber !== undefined) data.agencyNumber = payload.agencyNumber;
         if (payload.isRealCustomer !== undefined) data.isRealCustomer = payload.isRealCustomer;
+        if (payload.isCompany !== undefined) data.isCompany = payload.isCompany;
+        // Validate the source lawyer against the *merged* state: a PATCH may carry
+        // either field alone. Untouched cases are left as-is so pre-existing rows
+        // without a source lawyer stay editable.
+        if (payload.isCompany !== undefined || payload.sourceLawyerId !== undefined) {
+            const isCompany = payload.isCompany ?? existing.isCompany;
+            const submittedId =
+                payload.sourceLawyerId !== undefined
+                    ? payload.sourceLawyerId
+                    : existing.sourceLawyerId;
+            const sourceLawyerId = resolveSourceLawyer(isCompany, submittedId);
+            data.sourceLawyer = sourceLawyerId
+                ? { connect: { id: sourceLawyerId } }
+                : { disconnect: true };
+        }
         if (payload.sessionReceiverId !== undefined) {
             data.sessionReceiver = payload.sessionReceiverId
                 ? { connect: { id: payload.sessionReceiverId } }

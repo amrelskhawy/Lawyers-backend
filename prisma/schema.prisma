@@ -28,6 +28,7 @@ model User {
   preferredOnCases           Case[]               @relation("CasePreferredLawyer")
   consultantOnCases          Case[]               @relation("CaseConsultant")
   sessionReceivedCases       Case[]               @relation("CaseSessionReceiver")
+  sourcedCases               Case[]               @relation("CaseSourceLawyer")
   createdSessionReports      SessionReport[]      @relation("SessionReportCreator")
   updatedSessionReports      SessionReport[]      @relation("SessionReportUpdater")
   createdFieldVisitReports   FieldVisitReport[]   @relation("FieldVisitReportCreator")
@@ -331,6 +332,16 @@ model Case {
   // separate Customer Meetings list until staff flip this switch on.
   isRealCustomer Boolean @default(false)
 
+  // Source of the client: true (default) = the client came through the company;
+  // false = a lawyer brought the client to the company.
+  isCompany Boolean @default(true)
+
+  // When isCompany = false, the lawyer who brought this client to the company.
+  // Pure attribution — unrelated to the assignment slots below and their
+  // accept/reject lifecycles. Always null while isCompany = true.
+  sourceLawyerId String?
+  sourceLawyer   User?   @relation("CaseSourceLawyer", fields: [sourceLawyerId], references: [id])
+
   // Lawyer slot
   wantsSpecificLawyer  Boolean              @default(false)
   preferredLawyerId    String?
@@ -403,6 +414,7 @@ model Case {
   @@index([customerId])
   @@index([createdById])
   @@index([updatedById])
+  @@index([sourceLawyerId])
 }
 
 /// A document uploaded from a device into the customer's Drive folder and
