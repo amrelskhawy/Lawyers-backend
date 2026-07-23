@@ -13,11 +13,20 @@ import {
     verifySigningIdentity,
     submitSignedContract,
 } from "./lawyer-fees-contracts.controller.js";
+import {
+    listContractPayments,
+    listCaseContractPayments,
+    createContractPayment,
+    updateContractPayment,
+    deleteContractPayment,
+} from "./contract-payments.controller.js";
 import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
 import {
     validateCreateLawyerFeesContract,
     validateUpdateLawyerFeesContract,
+    validateCreateContractPayment,
+    validateUpdateContractPayment,
 } from "./lawyer-fees-contracts.validator.js";
 
 const router = express.Router();
@@ -26,6 +35,13 @@ router.get("/",                        protect, requireRole("ADMIN", "MODERATOR"
 router.get("/by-case/:caseId",         protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listLawyerFeesContractsByCase);
 router.get("/by-customer/:customerId", protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), listLawyerFeesContractsByCustomer);
 router.get("/:id",                     protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), getLawyerFeesContract);
+
+// ── Collections against a contract — money handling is staff-only ─────────────
+router.get("/by-case/:caseId/payments", protect, requireRole("ADMIN", "MODERATOR"), listCaseContractPayments);
+router.get("/:id/payments",             protect, requireRole("ADMIN", "MODERATOR"), listContractPayments);
+router.post("/:id/payments",            protect, requireRole("ADMIN", "MODERATOR"), validateCreateContractPayment, logActivity("CREATE", "ContractPayment"), createContractPayment);
+router.patch("/:id/payments/:paymentId", protect, requireRole("ADMIN", "MODERATOR"), validateUpdateContractPayment, logActivity("UPDATE", "ContractPayment"), updateContractPayment);
+router.delete("/:id/payments/:paymentId", protect, requireRole("ADMIN"), logActivity("DELETE", "ContractPayment"), deleteContractPayment);
 
 router.post("/",       protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateCreateLawyerFeesContract, logActivity("CREATE", "LawyerFeesContract"), createLawyerFeesContract);
 router.patch("/:id",   protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"), validateUpdateLawyerFeesContract, logActivity("UPDATE", "LawyerFeesContract"), updateLawyerFeesContract);

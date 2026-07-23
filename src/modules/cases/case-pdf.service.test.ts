@@ -12,6 +12,8 @@ describe("buildReportContext", () => {
         hijriDate: null,
         agencyNumber: "123",
         isRealCustomer: false,
+        isCompany: true,
+        sourceLawyerId: null,
         wantsSpecificLawyer: false,
         preferredLawyerId: null,
         preferredLawyerName: null,

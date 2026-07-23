@@ -29,6 +29,7 @@ model User {
   consultantOnCases          Case[]               @relation("CaseConsultant")
   sessionReceivedCases       Case[]               @relation("CaseSessionReceiver")
   sourcedCases               Case[]               @relation("CaseSourceLawyer")
+  recordedContractPayments   ContractPayment[]    @relation("ContractPaymentRecorder")
   createdSessionReports      SessionReport[]      @relation("SessionReportCreator")
   updatedSessionReports      SessionReport[]      @relation("SessionReportUpdater")
   createdFieldVisitReports   FieldVisitReport[]   @relation("FieldVisitReportCreator")
@@ -583,10 +584,40 @@ model LawyerFeesContract {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  payments ContractPayment[]
+
   @@index([customerId])
   @@index([caseId])
   @@index([createdById])
   @@index([updatedById])
+}
+
+/// One collection against a fees contract. The contract's `totalFees` is the
+/// debt; the sum of its payments is what has been collected, and the difference
+/// is what is still owed. Installment fields on the contract are unrelated to
+/// this — collections are tracked as free-form amounts, not fixed schedules.
+model ContractPayment {
+  id String @id @default(uuid())
+
+  contractId String
+  contract   LawyerFeesContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
+
+  amount Decimal @db.Decimal(12, 2)
+  /// When the client actually paid — this is what buckets the monthly financials
+  /// view, independent of when the row was created.
+  paidAt DateTime
+  note   String?
+
+  recordedById String
+  recordedBy   User   @relation("ContractPaymentRecorder", fields: [recordedById], references: [id])
+
+  isDeleted Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([contractId])
+  @@index([paidAt])
+  @@index([recordedById])
 }
 
 enum PaymentStatus {

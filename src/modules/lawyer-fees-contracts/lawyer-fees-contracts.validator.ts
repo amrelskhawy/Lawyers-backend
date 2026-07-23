@@ -52,8 +52,30 @@ export const UpdateLawyerFeesContractSchema = z
     })
     .strict();
 
+// A collection against a contract. `amount` must be positive — refunds and
+// corrections are handled by editing or deleting the payment, not by negatives.
+export const CreateContractPaymentSchema = z
+    .object({
+        amount: decimalLike.refine((v) => Number(v) > 0, "Amount must be greater than zero"),
+        paidAt: isoDate,
+        note: z.string().nullable().optional(),
+    })
+    .strict();
+
+export const UpdateContractPaymentSchema = z
+    .object({
+        amount: decimalLike
+            .refine((v) => Number(v) > 0, "Amount must be greater than zero")
+            .optional(),
+        paidAt: isoDate.optional(),
+        note: z.string().nullable().optional(),
+    })
+    .strict();
+
 export type CreateLawyerFeesContractPayload = z.infer<typeof CreateLawyerFeesContractSchema>;
 export type UpdateLawyerFeesContractPayload = z.infer<typeof UpdateLawyerFeesContractSchema>;
+export type CreateContractPaymentPayload = z.infer<typeof CreateContractPaymentSchema>;
+export type UpdateContractPaymentPayload = z.infer<typeof UpdateContractPaymentSchema>;
 
 export const validateCreateLawyerFeesContract = (
     req: Request,
@@ -76,6 +98,36 @@ export const validateUpdateLawyerFeesContract = (
     next: NextFunction,
 ) => {
     const result = UpdateLawyerFeesContractSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateCreateContractPayment = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    const result = CreateContractPaymentSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateUpdateContractPayment = (
+    req: Request,
+    res: Response,
+    next: NextFunction,
+) => {
+    const result = UpdateContractPaymentSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)

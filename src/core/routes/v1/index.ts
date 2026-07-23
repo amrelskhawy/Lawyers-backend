@@ -21,6 +21,7 @@ import activityLogsRoutes from "../../../modules/activity-logs/activity-logs.rou
 import remindersRoutes from "../../../modules/reminders/reminders.routes.js";
 import attachmentsRoutes from "../../../modules/attachments/attachments.routes.js";
 import signaturesRoutes from "../../../modules/signatures/signatures.routes.js";
+import financialsRoutes from "../../../modules/financials/financials.routes.js";
 
 const router = Router();
 
@@ -45,5 +46,6 @@ router.use("/activity-logs", activityLogsRoutes);
 router.use("/reminders", remindersRoutes);
 router.use("/attachments", attachmentsRoutes);
 router.use("/signatures", signaturesRoutes);
+router.use("/financials", financialsRoutes);
 
 export default router;
