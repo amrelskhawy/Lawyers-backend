@@ -78,7 +78,11 @@ export class FinancialsService {
             { isDeleted: false },
             scopeFilter(query),
         ];
-        if (period) and.push({ contractDate: period });
+        // A contract's date is optional — fees can be agreed (and money owed)
+        // before anyone fills the contract date in. Filtering a period on
+        // `contractDate` alone would silently drop those undated contracts,
+        // hiding real balances the moment a year is picked. Keep them in.
+        if (period) and.push({ OR: [{ contractDate: period }, { contractDate: null }] });
         if (query.search) {
             const contains = { contains: query.search, mode: "insensitive" as const };
             and.push({
