@@ -22,6 +22,6 @@ export const getFinancialsContracts = asyncHandler(async (req: AuthRequest, res:
 });
 
 export const getFinancialsYears = asyncHandler(async (_req: AuthRequest, res: Response) => {
-    const data = await service.availableYears();
+    const data = await service.availableYears(parsedQuery(res));
     res.status(200).json(new AppResponse(true, "FINANCIALS_YEARS_RETRIEVED_SUCCESS", data));
 });

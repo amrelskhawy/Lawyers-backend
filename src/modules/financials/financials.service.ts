@@ -194,10 +194,18 @@ export class FinancialsService {
         };
     }
 
-    /** Years that actually have contracts, newest first — drives the year picker. */
-    async availableYears(): Promise<number[]> {
+    /**
+     * Years that actually have contracts, newest first — drives the year picker.
+     * A self-scoped viewer only gets the years their own contracts fall in;
+     * offering them a year with nothing behind it would just show an empty page.
+     */
+    async availableYears(query: FinancialsQuery): Promise<number[]> {
         const rows = await prisma.lawyerFeesContract.findMany({
-            where: { isDeleted: false, contractDate: { not: null } },
+            where: {
+                isDeleted: false,
+                contractDate: { not: null },
+                ...(query.restrictedToSelf ? scopeFilter(query) : {}),
+            },
             select: { contractDate: true },
         });
         const years = new Set<number>();

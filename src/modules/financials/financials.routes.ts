@@ -9,10 +9,12 @@ import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 
 const router = express.Router();
 
-// Company-wide money — admins and moderators only.
-router.use(protect, requireRole("ADMIN", "MODERATOR"));
+// Admins and moderators see all the money; a lawyer or consultant is narrowed
+// to the clients they sourced by `validateFinancialsQuery`, which overrides the
+// scope from the token. Every route below must therefore run that validator.
+router.use(protect, requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"));
 
-router.get("/years", getFinancialsYears);
+router.get("/years", validateFinancialsQuery, getFinancialsYears);
 router.get("/summary", validateFinancialsQuery, getFinancialsSummary);
 router.get("/contracts", validateFinancialsQuery, getFinancialsContracts);
 
