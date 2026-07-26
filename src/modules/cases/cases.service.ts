@@ -92,6 +92,8 @@ export interface CaseListOptions {
     onlyClosed?: boolean;
     /** Split the case list by the real-customer flag: true → Client Cases, false → Customer Meetings. */
     isRealCustomer?: boolean;
+    /** Restrict to one customer's cases — used by the fee-contract case picker. */
+    customerId?: string;
 }
 
 export class CasesService {
@@ -143,6 +145,7 @@ export class CasesService {
             });
         }
 
+        if (opts.customerId) and.push({ customerId: opts.customerId });
         if (opts.isRealCustomer !== undefined) and.push({ isRealCustomer: opts.isRealCustomer });
         if (opts.caseType) and.push({ caseType: opts.caseType });
         if (opts.caseDegree === "UNASSIGNED") and.push({ caseDegree: null });

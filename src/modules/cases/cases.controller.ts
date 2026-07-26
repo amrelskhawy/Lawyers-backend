@@ -55,6 +55,7 @@ export const listCases = asyncHandler(async (req: AuthRequest, res: Response) =>
         lawyerId: asStr(req.query.lawyerId),
         onlyClosed: req.query.onlyClosed === "true",
         isRealCustomer: realCustomer,
+        customerId: asStr(req.query.customerId),
     });
     res.status(200).json(new AppResponse(true, "CASES_RETRIEVED_SUCCESS", data, 200, meta));
 });
