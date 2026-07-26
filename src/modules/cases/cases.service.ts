@@ -3,8 +3,10 @@ import prisma from "../../core/db/prisma.js";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import { driveService } from "../../core/services/google/drive.js";
 import { sendEmailWithTemplate } from "../../core/utils/email.js";
-import { sendWhatsAppFile } from "../../core/services/waapi/waapi.service.js";
+import { sendWhatsAppFile, sendWhatsAppMessage } from "../../core/services/waapi/waapi.service.js";
 import { renderCaseReportPdf } from "./case-pdf.service.js";
+import { buildOutstandingBalanceMessage } from "./cases.messages.js";
+import { round2, sumAmounts, toAmount } from "../../core/utils/money.js";
 import { hijriToGregorian, hijriMonthRange } from "../../core/utils/hijri.js";
 import { parseListQuery, buildMeta } from "../../core/utils/pagination.js";
 import type { CaseType, CaseDegree } from "@prisma/client";
@@ -29,6 +31,20 @@ const caseInclude = {
     sourceLawyer: { select: { id: true, name: true } },
     createdBy: { select: { id: true, name: true } },
 } satisfies Prisma.CaseInclude;
+
+/**
+ * Outcome of the balance-reminder WhatsApp attached to a case-close response,
+ * so the dashboard can tell staff whether the client was actually notified.
+ */
+export interface BalanceNotification {
+    /** Money still owed on the case's contracts, in SAR. */
+    remaining: number;
+    sent: boolean;
+    phone?: string;
+    /** Why no message went out despite the case closing successfully. */
+    skippedReason?: "NO_BALANCE" | "NO_PHONE";
+    error?: string;
+}
 
 /**
  * The source lawyer only exists for non-company clients. A company client never
@@ -626,6 +642,73 @@ export class CasesService {
     }
 
     /**
+     * Money still owed on *this case* = Σ(contract totalFees) − Σ(collected
+     * payments) over the contracts linked to it. Deleted contracts and deleted
+     * payments are excluded, matching how the financials module reports debt.
+     *
+     * Scope is strictly `caseId`. The client's other contracts — including ones
+     * with no case link at all — are somebody else's balance and must never be
+     * folded into this case's closing reminder.
+     *
+     * Phone and name both come from a contract that still carries a balance
+     * (that is who signed for the money); the customer record is the fallback
+     * when contracts were created without them.
+     */
+    private async getOutstandingBalance(caseId: string) {
+        const contracts = await prisma.lawyerFeesContract.findMany({
+            where: { caseId, isDeleted: false },
+            select: {
+                clientName: true,
+                clientPhone: true,
+                totalFees: true,
+                payments: { where: { isDeleted: false }, select: { amount: true } },
+            },
+        });
+
+        let remaining = 0;
+        let contractPhone: string | null = null;
+        let contractName: string | null = null;
+        for (const c of contracts) {
+            const owed = round2(toAmount(c.totalFees) - sumAmounts(c.payments.map((p) => p.amount)));
+            if (owed <= 0) continue;
+            remaining = round2(remaining + owed);
+            contractPhone ??= c.clientPhone?.trim() || null;
+            contractName ??= c.clientName?.trim() || null;
+        }
+
+        return { remaining, contractPhone, contractName };
+    }
+
+    /**
+     * Best-effort WhatsApp reminder of the balance left on a just-closed case.
+     * A WAAPI failure is reported back to the caller rather than thrown, so a
+     * dead provider can never undo a close that already committed.
+     */
+    private async notifyOutstandingBalance(
+        caseId: string,
+        customerPhone: string | null,
+        customerName: string | null,
+    ): Promise<BalanceNotification> {
+        const { remaining, contractPhone, contractName } = await this.getOutstandingBalance(caseId);
+        if (remaining <= 0) {
+            return { remaining, sent: false, skippedReason: "NO_BALANCE" };
+        }
+
+        const phone = contractPhone ?? customerPhone?.trim() ?? null;
+        if (!phone) {
+            return { remaining, sent: false, skippedReason: "NO_PHONE" };
+        }
+
+        const name = contractName ?? customerName?.trim() ?? null;
+        try {
+            await sendWhatsAppMessage(phone, buildOutstandingBalanceMessage(remaining, name));
+            return { remaining, sent: true, phone };
+        } catch (e: any) {
+            return { remaining, sent: false, phone, error: e?.message ?? "WhatsApp send failed" };
+        }
+    }
+
+    /**
      * Toggle the case's "fully completed" state. Completing cancels every still
      * PENDING reminder (the scheduler only sends PENDING, so cancelled ones are
      * never delivered) and blocks new reminder actions. Reopening clears the
@@ -647,7 +730,7 @@ export class CasesService {
             }
         }
 
-        return prisma.$transaction(async (tx) => {
+        const updated = await prisma.$transaction(async (tx) => {
             if (completed) {
                 await tx.reminder.updateMany({
                     where: { caseId, status: "PENDING" },
@@ -666,6 +749,22 @@ export class CasesService {
                 include: caseInclude,
             });
         });
+
+        if (!completed) return updated;
+
+        // Runs after the commit and never rethrows — the case is already closed,
+        // and a WhatsApp/WAAPI failure must not turn that into a failed request.
+        const balanceNotification = await this.notifyOutstandingBalance(
+            caseId,
+            updated.customer?.phone ?? null,
+            updated.customer?.fullName ?? null,
+        ).catch((e: any) => ({
+            remaining: 0,
+            sent: false,
+            error: e?.message ?? "balance lookup failed",
+        }) satisfies BalanceNotification);
+
+        return { ...updated, balanceNotification };
     }
 
     /**
