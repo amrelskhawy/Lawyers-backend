@@ -37,25 +37,27 @@ model User {
   createdLawyerFeesContracts LawyerFeesContract[] @relation("LawyerFeesContractCreator")
   updatedLawyerFeesContracts LawyerFeesContract[] @relation("LawyerFeesContractUpdater")
 
-  createdBookings    Booking[]    @relation("BookingCreator")
-  updatedBookings    Booking[]    @relation("BookingUpdater")
-  createdServices    Service[]    @relation("ServiceCreator")
-  updatedServices    Service[]    @relation("ServiceUpdater")
-  createdCustomers   Customer[]   @relation("CustomerCreator")
-  updatedCustomers   Customer[]   @relation("CustomerUpdater")
-  createdHolidays    Holiday[]    @relation("HolidayCreator")
-  updatedHolidays    Holiday[]    @relation("HolidayUpdater")
-  createdWorkingDays WorkingDay[] @relation("WorkingDayCreator")
-  updatedWorkingDays WorkingDay[] @relation("WorkingDayUpdater")
-  createdOrganizers  Organizer[]  @relation("OrganizerCreator")
-  updatedOrganizers  Organizer[]  @relation("OrganizerUpdater")
+  createdBookings          Booking[]          @relation("BookingCreator")
+  updatedBookings          Booking[]          @relation("BookingUpdater")
+  createdServices          Service[]          @relation("ServiceCreator")
+  updatedServices          Service[]          @relation("ServiceUpdater")
+  createdConsultingRecords ConsultingRecord[] @relation("ConsultingRecordCreator")
+  updatedConsultingRecords ConsultingRecord[] @relation("ConsultingRecordUpdater")
+  createdCustomers         Customer[]         @relation("CustomerCreator")
+  updatedCustomers         Customer[]         @relation("CustomerUpdater")
+  createdHolidays          Holiday[]          @relation("HolidayCreator")
+  updatedHolidays          Holiday[]          @relation("HolidayUpdater")
+  createdWorkingDays       WorkingDay[]       @relation("WorkingDayCreator")
+  updatedWorkingDays       WorkingDay[]       @relation("WorkingDayUpdater")
+  createdOrganizers        Organizer[]        @relation("OrganizerCreator")
+  updatedOrganizers        Organizer[]        @relation("OrganizerUpdater")
 
-  activityLogs     ActivityLog[]
-  createdReminders  Reminder[] @relation("ReminderCreator")
-  receivedReminders Reminder[] @relation("ReminderRecipient")
+  activityLogs      ActivityLog[]
+  createdReminders  Reminder[]    @relation("ReminderCreator")
+  receivedReminders Reminder[]    @relation("ReminderRecipient")
 
-  completedCases       Case[]           @relation("CaseCompleter")
-  uploadedAttachments  CaseAttachment[] @relation("AttachmentUploader")
+  completedCases      Case[]           @relation("CaseCompleter")
+  uploadedAttachments CaseAttachment[] @relation("AttachmentUploader")
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -181,8 +183,8 @@ model Reminder {
   createdBy   User   @relation("ReminderCreator", fields: [createdById], references: [id])
 
   // Set only for MEMO_REQUEST reminders — the consultant who was notified.
-  recipientId  String?
-  recipient    User?    @relation("ReminderRecipient", fields: [recipientId], references: [id])
+  recipientId String?
+  recipient   User?   @relation("ReminderRecipient", fields: [recipientId], references: [id])
 
   // Deadline date stored on MEMO_REQUEST reminders for the consultant reminders list.
   memoDeadline DateTime?
@@ -237,6 +239,27 @@ model Service {
 
   Booking Booking[]
 
+  @@index([createdById])
+  @@index([updatedById])
+}
+
+model ConsultingRecord {
+  id         String   @id @default(uuid())
+  clientName String
+  date       DateTime
+  value      Decimal  @db.Decimal(10, 2)
+  type       String
+  isDeleted  Boolean  @default(false)
+
+  createdById String?
+  createdBy   User?   @relation("ConsultingRecordCreator", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("ConsultingRecordUpdater", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([date])
   @@index([createdById])
   @@index([updatedById])
 }
@@ -324,9 +347,9 @@ model Case {
   otherCaseType   String?
   caseDegree      CaseDegree?
   otherDegreeText String?
-  caseDate      DateTime
-  hijriDate     String?
-  agencyNumber  String?
+  caseDate        DateTime
+  hijriDate       String?
+  agencyNumber    String?
 
   // When true, the case is a real customer's case (shown in "Client Cases").
   // When false (default), it is only a "Customer Meeting" — surfaced in the
@@ -344,20 +367,20 @@ model Case {
   sourceLawyer   User?   @relation("CaseSourceLawyer", fields: [sourceLawyerId], references: [id])
 
   // Lawyer slot
-  wantsSpecificLawyer  Boolean              @default(false)
-  preferredLawyerId    String?
-  preferredLawyer      User?                @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
-  preferredLawyerName  String?
-  assignmentStatus         CaseAssignmentStatus @default(UNASSIGNED)
-  assignmentRejectedAt     DateTime?
+  wantsSpecificLawyer       Boolean              @default(false)
+  preferredLawyerId         String?
+  preferredLawyer           User?                @relation("CasePreferredLawyer", fields: [preferredLawyerId], references: [id])
+  preferredLawyerName       String?
+  assignmentStatus          CaseAssignmentStatus @default(UNASSIGNED)
+  assignmentRejectedAt      DateTime?
   assignmentRejectionReason String?
 
   // Consultant slot — independent of the lawyer slot (own accept/reject lifecycle)
-  consultantId         String?
-  consultant           User?                @relation("CaseConsultant", fields: [consultantId], references: [id])
-  consultantName       String?
-  consultantAssignmentStatus         CaseAssignmentStatus @default(UNASSIGNED)
-  consultantAssignmentRejectedAt     DateTime?
+  consultantId                        String?
+  consultant                          User?                @relation("CaseConsultant", fields: [consultantId], references: [id])
+  consultantName                      String?
+  consultantAssignmentStatus          CaseAssignmentStatus @default(UNASSIGNED)
+  consultantAssignmentRejectedAt      DateTime?
   consultantAssignmentRejectionReason String?
 
   sessionReceiverId   String?
@@ -602,7 +625,7 @@ model ContractPayment {
   contractId String
   contract   LawyerFeesContract @relation(fields: [contractId], references: [id], onDelete: Cascade)
 
-  amount Decimal @db.Decimal(12, 2)
+  amount Decimal  @db.Decimal(12, 2)
   /// When the client actually paid — this is what buckets the monthly financials
   /// view, independent of when the row was created.
   paidAt DateTime
