@@ -1,5 +1,6 @@
 import { Response, NextFunction } from "express";
 import { z } from "zod";
+import { Role } from "@prisma/client";
 import { AppResponse } from "../../core/utils/AppResponse.js";
 import type { AuthRequest } from "../../core/middlewares/authMiddleware.js";
 
@@ -24,8 +25,13 @@ export type FinancialsQuery = z.infer<typeof FinancialsQuerySchema> & {
     restrictedToSelf?: boolean;
 };
 
-/** Roles that only ever see their own sourced money, never the company's. */
-const SELF_SCOPED_ROLES = ["LAWYER", "CONSULTANT"];
+/**
+ * Roles that only ever see their own sourced money, never the company's —
+ * every staff role except ADMIN/MODERATOR, who see everything.
+ */
+const SELF_SCOPED_ROLES: string[] = Object.values(Role).filter(
+    (role) => role !== "ADMIN" && role !== "MODERATOR",
+);
 
 export const validateFinancialsQuery = (req: AuthRequest, res: Response, next: NextFunction) => {
     const result = FinancialsQuerySchema.safeParse(req.query);

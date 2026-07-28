@@ -310,6 +310,14 @@ export class CasesService {
         });
     }
 
+    /** Every staff user (any role) — used to populate the case "source" picker. */
+    async listStaff() {
+        return prisma.user.findMany({
+            select: { id: true, name: true, email: true, role: true },
+            orderBy: { name: "asc" },
+        });
+    }
+
     async getById(id: string, requestingUser: RequestingUser) {
         const c = await prisma.case.findUnique({
             where: { id },

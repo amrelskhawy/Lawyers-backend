@@ -87,6 +87,11 @@ export const listLawyers = asyncHandler(async (_req: AuthRequest, res: Response)
     res.status(200).json(new AppResponse(true, "LAWYERS_RETRIEVED_SUCCESS", data));
 });
 
+export const listStaff = asyncHandler(async (_req: AuthRequest, res: Response) => {
+    const data = await cases.listStaff();
+    res.status(200).json(new AppResponse(true, "STAFF_RETRIEVED_SUCCESS", data));
+});
+
 export const getCase = asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = await cases.getById(req.params.id as string, req.user);
     res.status(200).json(new AppResponse(true, "CASE_RETRIEVED_SUCCESS", data));

@@ -3,6 +3,7 @@ import {
     listCases,
     listUnscheduledCases,
     listLawyers,
+    listStaff,
     getCase,
     createCase,
     updateCase,
@@ -53,6 +54,14 @@ router.get(
     "/lawyers",
     protect,
     listLawyers,
+);
+// All staff (any role) — feeds the "source" picker on the case edit page,
+// which only ADMIN/MODERATOR can see or edit.
+router.get(
+    "/staff",
+    protect,
+    requireRole("ADMIN", "MODERATOR"),
+    listStaff,
 );
 router.get(
     "/:id",
