@@ -244,12 +244,17 @@ model Service {
 }
 
 model ConsultingRecord {
-  id         String   @id @default(uuid())
+  id String @id @default(uuid())
+
+  customerId String?
+  customer   Customer? @relation(fields: [customerId], references: [id])
+  /// Snapshot of the customer's name at the time of the record, so it stays readable even if the customer is later renamed/removed.
   clientName String
-  date       DateTime
-  value      Decimal  @db.Decimal(10, 2)
-  type       String
-  isDeleted  Boolean  @default(false)
+
+  date      DateTime
+  value     Decimal  @db.Decimal(10, 2)
+  type      String
+  isDeleted Boolean  @default(false)
 
   createdById String?
   createdBy   User?   @relation("ConsultingRecordCreator", fields: [createdById], references: [id])
@@ -260,6 +265,7 @@ model ConsultingRecord {
   updatedAt DateTime @updatedAt
 
   @@index([date])
+  @@index([customerId])
   @@index([createdById])
   @@index([updatedById])
 }
@@ -285,6 +291,7 @@ model Customer {
   bookings            Booking[]
   cases               Case[]
   lawyerFeesContracts LawyerFeesContract[]
+  consultingRecords   ConsultingRecord[]
 
   @@index([createdById])
   @@index([updatedById])

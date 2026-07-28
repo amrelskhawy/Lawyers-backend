@@ -6,6 +6,8 @@ import {
     updateConsultingRecord,
     deleteConsultingRecord,
     deleteMultipleConsultingRecords,
+    getConsultingSummary,
+    getConsultingYears,
 } from "./consulting.controller.js";
 import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
@@ -17,6 +19,8 @@ const router = express.Router();
 
 router.use(protect, requireRole("ADMIN", "MODERATOR"));
 
+router.get("/years", getConsultingYears);
+router.get("/summary", getConsultingSummary);
 router.get("/:id", getConsultingRecord);
 router.get("/", listConsultingRecords);
 router.post("/", validateCreateConsulting, logActivity("CREATE", "ConsultingRecord"), createConsultingRecord);

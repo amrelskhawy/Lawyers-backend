@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { AppResponse } from '../../core/utils/AppResponse.js';
 
 const ConsultingBaseObject = z.object({
-    clientName: z.string().min(1).max(150),
+    customerId: z.string().uuid("Invalid customer"),
     date: z.coerce.date(),
     value: z.number().min(0, "Value must be a non-negative number"),
     type: z.string().min(1).max(150),

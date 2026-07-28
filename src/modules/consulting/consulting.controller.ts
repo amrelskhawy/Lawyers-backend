@@ -11,6 +11,16 @@ export const listConsultingRecords = asyncHandler(async (req: Request, res: Resp
     res.status(200).json(new AppResponse(true, "CONSULTING_RECORDS_RETRIEVED_SUCCESS", data, 200, meta));
 });
 
+export const getConsultingSummary = asyncHandler(async (req: Request, res: Response) => {
+    const summary = await consultingService.getSummary(req.query);
+    res.status(200).json(new AppResponse(true, "CONSULTING_SUMMARY_RETRIEVED_SUCCESS", summary));
+});
+
+export const getConsultingYears = asyncHandler(async (req: Request, res: Response) => {
+    const years = await consultingService.getAvailableYears();
+    res.status(200).json(new AppResponse(true, "CONSULTING_YEARS_RETRIEVED_SUCCESS", years));
+});
+
 export const getConsultingRecord = asyncHandler(async (req: Request, res: Response) => {
     const id = req.params.id as string;
     const record = await consultingService.getConsultingRecordById(id);
