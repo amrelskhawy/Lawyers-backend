@@ -97,7 +97,7 @@ export class FinancialsService {
         return prisma.lawyerFeesContract.findMany({
             where: { AND: and },
             select: contractSelect,
-            orderBy: { contractDate: "desc" },
+            orderBy: { createdAt: "desc" },
         });
     }
 
@@ -183,10 +183,9 @@ export class FinancialsService {
         rawQuery: Record<string, unknown>,
     ): Promise<{ data: FinancialsRow[]; meta: PageMeta }> {
         const q = parseListQuery(rawQuery, { defaultLimit: 20 });
-        const rows = (await this.loadContracts(query))
-            .map((c) => this.toRow(c, query))
-            // What must be chased first is what is still owed.
-            .sort((a, b) => b.remaining - a.remaining);
+        // Newest first — the DB already ordered by `createdAt` desc, so the
+        // rows keep that order rather than being re-sorted by amount owed.
+        const rows = (await this.loadContracts(query)).map((c) => this.toRow(c, query));
 
         return {
             data: rows.slice(q.skip, q.skip + q.take),
