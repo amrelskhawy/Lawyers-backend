@@ -9,10 +9,10 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 const TEMPLATE_PATH = path.resolve(__dirname, "../../views/lawyer-fees/lawyer-fees-contract.hbs");
-const BG_DIR        = path.resolve(__dirname, "../../views/lawyer-fees");
-const BG_URL_1      = `file://${path.join(BG_DIR, "lawyer-fees-contract-01.png")}`;
-const BG_URL_2      = `file://${path.join(BG_DIR, "lawyer-fees-contract-02.png")}`;
-const BG_URL_3      = `file://${path.join(BG_DIR, "lawyer-fees-contract-03.png")}`;
+const BG_DIR = path.resolve(__dirname, "../../views/lawyer-fees");
+const BG_URL_1 = `file://${path.join(BG_DIR, "lawyer-fees-contract-01.png")}`;
+const BG_URL_2 = `file://${path.join(BG_DIR, "lawyer-fees-contract-02.png")}`;
+const BG_URL_3 = `file://${path.join(BG_DIR, "lawyer-fees-contract-03.png")}`;
 
 const PAGE2_DEFAULT = `<p>2 . جميع الأتعاب المدفوعة تعتبر مقابل الأعمال المنجزة وغير قابلة للاسترداد.</p>
 <p>3 . يتحمل الطرف الثاني الرسوم القضائية، والمصاريف الحكومية، ورسوم الغرف التجارية، وأي مصاريف إدارية لازمة لسير الإجراءات.</p>
@@ -33,7 +33,7 @@ const PAGE3_DEFAULT = `<p><strong>البند الرابع – التزامات �
 <p>2. التعاون التام مع الطرف الأول، وعدم تعيين أي محامٍ آخر في نفس القضية دون موافقة خطية منه.</p>
 <p>3. في حالة قيام الطرف الثاني بالغاء الوكالة الممنوحة لطرف الأول في أي مرحلة من مراحل الدعوى بالإرادة المنفردة تعتبر جميع اتعاب الطرف الأول المالية حاله وواجبة السداد في حينه.</p>
 <p><strong>البند الخامس</strong></p>
-<p>يتكون هذا العقد من ورقتين، يتضمن خمسة بنود رئيسية بالإضافة إلى التمهيد، ويُعتبر كل منها مكملاً ومفسراً للآخر، وقع من نسختين أصليتين، ولا يُعتد بأي تعديل أو إضافة ما لم يكن مكتوباً وموقعاً من الطرفين.</p>`;
+<p>يتكون هذا العقد من 3 ورقات، يتضمن خمسة بنود رئيسية بالإضافة إلى التمهيد، ويُعتبر كل منها مكملاً ومفسراً للآخر، وقع من نسختين أصليتين، ولا يُعتد بأي تعديل أو إضافة ما لم يكن مكتوباً وموقعاً من الطرفين.</p>`;
 
 function escapeHtml(s: string): string {
     return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
@@ -48,10 +48,19 @@ function isEffectivelyEmptyHtml(html: string): boolean {
     return stripped.length === 0;
 }
 
+/**
+ * Quill 2's getSemanticHTML() (what the editor emits) escapes every space as &nbsp;, which
+ * makes a paragraph one unbreakable word — it then refuses to wrap at spaces, stranding
+ * markers like "أ-" on their own line and splitting words mid-word in the rendered page.
+ */
+function normalizeSpaces(html: string): string {
+    return html.replace(/&nbsp;/gi, " ").replace(/\u00a0/g, " ");
+}
+
 function ensureHtml(value: string | null | undefined, fallback: string): string {
     if (!value) return fallback;
     if (/<[a-z][\s\S]*>/i.test(value)) {
-        return isEffectivelyEmptyHtml(value) ? fallback : value;
+        return isEffectivelyEmptyHtml(value) ? fallback : normalizeSpaces(value);
     }
     const paragraphs = value
         .split(/\n+/)
@@ -87,30 +96,30 @@ export function buildLawyerFeesContractContext(c: LawyerFeesContract) {
         bg_url_2: BG_URL_2,
         bg_url_3: BG_URL_3,
 
-        contract_number:    c.contractNumber ?? "",
-        contract_day:       c.contractDay    ?? "",
-        contract_date:      formatDate(c.contractDate),
-        hijri_date:         c.hijriDate      ?? "",
+        contract_number: c.contractNumber ?? "",
+        contract_day: c.contractDay ?? "",
+        contract_date: formatDate(c.contractDate),
+        hijri_date: c.hijriDate ?? "",
 
-        client_name:        c.clientName     ?? "",
-        client_id_number:   c.clientIdNumber ?? "",
-        client_phone:       c.clientPhone    ?? "",
+        client_name: c.clientName ?? "",
+        client_id_number: c.clientIdNumber ?? "",
+        client_phone: c.clientPhone ?? "",
 
         service_description: c.serviceDescription ?? "",
 
-        total_fees:         formatAmount(c.totalFees),
-        first_installment:       formatAmount(c.firstInstallment),
-        first_installment_note:  c.firstInstallmentNote ?? "",
-        second_installment:      formatAmount(c.secondInstallment),
-        other_fees:         c.otherFees ?? "",
-        currency:           c.currency ?? "SAR",
+        total_fees: formatAmount(c.totalFees),
+        first_installment: formatAmount(c.firstInstallment),
+        first_installment_note: c.firstInstallmentNote ?? "",
+        second_installment: formatAmount(c.secondInstallment),
+        other_fees: c.otherFees ?? "",
+        currency: c.currency ?? "SAR",
 
-        page2_content:      ensureHtml(c.page2Content, PAGE2_DEFAULT),
-        page3_content:      ensureHtml(c.page3Content, PAGE3_DEFAULT),
+        page2_content: ensureHtml(c.page2Content, PAGE2_DEFAULT),
+        page3_content: ensureHtml(c.page3Content, PAGE3_DEFAULT),
 
-        first_party_signature_url:  c.firstPartySignature  ?? "",
+        first_party_signature_url: c.firstPartySignature ?? "",
         second_party_signature_url: c.secondPartySignature ?? "",
-        second_party_signed_at:     c.secondPartySignedAt ? formatDate(c.secondPartySignedAt) : "",
+        second_party_signed_at: c.secondPartySignedAt ? formatDate(c.secondPartySignedAt) : "",
     };
 }
 
@@ -144,9 +153,9 @@ export async function renderLawyerFeesContractPdf(c: LawyerFeesContract): Promis
                     img.complete && img.naturalWidth > 0
                         ? Promise.resolve()
                         : new Promise<void>((resolve) => {
-                              img.addEventListener("load",  () => resolve(), { once: true });
-                              img.addEventListener("error", () => resolve(), { once: true });
-                          }),
+                            img.addEventListener("load", () => resolve(), { once: true });
+                            img.addEventListener("error", () => resolve(), { once: true });
+                        }),
                 ),
             );
         });
