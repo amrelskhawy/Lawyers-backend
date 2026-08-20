@@ -13,6 +13,7 @@ export interface TaskFilters {
 export interface CreateTaskPayload {
     title: string;
     description?: string | null;
+    notes?: string | null;
     status?: TaskStatus;
     priority?: TaskPriority;
     dueDate?: string | null;
@@ -21,6 +22,12 @@ export interface CreateTaskPayload {
 }
 
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
+
+/** The slice of a task an assignee may change: status and progress notes. */
+export interface TaskProgressPayload {
+    status?: TaskStatus;
+    notes?: string | null;
+}
 
 /** The minimum a permission check needs to know about a task. */
 export interface TaskParticipants {

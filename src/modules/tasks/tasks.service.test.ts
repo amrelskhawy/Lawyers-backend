@@ -20,6 +20,8 @@ import {
     buildTaskScopeWhere,
     canEditTask,
     canChangeTaskStatus,
+    canEditTaskNotes,
+    canDeleteTask,
     TasksService,
 } from "./tasks.service.js";
 
@@ -84,6 +86,48 @@ describe("canChangeTaskStatus", () => {
 
     it("denies someone who is neither creator nor assignee", () => {
         expect(canChangeTaskStatus({ createdById: OTHER, assignees: [] }, ME)).toBe(false);
+    });
+});
+
+describe("canEditTaskNotes", () => {
+    it("allows the creator", () => {
+        expect(canEditTaskNotes({ createdById: ME, assignees: [] }, ME)).toBe(true);
+    });
+
+    it("allows an assignee — notes are where they report progress", () => {
+        expect(canEditTaskNotes({ createdById: OTHER, assignees: [{ userId: ME }] }, ME)).toBe(true);
+    });
+
+    it("denies someone who is neither creator nor assignee", () => {
+        expect(canEditTaskNotes({ createdById: OTHER, assignees: [] }, ME)).toBe(false);
+    });
+});
+
+describe("canDeleteTask", () => {
+    it("allows the creator whatever their role", () => {
+        const task = { createdById: ME, assignees: [] };
+        expect(canDeleteTask(task, { id: ME, role: "LAWYER" })).toBe(true);
+    });
+
+    it("allows an ADMIN who is an assignee", () => {
+        const task = { createdById: OTHER, assignees: [{ userId: ME }] };
+        expect(canDeleteTask(task, { id: ME, role: "ADMIN" })).toBe(true);
+    });
+
+    it("allows a MODERATOR who is an assignee", () => {
+        const task = { createdById: OTHER, assignees: [{ userId: ME }] };
+        expect(canDeleteTask(task, { id: ME, role: "MODERATOR" })).toBe(true);
+    });
+
+    it("denies an ADMIN who is neither creator nor assignee", () => {
+        // Strict visibility holds: a task outside their scope stays untouchable.
+        const task = { createdById: OTHER, assignees: [] };
+        expect(canDeleteTask(task, { id: ME, role: "ADMIN" })).toBe(false);
+    });
+
+    it("denies a plain assignee who is not ADMIN or MODERATOR", () => {
+        const task = { createdById: OTHER, assignees: [{ userId: ME }] };
+        expect(canDeleteTask(task, { id: ME, role: "LAWYER" })).toBe(false);
     });
 });
 

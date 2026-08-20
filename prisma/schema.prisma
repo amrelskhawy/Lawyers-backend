@@ -701,6 +701,10 @@ model Task {
   title       String
   description String?
 
+  /// Progress notes. The only free-text field assignees may write to — the rest
+  /// of the task belongs to whoever created it.
+  notes String?
+
   status   TaskStatus   @default(TODO)
   priority TaskPriority @default(MEDIUM)
   dueDate  DateTime?

@@ -6,6 +6,7 @@ const priorityEnum = z.enum(["LOW", "MEDIUM", "HIGH"]);
 export const CreateTaskSchema = z.object({
     title: z.string().trim().min(1, "Title is required").max(200),
     description: z.string().trim().max(2000).nullable().optional(),
+    notes: z.string().trim().max(2000).nullable().optional(),
     status: statusEnum.optional(),
     priority: priorityEnum.optional(),
     dueDate: z.string().datetime().nullable().optional(),
@@ -15,6 +16,12 @@ export const CreateTaskSchema = z.object({
 
 export const UpdateTaskSchema = CreateTaskSchema.partial();
 
-export const UpdateTaskStatusSchema = z.object({
-    status: statusEnum,
-});
+/** What an assignee may change: status, progress notes, or both. */
+export const UpdateTaskProgressSchema = z
+    .object({
+        status: statusEnum.optional(),
+        notes: z.string().trim().max(2000).nullable().optional(),
+    })
+    .refine((body) => body.status !== undefined || body.notes !== undefined, {
+        message: "Provide a status or notes to update",
+    });

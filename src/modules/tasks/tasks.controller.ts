@@ -43,21 +43,17 @@ export const updateTask = asyncHandler(async (req: AuthRequest, res: Response) =
     res.status(200).json(new AppResponse(true, "TASK_UPDATED_SUCCESS", data));
 });
 
-export const updateTaskStatus = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.updateStatus(
-        req.params.id as string,
-        req.user.id,
-        req.body.status,
-    );
-    res.status(200).json(new AppResponse(true, "TASK_STATUS_UPDATED_SUCCESS", data));
+export const updateTaskProgress = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await TasksService.updateProgress(req.params.id as string, req.user.id, req.body);
+    res.status(200).json(new AppResponse(true, "TASK_PROGRESS_UPDATED_SUCCESS", data));
 });
 
 export const deleteTask = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.remove(req.params.id as string, req.user.id);
+    const data = await TasksService.remove(req.params.id as string, req.user);
     res.status(200).json(new AppResponse(true, "TASK_DELETED_SUCCESS", data));
 });
 
 export const deleteMultipleTasks = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.removeMany(req.body.ids, req.user.id);
+    const data = await TasksService.removeMany(req.body.ids, req.user);
     res.status(200).json(new AppResponse(true, "TASKS_DELETED_SUCCESS", data));
 });

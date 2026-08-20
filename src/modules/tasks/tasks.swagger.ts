@@ -12,6 +12,7 @@
  *         id: { type: string, format: uuid }
  *         title: { type: string }
  *         description: { type: string, nullable: true }
+ *         notes: { type: string, nullable: true, description: Progress notes — the one field assignees may write }
  *         status: { type: string, enum: [TODO, IN_PROGRESS, DONE] }
  *         priority: { type: string, enum: [LOW, MEDIUM, HIGH] }
  *         dueDate: { type: string, format: date-time, nullable: true }
@@ -29,6 +30,7 @@
  *       properties:
  *         title: { type: string, maxLength: 200 }
  *         description: { type: string, nullable: true }
+ *         notes: { type: string, nullable: true }
  *         status: { type: string, enum: [TODO, IN_PROGRESS, DONE] }
  *         priority: { type: string, enum: [LOW, MEDIUM, HIGH] }
  *         dueDate: { type: string, format: date-time, nullable: true }
@@ -110,7 +112,7 @@
  *       403: { description: TASK_FORBIDDEN }
  *   delete:
  *     tags: [Tasks]
- *     summary: Delete a task (creator only)
+ *     summary: Delete a task (creator, or an ADMIN/MODERATOR assigned to it)
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -121,10 +123,11 @@
  *       200: { description: Task deleted }
  *       403: { description: TASK_FORBIDDEN }
  *
- * /tasks/{id}/status:
+ * /tasks/{id}/progress:
  *   patch:
  *     tags: [Tasks]
- *     summary: Move a task along its status (creator or assignee)
+ *     summary: Update status and/or progress notes (creator or assignee)
+ *     description: The only write an assignee gets — every other field is the creator's.
  *     security: [{ bearerAuth: [] }]
  *     parameters:
  *       - in: path
@@ -137,17 +140,18 @@
  *         application/json:
  *           schema:
  *             type: object
- *             required: [status]
  *             properties:
  *               status: { type: string, enum: [TODO, IN_PROGRESS, DONE] }
+ *               notes: { type: string, nullable: true }
  *     responses:
- *       200: { description: Status updated }
+ *       200: { description: Progress updated }
+ *       400: { description: TASK_NOTHING_TO_UPDATE }
  *       403: { description: TASK_FORBIDDEN }
  *
  * /tasks/many:
  *   delete:
  *     tags: [Tasks]
- *     summary: Delete several tasks (only those I created are removed)
+ *     summary: Delete several tasks (only the ones I may delete are removed)
  *     security: [{ bearerAuth: [] }]
  *     requestBody:
  *       required: true
