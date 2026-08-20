@@ -1,0 +1,29 @@
+import type { TaskPriority, TaskStatus } from "@prisma/client";
+
+/** Which half of "my tasks" the caller wants; omitted means both. */
+export type TaskOwnership = "created" | "assigned";
+
+export interface TaskFilters {
+    mine?: TaskOwnership;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    caseId?: string;
+}
+
+export interface CreateTaskPayload {
+    title: string;
+    description?: string | null;
+    status?: TaskStatus;
+    priority?: TaskPriority;
+    dueDate?: string | null;
+    caseId?: string | null;
+    assigneeIds?: string[];
+}
+
+export type UpdateTaskPayload = Partial<CreateTaskPayload>;
+
+/** The minimum a permission check needs to know about a task. */
+export interface TaskParticipants {
+    createdById: string;
+    assignees: { userId: string }[];
+}
