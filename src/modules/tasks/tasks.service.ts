@@ -11,19 +11,29 @@ import type {
 
 /**
  * The single source of truth for who can see a task: its creator and its
- * assignees, nobody else. Deliberately role-blind — an ADMIN gets exactly the
- * same scope as a RECEPTIONIST, so there is no admin-wide task view.
+ * assignees, plus — only for an ADMIN/MODERATOR viewer — tasks another
+ * ADMIN/MODERATOR opted to share via `isVisibleForOtherAdmins`. Everyone else
+ * still gets exactly the creator/assignee scope, so this is not an admin-wide
+ * task view, just an explicit, per-task opt-in for tracking purposes.
  */
-export function buildTaskScopeWhere(userId: string, filters: TaskFilters): Prisma.TaskWhereInput {
+export function buildTaskScopeWhere(
+    user: { id: string; role: Role },
+    filters: TaskFilters,
+): Prisma.TaskWhereInput {
+    const userId = user.id;
     const createdByMe: Prisma.TaskWhereInput = { createdById: userId };
     const assignedToMe: Prisma.TaskWhereInput = { assignees: { some: { userId } } };
+    const isManager = user.role === "ADMIN" || user.role === "MODERATOR";
+
+    const branches = [createdByMe, assignedToMe];
+    if (isManager) branches.push({ isVisibleForOtherAdmins: true });
 
     const scope: Prisma.TaskWhereInput =
         filters.mine === "created"
             ? createdByMe
             : filters.mine === "assigned"
               ? assignedToMe
-              : { OR: [createdByMe, assignedToMe] };
+              : { OR: branches };
 
     const where: Prisma.TaskWhereInput = { ...scope };
     if (filters.status) where.status = filters.status;
@@ -80,18 +90,18 @@ const toDate = (value: string | null | undefined) => (value ? new Date(value) : 
 type TaskActor = { id: string; role: Role };
 
 export class TasksService {
-    static async list(userId: string, filters: TaskFilters) {
+    static async list(user: TaskActor, filters: TaskFilters) {
         return prisma.task.findMany({
-            where: buildTaskScopeWhere(userId, filters),
+            where: buildTaskScopeWhere(user, filters),
             include: taskInclude,
             orderBy: { createdAt: "desc" },
         });
     }
 
     /** Reads go through the scope filter, so an out-of-scope id is a 404, not a 403. */
-    static async getOne(id: string, userId: string) {
+    static async getOne(id: string, user: TaskActor) {
         const task = await prisma.task.findFirst({
-            where: { id, ...buildTaskScopeWhere(userId, {}) },
+            where: { id, ...buildTaskScopeWhere(user, {}) },
             include: taskInclude,
         });
         if (!task) throw new AppResponse(false, "TASK_NOT_FOUND", null, 404);
@@ -106,7 +116,7 @@ export class TasksService {
         });
     }
 
-    static async create(userId: string, payload: CreateTaskPayload) {
+    static async create(user: TaskActor, payload: CreateTaskPayload) {
         await TasksService.assertAssigneesExist(payload.assigneeIds);
         return prisma.task.create({
             data: {
@@ -117,16 +127,20 @@ export class TasksService {
                 priority: payload.priority ?? "MEDIUM",
                 dueDate: toDate(payload.dueDate),
                 caseId: payload.caseId ?? null,
-                createdById: userId,
+                createdById: user.id,
+                // Only an ADMIN/MODERATOR creator may share the task with other
+                // managers — everyone else's flag is silently dropped, never trusted
+                // from the client alone.
+                isVisibleForOtherAdmins: TasksService.canShareWithManagers(user, payload),
                 assignees: { create: assigneeRows(payload.assigneeIds) },
             },
             include: taskInclude,
         });
     }
 
-    static async update(id: string, userId: string, payload: UpdateTaskPayload) {
+    static async update(id: string, user: TaskActor, payload: UpdateTaskPayload) {
         const task = await TasksService.findForPermissionCheck(id);
-        if (!canEditTask(task, userId)) throw new AppResponse(false, "TASK_FORBIDDEN", null, 403);
+        if (!canEditTask(task, user.id)) throw new AppResponse(false, "TASK_FORBIDDEN", null, 403);
         await TasksService.assertAssigneesExist(payload.assigneeIds);
 
         const data: Prisma.TaskUpdateInput = {};
@@ -136,6 +150,9 @@ export class TasksService {
         if (payload.status !== undefined) data.status = payload.status;
         if (payload.priority !== undefined) data.priority = payload.priority;
         if (payload.dueDate !== undefined) data.dueDate = toDate(payload.dueDate);
+        if (payload.isVisibleForOtherAdmins !== undefined) {
+            data.isVisibleForOtherAdmins = TasksService.canShareWithManagers(user, payload);
+        }
         if (payload.caseId !== undefined) {
             data.case = payload.caseId
                 ? { connect: { id: payload.caseId } }
@@ -147,6 +164,12 @@ export class TasksService {
         }
 
         return prisma.task.update({ where: { id }, data, include: taskInclude });
+    }
+
+    /** The sharing checkbox only ever takes effect for an ADMIN/MODERATOR caller. */
+    private static canShareWithManagers(user: TaskActor, payload: CreateTaskPayload | UpdateTaskPayload) {
+        const isManager = user.role === "ADMIN" || user.role === "MODERATOR";
+        return isManager && payload.isVisibleForOtherAdmins === true;
     }
 
     /**

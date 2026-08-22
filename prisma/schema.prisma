@@ -709,6 +709,11 @@ model Task {
   priority TaskPriority @default(MEDIUM)
   dueDate  DateTime?
 
+  /// Opt-in, set only by an ADMIN/MODERATOR creator: lets other admins and
+  /// moderators see the task for tracking purposes even when they are not
+  /// assigned to it. Everyone else still needs to be the creator or an assignee.
+  isVisibleForOtherAdmins Boolean @default(false)
+
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
 

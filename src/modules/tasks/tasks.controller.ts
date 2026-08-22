@@ -19,7 +19,7 @@ const readFilters = (query: AuthRequest["query"]): TaskFilters => {
 };
 
 export const listTasks = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.list(req.user.id, readFilters(req.query));
+    const data = await TasksService.list(req.user, readFilters(req.query));
     res.status(200).json(new AppResponse(true, "TASKS_RETRIEVED_SUCCESS", data));
 });
 
@@ -29,17 +29,17 @@ export const listAssignableUsers = asyncHandler(async (_req: AuthRequest, res: R
 });
 
 export const getTask = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.getOne(req.params.id as string, req.user.id);
+    const data = await TasksService.getOne(req.params.id as string, req.user);
     res.status(200).json(new AppResponse(true, "TASK_RETRIEVED_SUCCESS", data));
 });
 
 export const createTask = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.create(req.user.id, req.body);
+    const data = await TasksService.create(req.user, req.body);
     res.status(201).json(new AppResponse(true, "TASK_CREATED_SUCCESS", data));
 });
 
 export const updateTask = asyncHandler(async (req: AuthRequest, res: Response) => {
-    const data = await TasksService.update(req.params.id as string, req.user.id, req.body);
+    const data = await TasksService.update(req.params.id as string, req.user, req.body);
     res.status(200).json(new AppResponse(true, "TASK_UPDATED_SUCCESS", data));
 });
 

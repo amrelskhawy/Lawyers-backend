@@ -19,6 +19,8 @@ export interface CreateTaskPayload {
     dueDate?: string | null;
     caseId?: string | null;
     assigneeIds?: string[];
+    /** Honored only when the caller is an ADMIN or MODERATOR — see TasksService.create. */
+    isVisibleForOtherAdmins?: boolean;
 }
 
 export type UpdateTaskPayload = Partial<CreateTaskPayload>;
