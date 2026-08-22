@@ -2,6 +2,7 @@ import express from "express";
 import {
     listTasks,
     listAssignableUsers,
+    getOpenTasksCount,
     getTask,
     createTask,
     updateTask,
@@ -22,6 +23,7 @@ const router = express.Router();
 // service — not by role.
 router.get("/", protect, listTasks);
 router.get("/assignable-users", protect, listAssignableUsers);
+router.get("/open-count", protect, getOpenTasksCount);
 router.get("/:id", protect, getTask);
 router.post("/", protect, validateRequest(CreateTaskSchema as any), logActivity("CREATE", "Task"), createTask);
 router.put("/:id", protect, validateRequest(UpdateTaskSchema as any), logActivity("UPDATE", "Task"), updateTask);

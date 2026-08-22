@@ -28,6 +28,11 @@ export const listAssignableUsers = asyncHandler(async (_req: AuthRequest, res: R
     res.status(200).json(new AppResponse(true, "TASK_ASSIGNABLE_USERS_RETRIEVED_SUCCESS", data));
 });
 
+export const getOpenTasksCount = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await TasksService.openCount(req.user);
+    res.status(200).json(new AppResponse(true, "TASKS_OPEN_COUNT_RETRIEVED_SUCCESS", data));
+});
+
 export const getTask = asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = await TasksService.getOne(req.params.id as string, req.user);
     res.status(200).json(new AppResponse(true, "TASK_RETRIEVED_SUCCESS", data));

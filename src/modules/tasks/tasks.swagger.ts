@@ -18,12 +18,14 @@
  *         dueDate: { type: string, format: date-time, nullable: true }
  *         caseId: { type: string, format: uuid, nullable: true }
  *         createdById: { type: string, format: uuid }
+ *         hasTempAssignee: { type: boolean }
  *         assignees:
  *           type: array
  *           items:
  *             type: object
  *             properties:
  *               userId: { type: string, format: uuid }
+ *               isTemp: { type: boolean, description: true = stand-in, false = owner }
  *     TaskInput:
  *       type: object
  *       required: [title]
@@ -37,6 +39,13 @@
  *         caseId: { type: string, format: uuid, nullable: true }
  *         assigneeIds:
  *           type: array
+ *           items: { type: string, format: uuid }
+ *         hasTempAssignee:
+ *           type: boolean
+ *           description: Turns the stand-in list on; with it off, tempAssigneeIds is ignored
+ *         tempAssigneeIds:
+ *           type: array
+ *           description: Who performs the task while an owner is away
  *           items: { type: string, format: uuid }
  *
  * /tasks:
@@ -79,6 +88,14 @@
  *     security: [{ bearerAuth: [] }]
  *     responses:
  *       200: { description: Users retrieved }
+ *
+ * /tasks/open-count:
+ *   get:
+ *     tags: [Tasks]
+ *     summary: How many of my visible tasks are not DONE (sidebar badge)
+ *     security: [{ bearerAuth: [] }]
+ *     responses:
+ *       200: { description: Count retrieved }
  *
  * /tasks/{id}:
  *   get:

@@ -714,6 +714,11 @@ model Task {
   /// assigned to it. Everyone else still needs to be the creator or an assignee.
   isVisibleForOtherAdmins Boolean @default(false)
 
+  /// Whether this task keeps stand-ins: people who take it over while an owner
+  /// is away. The stand-ins themselves live in `assignees` with `isTemp` set,
+  /// so turning this off leaves the owners untouched.
+  hasTempAssignee Boolean @default(false)
+
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
@@ -739,6 +744,10 @@ model TaskAssignee {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  /// false = an owner of the task; true = a stand-in who performs it while an
+  /// owner is absent. Both kinds see the task and may move it along.
+  isTemp Boolean @default(false)
 
   assignedAt DateTime @default(now())
 
