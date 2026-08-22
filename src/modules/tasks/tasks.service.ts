@@ -84,7 +84,7 @@ export class TasksService {
         return prisma.task.findMany({
             where: buildTaskScopeWhere(userId, filters),
             include: taskInclude,
-            orderBy: [{ status: "asc" }, { dueDate: "asc" }, { createdAt: "desc" }],
+            orderBy: { createdAt: "desc" },
         });
     }
 
