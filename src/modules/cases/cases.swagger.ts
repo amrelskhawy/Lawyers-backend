@@ -151,6 +151,43 @@
  *     responses:
  *       200: { description: Assignment rejected }
  *
+ * /cases/{id}/stand-in:
+ *   patch:
+ *     tags: [Cases]
+ *     summary: Name or clear the person covering a slot while its holder is away
+ *     description: >
+ *       Takes effect immediately — a stand-in has no accept/reject lifecycle of
+ *       their own. They see the case and act with the slot holder's rights.
+ *       Requires the slot to have an active (PENDING or ACCEPTED) holder, and the
+ *       picked user's role must match the slot. Passing a null userId clears it.
+ *     security: [{ bearerAuth: [] }]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [kind, userId]
+ *             properties:
+ *               kind:
+ *                 type: string
+ *                 enum: [LAWYER, CONSULTANT]
+ *                 description: Which slot the stand-in covers
+ *               userId:
+ *                 type: string
+ *                 format: uuid
+ *                 nullable: true
+ *                 description: The stand-in; null clears the slot's stand-in
+ *               userName: { type: string }
+ *     responses:
+ *       200: { description: Stand-in updated }
+ *       400: { description: Slot has no active holder, or the pick is invalid }
+ *
  * /cases/{id}/session:
  *   patch:
  *     tags: [Cases]

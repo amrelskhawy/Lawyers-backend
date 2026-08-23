@@ -19,10 +19,6 @@ export interface CreateTaskPayload {
     dueDate?: string | null;
     caseId?: string | null;
     assigneeIds?: string[];
-    /** Turns the stand-in list on; with it off, `tempAssigneeIds` is ignored. */
-    hasTempAssignee?: boolean;
-    /** Who performs the task while an owner is away. */
-    tempAssigneeIds?: string[];
     /** Honored only when the caller is an ADMIN or MODERATOR — see TasksService.create. */
     isVisibleForOtherAdmins?: boolean;
 }

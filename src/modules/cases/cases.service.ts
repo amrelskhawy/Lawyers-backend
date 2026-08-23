@@ -19,6 +19,7 @@ import type {
     SetSessionDatePayload,
     SetCaseDegreePayload,
     SetCourtInfoPayload,
+    SetStandInPayload,
 } from "./cases.validator.js";
 
 const caseInclude = {
@@ -27,6 +28,8 @@ const caseInclude = {
     },
     preferredLawyer: { select: { id: true, name: true } },
     consultant: { select: { id: true, name: true } },
+    tempLawyer: { select: { id: true, name: true } },
+    tempConsultant: { select: { id: true, name: true } },
     sessionReceiver: { select: { id: true, name: true } },
     sourceLawyer: { select: { id: true, name: true } },
     createdBy: { select: { id: true, name: true } },
@@ -73,6 +76,29 @@ function slotState(c: { preferredLawyerId: string | null; assignmentStatus: stri
         : { assigneeId: c.preferredLawyerId, status: c.assignmentStatus };
 }
 
+/** Fields that clear a slot's stand-in — used when the slot itself is emptied. */
+function clearStandIn(kind: AssignmentKind): Prisma.CaseUpdateInput {
+    return kind === "CONSULTANT"
+        ? { tempConsultant: { disconnect: true }, tempConsultantName: null }
+        : { tempLawyer: { disconnect: true }, tempLawyerName: null };
+}
+
+/**
+ * Whoever may work this case from the lawyer side: the assigned lawyer, their
+ * stand-in, or the lawyer receiving the session. A stand-in acts with the slot
+ * holder's rights — that is the whole point of naming one.
+ */
+function isCaseWorker(
+    c: { preferredLawyerId: string | null; tempLawyerId: string | null; sessionReceiverId: string | null },
+    userId: string,
+) {
+    return (
+        c.preferredLawyerId === userId ||
+        c.tempLawyerId === userId ||
+        c.sessionReceiverId === userId
+    );
+}
+
 type RequestingUser = { id: string; role: string };
 
 /** Options for {@link CasesService.list} — calendar window, pagination + filters. */
@@ -113,6 +139,9 @@ export class CasesService {
                 OR: [
                     { preferredLawyerId: requestingUser.id },
                     { consultantId: requestingUser.id },
+                    // Stand-ins see the case for as long as they are covering a slot.
+                    { tempLawyerId: requestingUser.id },
+                    { tempConsultantId: requestingUser.id },
                 ],
             });
         }
@@ -141,6 +170,8 @@ export class CasesService {
                     { agencyNumber: contains },
                     { preferredLawyerName: contains },
                     { consultantName: contains },
+                    { tempLawyerName: contains },
+                    { tempConsultantName: contains },
                 ],
             });
         }
@@ -152,7 +183,12 @@ export class CasesService {
         else if (opts.caseDegree) and.push({ caseDegree: opts.caseDegree });
         if (opts.lawyerId) {
             and.push({
-                OR: [{ preferredLawyerId: opts.lawyerId }, { consultantId: opts.lawyerId }],
+                OR: [
+                    { preferredLawyerId: opts.lawyerId },
+                    { consultantId: opts.lawyerId },
+                    { tempLawyerId: opts.lawyerId },
+                    { tempConsultantId: opts.lawyerId },
+                ],
             });
         }
 
@@ -329,7 +365,9 @@ export class CasesService {
         if (
             (requestingUser.role === "LAWYER" || requestingUser.role === "CONSULTANT") &&
             c.preferredLawyerId !== requestingUser.id &&
-            c.consultantId !== requestingUser.id
+            c.consultantId !== requestingUser.id &&
+            c.tempLawyerId !== requestingUser.id &&
+            c.tempConsultantId !== requestingUser.id
         ) {
             throw new AppResponse(false, "AUTH_UNAUTHORIZED", null, 403);
         }
@@ -537,6 +575,61 @@ export class CasesService {
         });
     }
 
+    /**
+     * Name — or clear — the person covering one slot while its holder is away.
+     * Unlike a real assignment this takes effect at once: a stand-in has no
+     * accept/reject lifecycle of their own, they simply step in. Passing a null
+     * `userId` clears the slot's stand-in.
+     */
+    async setStandIn(caseId: string, payload: SetStandInPayload, actorId: string) {
+        const existing = await prisma.case.findUnique({ where: { id: caseId } });
+        if (!existing || existing.isDeleted) {
+            throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
+        }
+
+        const kind = payload.kind;
+        const { assigneeId, status } = slotState(existing, kind);
+
+        if (payload.userId == null) {
+            return prisma.case.update({
+                where: { id: caseId },
+                data: { ...clearStandIn(kind), updatedBy: { connect: { id: actorId } } },
+                include: caseInclude,
+            });
+        }
+
+        // Nobody covers an empty slot — there is no holder to stand in for.
+        if (status !== "PENDING" && status !== "ACCEPTED") {
+            throw new AppResponse(false, "CASE_NOT_ASSIGNED", null, 400);
+        }
+        if (payload.userId === assigneeId) {
+            throw new AppResponse(false, "CASE_STAND_IN_IS_ASSIGNEE", null, 400);
+        }
+
+        const user = await prisma.user.findUnique({ where: { id: payload.userId } });
+        // A stand-in holds the same role as the slot they cover.
+        if (!user || user.role !== kind) {
+            throw new AppResponse(false, "CASE_ASSIGN_INVALID_LAWYER", null, 400);
+        }
+
+        const data: Prisma.CaseUpdateInput =
+            kind === "CONSULTANT"
+                ? {
+                    tempConsultant: { connect: { id: payload.userId } },
+                    tempConsultantName: payload.userName ?? user.name,
+                }
+                : {
+                    tempLawyer: { connect: { id: payload.userId } },
+                    tempLawyerName: payload.userName ?? user.name,
+                };
+
+        return prisma.case.update({
+            where: { id: caseId },
+            data: { ...data, updatedBy: { connect: { id: actorId } } },
+            include: caseInclude,
+        });
+    }
+
     async unassign(caseId: string, unassignedById: string, kind: AssignmentKind) {
         const existing = await prisma.case.findUnique({ where: { id: caseId } });
         if (!existing || existing.isDeleted) {
@@ -567,7 +660,12 @@ export class CasesService {
 
         return prisma.case.update({
             where: { id: caseId },
-            data: { ...data, updatedBy: { connect: { id: unassignedById } } },
+            // Emptying a slot leaves nobody to stand in for.
+            data: {
+                ...data,
+                ...clearStandIn(kind),
+                updatedBy: { connect: { id: unassignedById } },
+            },
             include: caseInclude,
         });
     }
@@ -592,7 +690,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+            if (!isCaseWorker(existing, userId)) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
             if (existing.assignmentStatus !== "ACCEPTED") {
@@ -736,7 +834,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+            if (!isCaseWorker(existing, userId)) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }
@@ -793,7 +891,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+            if (!isCaseWorker(existing, userId)) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }
@@ -829,7 +927,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (existing.preferredLawyerId !== userId && existing.sessionReceiverId !== userId) {
+            if (!isCaseWorker(existing, userId)) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }

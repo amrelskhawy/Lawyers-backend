@@ -18,14 +18,12 @@
  *         dueDate: { type: string, format: date-time, nullable: true }
  *         caseId: { type: string, format: uuid, nullable: true }
  *         createdById: { type: string, format: uuid }
- *         hasTempAssignee: { type: boolean }
  *         assignees:
  *           type: array
  *           items:
  *             type: object
  *             properties:
  *               userId: { type: string, format: uuid }
- *               isTemp: { type: boolean, description: true = stand-in, false = owner }
  *     TaskInput:
  *       type: object
  *       required: [title]
@@ -39,13 +37,6 @@
  *         caseId: { type: string, format: uuid, nullable: true }
  *         assigneeIds:
  *           type: array
- *           items: { type: string, format: uuid }
- *         hasTempAssignee:
- *           type: boolean
- *           description: Turns the stand-in list on; with it off, tempAssigneeIds is ignored
- *         tempAssigneeIds:
- *           type: array
- *           description: Who performs the task while an owner is away
  *           items: { type: string, format: uuid }
  *
  * /tasks:

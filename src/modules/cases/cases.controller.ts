@@ -137,6 +137,11 @@ export const unassignCase = asyncHandler(async (req: AuthRequest, res: Response)
     res.status(200).json(new AppResponse(true, "CASE_UNASSIGNED_SUCCESS", data));
 });
 
+export const setCaseStandIn = asyncHandler(async (req: AuthRequest, res: Response) => {
+    const data = await cases.setStandIn(req.params.id as string, req.body, req.user.id);
+    res.status(200).json(new AppResponse(true, "CASE_STAND_IN_SET_SUCCESS", data));
+});
+
 export const setCaseSessionDate = asyncHandler(async (req: AuthRequest, res: Response) => {
     const data = await cases.setSessionDate(
         req.params.id as string,

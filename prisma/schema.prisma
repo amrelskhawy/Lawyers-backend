@@ -29,6 +29,8 @@ model User {
   consultantOnCases          Case[]               @relation("CaseConsultant")
   sessionReceivedCases       Case[]               @relation("CaseSessionReceiver")
   sourcedCases               Case[]               @relation("CaseSourceLawyer")
+  tempLawyerOnCases          Case[]               @relation("CaseTempLawyer")
+  tempConsultantOnCases      Case[]               @relation("CaseTempConsultant")
   recordedContractPayments   ContractPayment[]    @relation("ContractPaymentRecorder")
   createdSessionReports      SessionReport[]      @relation("SessionReportCreator")
   updatedSessionReports      SessionReport[]      @relation("SessionReportUpdater")
@@ -393,6 +395,16 @@ model Case {
   consultantAssignmentRejectedAt      DateTime?
   consultantAssignmentRejectionReason String?
 
+  // Stand-ins: whoever covers a slot while its holder is away. Set directly by
+  // staff (no accept/reject of their own) and cleared when the slot is
+  // unassigned. A stand-in sees the case and acts with the slot holder's rights.
+  tempLawyerId       String?
+  tempLawyer         User?   @relation("CaseTempLawyer", fields: [tempLawyerId], references: [id])
+  tempLawyerName     String?
+  tempConsultantId   String?
+  tempConsultant     User?   @relation("CaseTempConsultant", fields: [tempConsultantId], references: [id])
+  tempConsultantName String?
+
   sessionReceiverId   String?
   sessionReceiver     User?     @relation("CaseSessionReceiver", fields: [sessionReceiverId], references: [id])
   sessionReceiverName String?
@@ -450,6 +462,8 @@ model Case {
   @@index([createdById])
   @@index([updatedById])
   @@index([sourceLawyerId])
+  @@index([tempLawyerId])
+  @@index([tempConsultantId])
 }
 
 /// A document uploaded from a device into the customer's Drive folder and
@@ -714,11 +728,6 @@ model Task {
   /// assigned to it. Everyone else still needs to be the creator or an assignee.
   isVisibleForOtherAdmins Boolean @default(false)
 
-  /// Whether this task keeps stand-ins: people who take it over while an owner
-  /// is away. The stand-ins themselves live in `assignees` with `isTemp` set,
-  /// so turning this off leaves the owners untouched.
-  hasTempAssignee Boolean @default(false)
-
   caseId String?
   case   Case?   @relation(fields: [caseId], references: [id], onDelete: SetNull)
 
@@ -744,10 +753,6 @@ model TaskAssignee {
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-
-  /// false = an owner of the task; true = a stand-in who performs it while an
-  /// owner is absent. Both kinds see the task and may move it along.
-  isTemp Boolean @default(false)
 
   assignedAt DateTime @default(now())
 

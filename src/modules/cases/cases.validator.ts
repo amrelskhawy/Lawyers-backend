@@ -80,6 +80,14 @@ export const UnassignCaseSchema = z.object({
     kind: AssignmentKindEnum,
 }).strict();
 
+// Stand-in — names who covers a slot while its holder is away, or clears it
+// with a null `userId`. No accept/reject of its own: it takes effect at once.
+export const SetStandInSchema = z.object({
+    kind: AssignmentKindEnum,
+    userId: z.string().uuid().nullable(),
+    userName: z.string().optional(),
+}).strict();
+
 // Assignment rejection — the assigned lawyer must give a reason
 export const RejectAssignmentSchema = z.object({
     reason: z.string().trim().min(1, "Rejection reason is required"),
@@ -136,6 +144,7 @@ export type CreateCasePayload = z.infer<typeof CreateCaseSchema>;
 export type UpdateCasePayload = z.infer<typeof UpdateCaseSchema>;
 export type AssignCasePayload = z.infer<typeof AssignCaseSchema>;
 export type UnassignCasePayload = z.infer<typeof UnassignCaseSchema>;
+export type SetStandInPayload = z.infer<typeof SetStandInSchema>;
 export type AssignmentKind = z.infer<typeof AssignmentKindEnum>;
 export type RejectAssignmentPayload = z.infer<typeof RejectAssignmentSchema>;
 export type SetSessionDatePayload = z.infer<typeof SetSessionDateSchema>;
@@ -177,6 +186,17 @@ export const validateAssignCase = (req: Request, res: Response, next: NextFuncti
 
 export const validateUnassignCase = (req: Request, res: Response, next: NextFunction) => {
     const result = UnassignCaseSchema.safeParse(req.body);
+    if (!result.success) {
+        return res
+            .status(400)
+            .json(new AppResponse(false, "VALIDATION_ERROR", result.error.format(), 400));
+    }
+    req.body = result.data;
+    next();
+};
+
+export const validateSetStandIn = (req: Request, res: Response, next: NextFunction) => {
+    const result = SetStandInSchema.safeParse(req.body);
     if (!result.success) {
         return res
             .status(400)

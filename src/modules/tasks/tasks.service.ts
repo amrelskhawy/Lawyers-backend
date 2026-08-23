@@ -76,26 +76,13 @@ export function canDeleteTask(task: TaskParticipants, user: { id: string; role: 
 const taskInclude = {
     createdBy: { select: { id: true, name: true, role: true } },
     assignees: {
-        select: { userId: true, isTemp: true, user: { select: { id: true, name: true, role: true } } },
+        select: { userId: true, user: { select: { id: true, name: true, role: true } } },
     },
     case: { select: { id: true, caseType: true, customer: { select: { fullName: true } } } },
 } satisfies Prisma.TaskInclude;
 
-/**
- * The whole roster in one list: the owners, then — only while the stand-in
- * switch is on — the people covering for them. A user named on both lists stays
- * an owner, since a task holds one row per user.
- */
-function rosterRows(ownerIds: string[] | undefined, tempIds: string[] | undefined, hasTemp: boolean) {
-    const owners = [...new Set(ownerIds ?? [])];
-    const temps = hasTemp
-        ? [...new Set(tempIds ?? [])].filter((id) => !owners.includes(id))
-        : [];
-    return [
-        ...owners.map((userId) => ({ userId, isTemp: false })),
-        ...temps.map((userId) => ({ userId, isTemp: true })),
-    ];
-}
+const assigneeRows = (ids: string[] | undefined) =>
+    [...new Set(ids ?? [])].map((userId) => ({ userId }));
 
 const toDate = (value: string | null | undefined) => (value ? new Date(value) : null);
 
@@ -141,11 +128,7 @@ export class TasksService {
     }
 
     static async create(user: TaskActor, payload: CreateTaskPayload) {
-        const hasTemp = payload.hasTempAssignee ?? false;
-        await TasksService.assertAssigneesExist([
-            ...(payload.assigneeIds ?? []),
-            ...(hasTemp ? payload.tempAssigneeIds ?? [] : []),
-        ]);
+        await TasksService.assertAssigneesExist(payload.assigneeIds);
         return prisma.task.create({
             data: {
                 title: payload.title,
@@ -160,10 +143,7 @@ export class TasksService {
                 // managers — everyone else's flag is silently dropped, never trusted
                 // from the client alone.
                 isVisibleForOtherAdmins: TasksService.canShareWithManagers(user, payload),
-                hasTempAssignee: hasTemp,
-                assignees: {
-                    create: rosterRows(payload.assigneeIds, payload.tempAssigneeIds, hasTemp),
-                },
+                assignees: { create: assigneeRows(payload.assigneeIds) },
             },
             include: taskInclude,
         });
@@ -172,10 +152,7 @@ export class TasksService {
     static async update(id: string, user: TaskActor, payload: UpdateTaskPayload) {
         const task = await TasksService.findForPermissionCheck(id);
         if (!canEditTask(task, user.id)) throw new AppResponse(false, "TASK_FORBIDDEN", null, 403);
-        await TasksService.assertAssigneesExist([
-            ...(payload.assigneeIds ?? []),
-            ...(payload.tempAssigneeIds ?? []),
-        ]);
+        await TasksService.assertAssigneesExist(payload.assigneeIds);
 
         const data: Prisma.TaskUpdateInput = {};
         if (payload.title !== undefined) data.title = payload.title;
@@ -187,25 +164,14 @@ export class TasksService {
         if (payload.isVisibleForOtherAdmins !== undefined) {
             data.isVisibleForOtherAdmins = TasksService.canShareWithManagers(user, payload);
         }
-        if (payload.hasTempAssignee !== undefined) data.hasTempAssignee = payload.hasTempAssignee;
         if (payload.caseId !== undefined) {
             data.case = payload.caseId
                 ? { connect: { id: payload.caseId } }
                 : { disconnect: true };
         }
-        // Owners and stand-ins share one table, so any of the three roster fields
-        // rewrites it as a whole. Whatever the payload leaves out keeps the value
-        // already on the task instead of being wiped.
-        const touchesRoster =
-            payload.assigneeIds !== undefined ||
-            payload.tempAssigneeIds !== undefined ||
-            payload.hasTempAssignee !== undefined;
-        if (touchesRoster) {
-            const current = task.assignees;
-            const owners = payload.assigneeIds ?? current.filter((a) => !a.isTemp).map((a) => a.userId);
-            const temps = payload.tempAssigneeIds ?? current.filter((a) => a.isTemp).map((a) => a.userId);
-            const hasTemp = payload.hasTempAssignee ?? task.hasTempAssignee;
-            data.assignees = { deleteMany: {}, create: rosterRows(owners, temps, hasTemp) };
+        // Reassigning replaces the whole set — the payload is the new roster.
+        if (payload.assigneeIds !== undefined) {
+            data.assignees = { deleteMany: {}, create: assigneeRows(payload.assigneeIds) };
         }
 
         return prisma.task.update({ where: { id }, data, include: taskInclude });
@@ -265,17 +231,12 @@ export class TasksService {
     private static async findForPermissionCheck(id: string) {
         const task = await prisma.task.findUnique({
             where: { id },
-            select: {
-                createdById: true,
-                hasTempAssignee: true,
-                assignees: { select: { userId: true, isTemp: true } },
-            },
+            select: { createdById: true, assignees: { select: { userId: true } } },
         });
         if (!task) throw new AppResponse(false, "TASK_NOT_FOUND", null, 404);
         return task;
     }
 
-    /** Owners and stand-ins are checked together — both must be real users. */
     private static async assertAssigneesExist(ids: string[] | undefined) {
         if (!ids?.length) return;
         const unique = [...new Set(ids)];

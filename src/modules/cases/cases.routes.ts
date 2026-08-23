@@ -12,6 +12,7 @@ import {
     acceptCaseAssignment,
     rejectCaseAssignment,
     unassignCase,
+    setCaseStandIn,
     setCaseSessionDate,
     setCaseCompletion,
     setCaseDegree,
@@ -26,6 +27,7 @@ import {
     validateUpdateCase,
     validateAssignCase,
     validateUnassignCase,
+    validateSetStandIn,
     validateRejectAssignment,
     validateSetSessionDate,
     validateSetCompletion,
@@ -124,6 +126,16 @@ router.patch(
     validateUnassignCase,
     logActivity("UNASSIGN", "Case"),
     unassignCase,
+);
+
+// Stand-in for a slot — who covers while the holder is away (null clears it)
+router.patch(
+    "/:id/stand-in",
+    protect,
+    requireRole("ADMIN", "MODERATOR", "RECEPTIONIST"),
+    validateSetStandIn,
+    logActivity("SET_STAND_IN", "Case"),
+    setCaseStandIn,
 );
 
 // Set the (Hijri) session date — auto-schedules the 3 session reminders

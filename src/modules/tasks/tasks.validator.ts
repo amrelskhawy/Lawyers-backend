@@ -12,8 +12,6 @@ export const CreateTaskSchema = z.object({
     dueDate: z.string().datetime().nullable().optional(),
     caseId: z.string().uuid("Invalid case ID").nullable().optional(),
     assigneeIds: z.array(z.string().uuid("Invalid user ID")).optional(),
-    hasTempAssignee: z.boolean().optional(),
-    tempAssigneeIds: z.array(z.string().uuid("Invalid user ID")).optional(),
     isVisibleForOtherAdmins: z.boolean().optional(),
 });
 
