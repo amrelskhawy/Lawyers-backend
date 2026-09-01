@@ -28,6 +28,8 @@ const SCALAR_KEYS = [
     "clientIdNumber",
     "clientPhone",
     "serviceDescription",
+    "page2Content",
+    "page3Content",
     "otherFees",
     "firstInstallmentNote",
     "currency",
