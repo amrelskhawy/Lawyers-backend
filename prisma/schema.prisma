@@ -64,6 +64,9 @@ model User {
   createdTasks  Task[]         @relation("TaskCreator")
   assignedTasks TaskAssignee[]
 
+  createdArticles Article[] @relation("ArticleCreator")
+  updatedArticles Article[] @relation("ArticleUpdater")
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
@@ -758,4 +761,45 @@ model TaskAssignee {
 
   @@unique([taskId, userId])
   @@index([userId])
+}
+
+enum ArticleStatus {
+  DRAFT
+  PUBLISHED
+}
+
+/// A blog article written in the dashboard by an ADMIN/MODERATOR. Read-only for
+/// the public site: no comments, no likes — just the piece itself. `content`
+/// holds the rich-text HTML produced by the editor (fonts, sizes, colours,
+/// inline images), so it is sanitised on write and rendered as trusted HTML.
+model Article {
+  id      String  @id @default(uuid())
+  /// URL key for the public reader page (/articles/:slug). Derived from the
+  /// title on create and kept stable afterwards unless explicitly changed.
+  slug    String  @unique
+  title   String
+  /// Short teaser shown on the article cards; falls back to the stripped
+  /// opening of `content` when the writer leaves it empty.
+  excerpt String?
+  content String
+
+  /// Public Drive URL of the card/hero image.
+  coverImage String?
+
+  status      ArticleStatus @default(DRAFT)
+  /// Set the first time the article goes PUBLISHED; kept afterwards so the
+  /// public list keeps a stable order across edits.
+  publishedAt DateTime?
+
+  createdById String?
+  createdBy   User?   @relation("ArticleCreator", fields: [createdById], references: [id])
+  updatedById String?
+  updatedBy   User?   @relation("ArticleUpdater", fields: [updatedById], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([status, publishedAt])
+  @@index([createdById])
+  @@index([updatedById])
 }

@@ -41,6 +41,8 @@ function extractDetails(action: string, resource: string, reqBody: any, resData:
             return { case: d.caseId ?? null };
         case "LawyerFeesContract":
             return { case: d.caseId ?? null, amount: d.amount ?? null };
+        case "Article":
+            return { title: d.title ?? null, slug: d.slug ?? null, status: d.status ?? null };
         default:
             return null;
     }

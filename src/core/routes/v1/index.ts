@@ -24,6 +24,9 @@ import signaturesRoutes from "../../../modules/signatures/signatures.routes.js";
 import financialsRoutes from "../../../modules/financials/financials.routes.js";
 import consultingRoutes from "../../../modules/consulting/consulting.routes.js";
 import tasksRoutes from "../../../modules/tasks/tasks.routes.js";
+import articlesRoutes, {
+    publicArticlesRouter,
+} from "../../../modules/articles/articles.routes.js";
 
 const router = Router();
 
@@ -51,5 +54,7 @@ router.use("/signatures", signaturesRoutes);
 router.use("/financials", financialsRoutes);
 router.use("/consulting", consultingRoutes);
 router.use("/tasks", tasksRoutes);
+router.use("/articles", articlesRoutes);
+router.use("/public/articles", publicArticlesRouter);
 
 export default router;
