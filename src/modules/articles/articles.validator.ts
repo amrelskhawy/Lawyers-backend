@@ -31,6 +31,9 @@ export const CreateArticleSchema = z.object({
     metaDescription: z.string().trim().max(200).nullable().optional(),
     keywords: z.array(z.string().trim().min(1).max(60)).max(15).optional(),
     noIndex: z.boolean().optional(),
+    // Detected from the body when omitted; sent explicitly only to override a
+    // wrong guess on a heavily mixed-language article.
+    language: z.enum(["ar", "en"]).optional(),
 });
 
 export const UpdateArticleSchema = CreateArticleSchema.partial();

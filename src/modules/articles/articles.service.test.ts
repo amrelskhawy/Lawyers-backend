@@ -26,9 +26,15 @@ vi.mock("../../core/services/google/article-images-folder.js", () => ({
 }));
 
 const { ArticlesService } = await import("./articles.service.js");
-const { slugify, deriveMetaDescription, articleUrl, buildSitemapXml } = await import(
-    "./utils/index.js",
-);
+const {
+    slugify,
+    deriveMetaDescription,
+    articleUrl,
+    buildSitemapXml,
+    normalizeArabic,
+    detectLanguage,
+    buildSearchText,
+} = await import("./utils/index.js");
 const service = new ArticlesService();
 const author = { id: "u1" };
 
@@ -304,5 +310,109 @@ describe("public payloads", () => {
         expect(article.seo.robots).toBe("noindex, follow");
         expect(article.seo.title).toBe("Custom title");
         expect(article.seo.description).toBe("Body");
+    });
+});
+
+describe("normalizeArabic", () => {
+    it("folds the hamza forms of alef onto a bare alef", () => {
+        // What a reader types vs. how the article is actually spelled.
+        expect(normalizeArabic("الاجراءات")).toBe(normalizeArabic("الإجراءات"));
+        expect(normalizeArabic("احمد")).toBe(normalizeArabic("أحمد"));
+    });
+
+    it("strips tashkeel and tatweel", () => {
+        expect(normalizeArabic("الْمُحَامَاة")).toBe(normalizeArabic("المحاماة"));
+        expect(normalizeArabic("محـــاماة")).toBe(normalizeArabic("محاماة"));
+    });
+
+    it("folds ta marbuta and alef maqsura", () => {
+        expect(normalizeArabic("محاماة")).toBe(normalizeArabic("محاماه"));
+        expect(normalizeArabic("دعوى")).toBe(normalizeArabic("دعوي"));
+    });
+
+    it("converts Arabic-Indic digits to ASCII", () => {
+        // The ta marbuta also folds to ha, so compare against the folded form:
+        // the point here is only that ٢٥ and 25 end up identical.
+        expect(normalizeArabic("المادة ٢٥")).toBe(normalizeArabic("المادة 25"));
+        expect(normalizeArabic("المادة ٢٥")).toContain("25");
+    });
+
+    it("still folds case for Latin text", () => {
+        expect(normalizeArabic("  Labour   LAW ")).toBe("labour law");
+    });
+});
+
+describe("detectLanguage", () => {
+    it("reads an Arabic body as Arabic", () => {
+        expect(detectLanguage("حقوق العامل", "<p>نص المقال</p>")).toBe("ar");
+    });
+
+    it("reads an English body as English", () => {
+        expect(detectLanguage("Workers rights", "<p>Article body</p>")).toBe("en");
+    });
+
+    it("keeps a mostly-Arabic article Arabic when it quotes English", () => {
+        expect(detectLanguage("نظام العمل السعودي", "<p>وفقًا لـ Saudi Labour Law</p>")).toBe("ar");
+    });
+});
+
+describe("Arabic search", () => {
+    it("indexes title, keywords and body together, normalised", () => {
+        const searchText = buildSearchText({
+            title: "الإجراءات القضائية",
+            excerpt: null,
+            keywords: ["دعوى"],
+            content: "<p>نص الْمَقال</p>",
+        });
+
+        expect(searchText).toContain(normalizeArabic("الاجراءات"));
+        expect(searchText).toContain(normalizeArabic("دعوي"));
+        expect(searchText).toContain(normalizeArabic("المقال"));
+    });
+
+    it("matches the public list against the normalised blob", async () => {
+        prismaMock.article.count.mockResolvedValue(0);
+        prismaMock.article.findMany.mockResolvedValue([]);
+
+        await service.listPublic({ search: "الإجراءات" });
+
+        expect(prismaMock.article.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({
+                where: {
+                    status: "PUBLISHED",
+                    searchText: { contains: "الاجراءات" },
+                },
+            }),
+        );
+    });
+
+    it("filters the public list by article language when asked", async () => {
+        prismaMock.article.count.mockResolvedValue(0);
+        prismaMock.article.findMany.mockResolvedValue([]);
+
+        await service.listPublic({ language: "ar" });
+
+        expect(prismaMock.article.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ where: { status: "PUBLISHED", language: "ar" } }),
+        );
+    });
+
+    it("stamps language and a rebuilt search blob on create", async () => {
+        prismaMock.article.findFirst.mockResolvedValue(null);
+        prismaMock.article.create.mockImplementation(({ data }: any) => data);
+
+        const created: any = await service.create(
+            { title: "حقوق العامل", content: "<p>نص</p>" } as any,
+            author,
+        );
+
+        expect(created.language).toBe("ar");
+        expect(created.searchText).toContain(normalizeArabic("حقوق العامل"));
+    });
+});
+
+describe("slugify", () => {
+    it("drops tashkeel so one title cannot produce two URLs", () => {
+        expect(slugify("الْمُحَامَاة")).toBe(slugify("المحاماة"));
     });
 });

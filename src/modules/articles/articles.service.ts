@@ -10,10 +10,14 @@ import {
     Actor,
     articleInclude,
     articleUrl,
+    buildSearchText,
     buildSitemapXml,
     deriveExcerpt,
     deriveMetaDescription,
+    detectLanguage,
     EXCERPT_LENGTH,
+    localeFor,
+    normalizeArabic,
     PUBLIC_SELECT,
     SITE_URL,
     slugify,
@@ -48,11 +52,9 @@ export class ArticlesService {
             where.status = query.status;
         }
         if (q.search) {
-            where.OR = [
-                { title: { contains: q.search, mode: "insensitive" } },
-                { excerpt: { contains: q.search, mode: "insensitive" } },
-                { content: { contains: q.search, mode: "insensitive" } },
-            ];
+            // Matched against the normalised blob, not the display columns, so
+            // "الاجراءات" finds an article titled "الإجراءات".
+            where.searchText = { contains: normalizeArabic(q.search) };
         }
 
         const orderBy: Prisma.ArticleOrderByWithRelationInput = q.sortBy
@@ -84,17 +86,23 @@ export class ArticlesService {
         const status = payload.status ?? "DRAFT";
         const slug = await this.uniqueSlug(payload.slug ?? slugify(payload.title));
 
+        const fields = {
+            title: payload.title,
+            excerpt: payload.excerpt?.trim() || deriveExcerpt(content),
+            content,
+            metaTitle: payload.metaTitle?.trim() || null,
+            metaDescription: payload.metaDescription?.trim() || null,
+            keywords: payload.keywords ?? [],
+        };
+
         return prisma.article.create({
             data: {
                 slug,
-                title: payload.title,
-                excerpt: payload.excerpt?.trim() || deriveExcerpt(content),
-                content,
+                ...fields,
                 coverImage: payload.coverImage ?? null,
-                metaTitle: payload.metaTitle?.trim() || null,
-                metaDescription: payload.metaDescription?.trim() || null,
-                keywords: payload.keywords ?? [],
                 noIndex: payload.noIndex ?? false,
+                language: payload.language ?? detectLanguage(payload.title, content),
+                searchText: buildSearchText(fields),
                 status,
                 publishedAt: status === "PUBLISHED" ? new Date() : null,
                 createdById: user.id,
@@ -150,6 +158,22 @@ export class ArticlesService {
         if (payload.status === "PUBLISHED" && !existing.publishedAt) {
             data.publishedAt = new Date();
         }
+
+        // The search blob and the language are derived, never sent by the
+        // client — so they are rebuilt from the merged row rather than patched
+        // field by field, which is what keeps them from drifting out of sync
+        // with the article after a partial update.
+        const merged = {
+            title: (data.title as string | undefined) ?? existing.title,
+            excerpt: (data.excerpt as string | null | undefined) ?? existing.excerpt,
+            content: content ?? existing.content,
+            metaTitle: (data.metaTitle as string | null | undefined) ?? existing.metaTitle,
+            metaDescription:
+                (data.metaDescription as string | null | undefined) ?? existing.metaDescription,
+            keywords: (data.keywords as string[] | undefined) ?? existing.keywords,
+        };
+        data.searchText = buildSearchText(merged);
+        data.language = payload.language ?? detectLanguage(merged.title, merged.content);
 
         return prisma.article.update({ where: { id }, data, include: articleInclude });
     }
@@ -231,10 +255,18 @@ export class ArticlesService {
         metaDescription?: string | null;
         keywords?: string[];
         noIndex?: boolean;
+        language?: string;
     }>(article: T) {
+        const language = article.language === "en" ? "en" : "ar";
         return {
             ...article,
             seo: {
+                // The article's own language, not the reader's UI language —
+                // an Arabic post shared from an English-language session still
+                // has to announce itself to crawlers as Arabic.
+                language,
+                locale: localeFor(language),
+                dir: language === "ar" ? "rtl" : "ltr",
                 title: article.metaTitle?.trim() || article.title,
                 description: deriveMetaDescription(article),
                 canonical: articleUrl(article.slug),
@@ -278,10 +310,12 @@ export class ArticlesService {
 
         const where: Prisma.ArticleWhereInput = { status: "PUBLISHED" };
         if (q.search) {
-            where.OR = [
-                { title: { contains: q.search, mode: "insensitive" } },
-                { excerpt: { contains: q.search, mode: "insensitive" } },
-            ];
+            where.searchText = { contains: normalizeArabic(q.search) };
+        }
+        // Lets the blog show only the articles written in the language the
+        // reader is browsing in, instead of mixing both into one list.
+        if (query.language === "ar" || query.language === "en") {
+            where.language = query.language;
         }
 
         const [total, data] = await Promise.all([

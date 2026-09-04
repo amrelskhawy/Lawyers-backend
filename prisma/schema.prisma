@@ -804,6 +804,17 @@ model Article {
   /// page, for thin or duplicated posts that should stay reachable by link.
   noIndex         Boolean  @default(false)
 
+  /// "ar" or "en" — detected from the body on write. Drives `og:locale`,
+  /// `inLanguage` and the `lang`/`dir` of the reader page, so an Arabic article
+  /// is not served to Google as English.
+  language        String   @default("ar")
+
+  /// Normalised copy of the title, excerpt, keywords and body used only for
+  /// matching. Arabic is written with optional diacritics and interchangeable
+  /// letter forms, so searching the display columns directly misses the
+  /// majority of real queries — see normalizeArabic().
+  searchText      String   @default("")
+
   status      ArticleStatus @default(DRAFT)
   /// Set the first time the article goes PUBLISHED; kept afterwards so the
   /// public list keeps a stable order across edits.
@@ -818,6 +829,7 @@ model Article {
   updatedAt DateTime @updatedAt
 
   @@index([status, publishedAt])
+  @@index([status, language])
   @@index([createdById])
   @@index([updatedById])
 }

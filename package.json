@@ -8,6 +8,7 @@
     "build": "tsc && tsc-alias && cp -r src/views dist/views",
     "postinstall": "prisma generate && npm run build",
     "db:push": "prisma generate && prisma db push",
+    "articles:reindex": "tsx src/scripts/backfillArticleSearchIndex.ts",
     "stripe:listener": "stripe listen --forward-to localhost:3000/api/v1/payment/webhook/stripe",
     "test": "vitest run",
     "test:watch": "vitest",
