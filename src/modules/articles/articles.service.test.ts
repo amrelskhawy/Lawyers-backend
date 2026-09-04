@@ -26,7 +26,9 @@ vi.mock("../../core/services/google/article-images-folder.js", () => ({
 }));
 
 const { ArticlesService } = await import("./articles.service.js");
-const { slugify } = await import("./utils/index.js");
+const { slugify, deriveMetaDescription, articleUrl, buildSitemapXml } = await import(
+    "./utils/index.js",
+);
 const service = new ArticlesService();
 const author = { id: "u1" };
 
@@ -192,5 +194,115 @@ describe("uploadImage", () => {
             fileId: "file1",
         });
         expect(makePublic).toHaveBeenCalledWith("file1");
+    });
+});
+
+describe("deriveMetaDescription", () => {
+    it("prefers the writer's override over the excerpt", () => {
+        expect(
+            deriveMetaDescription({ metaDescription: "  Chosen  ", excerpt: "Fallback" }),
+        ).toBe("Chosen");
+    });
+
+    it("falls back to the excerpt, then to the stripped body", () => {
+        expect(deriveMetaDescription({ excerpt: "From excerpt" })).toBe("From excerpt");
+        expect(deriveMetaDescription({ content: "<p>From <b>body</b></p>" })).toBe("From body");
+    });
+
+    it("truncates on a word boundary so the snippet never ends mid-word", () => {
+        const source = "لفظ ".repeat(80);
+        const description = deriveMetaDescription({ metaDescription: source.trim() });
+
+        expect(description.length).toBeLessThanOrEqual(161);
+        expect(description.endsWith("…")).toBe(true);
+
+        // The kept text has to be a whole-word prefix of the original: the
+        // character right after the cut is the space that ended that word.
+        const kept = description.slice(0, -1);
+        expect(source.startsWith(kept)).toBe(true);
+        expect(source[kept.length]).toBe(" ");
+    });
+
+    it("leaves a short description untouched", () => {
+        expect(deriveMetaDescription({ metaDescription: "Short one" })).toBe("Short one");
+    });
+});
+
+describe("sitemap", () => {
+    it("lists only published, indexable articles", async () => {
+        prismaMock.article.findMany.mockResolvedValue([
+            { slug: "post-a", updatedAt: new Date("2026-01-02T00:00:00Z"), publishedAt: null },
+        ]);
+
+        const xml = await service.sitemap();
+
+        expect(prismaMock.article.findMany).toHaveBeenCalledWith(
+            expect.objectContaining({ where: { status: "PUBLISHED", noIndex: false } }),
+        );
+        expect(xml).toContain("<loc>https://www.saadalboqami.com/articles</loc>");
+        expect(xml).toContain(`<loc>${articleUrl("post-a")}</loc>`);
+        expect(xml).toContain("<lastmod>2026-01-02T00:00:00.000Z</lastmod>");
+    });
+
+    it("escapes XML so an ampersand in a slug cannot break the document", () => {
+        const xml = buildSitemapXml([{ loc: "https://x.test/a?b=1&c=2" }]);
+        expect(xml).toContain("https://x.test/a?b=1&amp;c=2");
+        expect(xml).not.toMatch(/&(?!amp;|lt;|gt;|quot;|apos;)/);
+    });
+});
+
+describe("public payloads", () => {
+    it("resolves the SEO block, and its canonical matches the sitemap entry", async () => {
+        prismaMock.article.findFirst.mockResolvedValue({
+            id: "a1",
+            slug: "workers-rights",
+            title: "Workers rights",
+            excerpt: "A short teaser",
+            content: "<p>Body</p>",
+            coverImage: "https://img.test/cover.png",
+            publishedAt: new Date("2026-01-01T00:00:00Z"),
+            updatedAt: new Date("2026-02-01T00:00:00Z"),
+            metaTitle: null,
+            metaDescription: null,
+            keywords: ["labour"],
+            noIndex: false,
+        });
+        prismaMock.article.findMany.mockResolvedValue([]);
+
+        const article = await service.getPublicBySlug("workers-rights");
+
+        expect(article.seo).toMatchObject({
+            title: "Workers rights",
+            description: "A short teaser",
+            canonical: articleUrl("workers-rights"),
+            image: "https://img.test/cover.png",
+            keywords: ["labour"],
+            robots: "index, follow",
+        });
+        expect(article.seo.modifiedTime).toEqual(new Date("2026-02-01T00:00:00Z"));
+    });
+
+    it("marks a noIndex article noindex rather than hiding it", async () => {
+        prismaMock.article.findFirst.mockResolvedValue({
+            id: "a2",
+            slug: "thin-post",
+            title: "Thin post",
+            excerpt: null,
+            content: "<p>Body</p>",
+            coverImage: null,
+            publishedAt: null,
+            updatedAt: null,
+            metaTitle: "Custom title",
+            metaDescription: null,
+            keywords: [],
+            noIndex: true,
+        });
+        prismaMock.article.findMany.mockResolvedValue([]);
+
+        const article = await service.getPublicBySlug("thin-post");
+
+        expect(article.seo.robots).toBe("noindex, follow");
+        expect(article.seo.title).toBe("Custom title");
+        expect(article.seo.description).toBe("Body");
     });
 });

@@ -23,6 +23,14 @@ export const CreateArticleSchema = z.object({
     content: z.string().trim().min(1, "Content is required").max(200_000),
     coverImage: z.string().trim().url("Invalid image URL").nullable().optional(),
     status: statusEnum.optional(),
+
+    // ── SEO ──────────────────────────────────────────────────────────────
+    // Capped a little above what Google shows so a writer who deliberately
+    // runs long is not blocked, only warned in the dashboard.
+    metaTitle: z.string().trim().max(70).nullable().optional(),
+    metaDescription: z.string().trim().max(200).nullable().optional(),
+    keywords: z.array(z.string().trim().min(1).max(60)).max(15).optional(),
+    noIndex: z.boolean().optional(),
 });
 
 export const UpdateArticleSchema = CreateArticleSchema.partial();

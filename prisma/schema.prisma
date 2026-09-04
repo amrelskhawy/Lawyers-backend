@@ -786,6 +786,24 @@ model Article {
   /// Public Drive URL of the card/hero image.
   coverImage String?
 
+  // ── SEO ──────────────────────────────────────────────────────────────────
+  // All optional: when the writer leaves them empty the public payload falls
+  // back to `title` / `excerpt`, so an article is never served without a
+  // usable <title> and description.
+
+  /// Overrides <title> and og:title on the reader page. Google truncates
+  /// around 60 characters.
+  metaTitle       String?
+  /// Overrides the meta description and og:description. Google truncates
+  /// around 160 characters.
+  metaDescription String?
+  /// Topic keywords. Not a ranking signal on their own — they are surfaced as
+  /// `keywords` in the article's JSON-LD and used to group related reading.
+  keywords        String[] @default([])
+  /// Keeps a de-indexed article out of the sitemap and stamps `noindex` on the
+  /// page, for thin or duplicated posts that should stay reachable by link.
+  noIndex         Boolean  @default(false)
+
   status      ArticleStatus @default(DRAFT)
   /// Set the first time the article goes PUBLISHED; kept afterwards so the
   /// public list keeps a stable order across edits.

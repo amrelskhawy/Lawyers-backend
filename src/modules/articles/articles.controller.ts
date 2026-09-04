@@ -68,3 +68,16 @@ export const getPublicArticle = asyncHandler(async (req: Request, res: Response)
     const article = await articlesService.getPublicBySlug(slug);
     res.status(200).json(new AppResponse(true, "ARTICLE_RETRIEVED_SUCCESS", article));
 });
+
+/**
+ * `/sitemap.xml`. Served as XML rather than through AppResponse — a crawler
+ * fetching this expects a sitemap document, not the API's JSON envelope. The
+ * cache header keeps a crawl burst off the database while still letting a
+ * newly published article show up within the hour.
+ */
+export const getArticlesSitemap = asyncHandler(async (_req: Request, res: Response) => {
+    const xml = await articlesService.sitemap();
+    res.set("Content-Type", "application/xml; charset=utf-8");
+    res.set("Cache-Control", "public, max-age=3600");
+    res.status(200).send(xml);
+});

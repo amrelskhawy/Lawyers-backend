@@ -11,6 +11,7 @@ import {
     uploadArticleImage,
     listPublicArticles,
     getPublicArticle,
+    getArticlesSitemap,
 } from "./articles.controller.js";
 import { protect, requireRole } from "../../core/middlewares/authMiddleware.js";
 import { logActivity } from "../../core/middlewares/activityLog.middleware.js";
@@ -31,6 +32,9 @@ const upload = multer({
  */
 export const publicArticlesRouter = express.Router();
 publicArticlesRouter.get("/", listPublicArticles);
+// Ahead of "/:slug" — otherwise the sitemap request is read as a slug lookup
+// and 404s.
+publicArticlesRouter.get("/sitemap.xml", getArticlesSitemap);
 publicArticlesRouter.get("/:slug", getPublicArticle);
 
 const router = express.Router();

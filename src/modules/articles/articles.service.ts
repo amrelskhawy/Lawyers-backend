@@ -6,7 +6,18 @@ import { driveService } from "../../core/services/google/drive.js";
 import { ensureArticleImagesFolder } from "../../core/services/google/article-images-folder.js";
 import { htmlToText, sanitizeArticleHtml } from "../../core/utils/html-sanitize.js";
 import type { CreateArticlePayload, UpdateArticlePayload } from "./articles.validator.js";
-import { Actor, articleInclude, PUBLIC_SELECT, EXCERPT_LENGTH, slugify, deriveExcerpt } from "./utils/index.js";
+import {
+    Actor,
+    articleInclude,
+    articleUrl,
+    buildSitemapXml,
+    deriveExcerpt,
+    deriveMetaDescription,
+    EXCERPT_LENGTH,
+    PUBLIC_SELECT,
+    SITE_URL,
+    slugify,
+} from "./utils/index.js";
 
 
 export class ArticlesService {
@@ -80,6 +91,10 @@ export class ArticlesService {
                 excerpt: payload.excerpt?.trim() || deriveExcerpt(content),
                 content,
                 coverImage: payload.coverImage ?? null,
+                metaTitle: payload.metaTitle?.trim() || null,
+                metaDescription: payload.metaDescription?.trim() || null,
+                keywords: payload.keywords ?? [],
+                noIndex: payload.noIndex ?? false,
                 status,
                 publishedAt: status === "PUBLISHED" ? new Date() : null,
                 createdById: user.id,
@@ -101,8 +116,17 @@ export class ArticlesService {
             content,
             coverImage: payload.coverImage,
             status: payload.status,
+            noIndex: payload.noIndex,
             updatedBy: { connect: { id: user.id } },
         };
+
+        // Blanking an SEO override in the form clears it, so the public payload
+        // goes back to falling back on the title/excerpt.
+        if (payload.metaTitle !== undefined) data.metaTitle = payload.metaTitle?.trim() || null;
+        if (payload.metaDescription !== undefined) {
+            data.metaDescription = payload.metaDescription?.trim() || null;
+        }
+        if (payload.keywords !== undefined) data.keywords = payload.keywords;
 
         // An explicit slug wins; otherwise a renamed title re-derives one.
         if (payload.slug) {
@@ -189,6 +213,65 @@ export class ArticlesService {
 
     // ── Public site ────────────────────────────────────────────────────────
 
+    /**
+     * Resolves every SEO fallback server-side and hands the reader page a ready
+     * `seo` block. The frontend must not re-derive any of this: the canonical
+     * URL here is the same string the sitemap emits, and a mismatch between the
+     * two is what makes Google drop a page from the index.
+     */
+    private withSeo<T extends {
+        slug: string;
+        title: string;
+        excerpt?: string | null;
+        content?: string;
+        coverImage?: string | null;
+        publishedAt?: Date | null;
+        updatedAt?: Date | null;
+        metaTitle?: string | null;
+        metaDescription?: string | null;
+        keywords?: string[];
+        noIndex?: boolean;
+    }>(article: T) {
+        return {
+            ...article,
+            seo: {
+                title: article.metaTitle?.trim() || article.title,
+                description: deriveMetaDescription(article),
+                canonical: articleUrl(article.slug),
+                image: article.coverImage ?? null,
+                keywords: article.keywords ?? [],
+                // `noindex` also has to keep the page out of the sitemap — see
+                // sitemap() below, which filters on the same flag.
+                robots: article.noIndex ? "noindex, follow" : "index, follow",
+                publishedTime: article.publishedAt ?? null,
+                modifiedTime: article.updatedAt ?? article.publishedAt ?? null,
+            },
+        };
+    }
+
+    /**
+     * `/sitemap.xml` for the blog. Only published, indexable articles — listing
+     * a draft or a noindex page is a crawl-budget leak and shows up in Search
+     * Console as a "submitted URL marked noindex" error.
+     */
+    async sitemap() {
+        const articles = await prisma.article.findMany({
+            where: { status: "PUBLISHED", noIndex: false },
+            select: { slug: true, updatedAt: true, publishedAt: true },
+            orderBy: [{ publishedAt: "desc" }],
+        });
+
+        return buildSitemapXml([
+            { loc: `${SITE_URL}/articles`, changefreq: "daily", priority: "0.8" },
+            ...articles.map((article) => ({
+                loc: articleUrl(article.slug),
+                lastmod: article.updatedAt ?? article.publishedAt,
+                changefreq: "weekly",
+                priority: "0.7",
+            })),
+        ]);
+    }
+
     /** Published articles only, newest first — what the blog page lists. */
     async listPublic(query: Record<string, unknown>) {
         const q = parseListQuery(query, { defaultLimit: 9, maxLimit: 50 });
@@ -213,7 +296,7 @@ export class ArticlesService {
             }),
         ]);
 
-        return { data, meta: buildMeta(total, q.page, q.limit) };
+        return { data: data.map((row) => this.withSeo(row)), meta: buildMeta(total, q.page, q.limit) };
     }
 
     /** One published article by its URL key. A draft reads as "not found". */
@@ -232,6 +315,6 @@ export class ArticlesService {
             take: 3,
         });
 
-        return { ...article, related };
+        return { ...this.withSeo(article), related: related.map((row) => this.withSeo(row)) };
     }
 }
