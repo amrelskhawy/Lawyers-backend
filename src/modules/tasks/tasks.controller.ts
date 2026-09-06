@@ -13,6 +13,7 @@ const readFilters = (query: AuthRequest["query"]): TaskFilters => {
     return {
         mine: pick<TaskOwnership>(query.mine, ["created", "assigned"]),
         status: pick<TaskStatus>(query.status, ["TODO", "IN_PROGRESS", "DONE"]),
+        excludeStatus: pick<TaskStatus>(query.excludeStatus, ["TODO", "IN_PROGRESS", "DONE"]),
         priority: pick<TaskPriority>(query.priority, ["LOW", "MEDIUM", "HIGH"]),
         caseId: typeof query.caseId === "string" ? query.caseId : undefined,
     };

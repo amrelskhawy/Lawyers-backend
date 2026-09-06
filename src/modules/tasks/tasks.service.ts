@@ -37,6 +37,7 @@ export function buildTaskScopeWhere(
 
     const where: Prisma.TaskWhereInput = { ...scope };
     if (filters.status) where.status = filters.status;
+    else if (filters.excludeStatus) where.status = { not: filters.excludeStatus };
     if (filters.priority) where.priority = filters.priority;
     if (filters.caseId) where.caseId = filters.caseId;
     return where;

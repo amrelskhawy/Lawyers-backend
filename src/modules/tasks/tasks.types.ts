@@ -6,6 +6,8 @@ export type TaskOwnership = "created" | "assigned";
 export interface TaskFilters {
     mine?: TaskOwnership;
     status?: TaskStatus;
+    /** Excludes a single status — used by the main tasks list to hide DONE once a task moves to the completed tab. */
+    excludeStatus?: TaskStatus;
     priority?: TaskPriority;
     caseId?: string;
 }
