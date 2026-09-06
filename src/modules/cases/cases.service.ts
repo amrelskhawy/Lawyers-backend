@@ -84,19 +84,28 @@ function clearStandIn(kind: AssignmentKind): Prisma.CaseUpdateInput {
 }
 
 /**
- * Whoever may work this case from the lawyer side: the assigned lawyer, their
- * stand-in, or the lawyer receiving the session. A stand-in acts with the slot
- * holder's rights — that is the whole point of naming one.
+ * Whoever may work this case from the caller's own slot: the assignee of
+ * their slot (lawyer or consultant, matching their role), that slot's
+ * stand-in, or the session receiver (a role-agnostic field, set independently
+ * of either slot). A stand-in acts with the slot holder's rights — that is
+ * the whole point of naming one.
  */
 function isCaseWorker(
-    c: { preferredLawyerId: string | null; tempLawyerId: string | null; sessionReceiverId: string | null },
+    c: {
+        preferredLawyerId: string | null;
+        tempLawyerId: string | null;
+        consultantId: string | null;
+        tempConsultantId: string | null;
+        sessionReceiverId: string | null;
+    },
     userId: string,
+    kind: AssignmentKind,
 ) {
-    return (
-        c.preferredLawyerId === userId ||
-        c.tempLawyerId === userId ||
-        c.sessionReceiverId === userId
-    );
+    const { assigneeId, standInId } =
+        kind === "CONSULTANT"
+            ? { assigneeId: c.consultantId, standInId: c.tempConsultantId }
+            : { assigneeId: c.preferredLawyerId, standInId: c.tempLawyerId };
+    return assigneeId === userId || standInId === userId || c.sessionReceiverId === userId;
 }
 
 type RequestingUser = { id: string; role: string };
@@ -690,10 +699,11 @@ export class CasesService {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (!isCaseWorker(existing, userId)) {
+            const kind = kindFromRole(userRole);
+            if (!isCaseWorker(existing, userId, kind)) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
-            if (existing.assignmentStatus !== "ACCEPTED") {
+            if (slotState(existing, kind).status !== "ACCEPTED") {
                 throw new AppResponse(false, "CASE_ASSIGNMENT_NOT_ACCEPTED", null, 403);
             }
         }
@@ -834,7 +844,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (!isCaseWorker(existing, userId)) {
+            if (!isCaseWorker(existing, userId, kindFromRole(userRole))) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }
@@ -891,7 +901,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_NOT_FOUND", null, 404);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (!isCaseWorker(existing, userId)) {
+            if (!isCaseWorker(existing, userId, kindFromRole(userRole))) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }
@@ -927,7 +937,7 @@ export class CasesService {
             throw new AppResponse(false, "CASE_COMPLETED", null, 400);
         }
         if (userRole === "LAWYER" || userRole === "CONSULTANT") {
-            if (!isCaseWorker(existing, userId)) {
+            if (!isCaseWorker(existing, userId, kindFromRole(userRole))) {
                 throw new AppResponse(false, "CASE_NOT_ASSIGNED_TO_YOU", null, 403);
             }
         }

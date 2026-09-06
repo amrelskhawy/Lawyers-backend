@@ -307,6 +307,10 @@ export class ReminderService {
 
         if (user.role === "CONSULTANT") {
             where.recipientId = user.id;
+        } else if (user.role === "LAWYER") {
+            // A lawyer has the same access as a consultant here: their own slice,
+            // scoped to cases where they are the accepted assigned lawyer.
+            where.case = { preferredLawyerId: user.id, assignmentStatus: "ACCEPTED" };
         }
         // ADMIN / MODERATOR: no additional filter — see all.
 

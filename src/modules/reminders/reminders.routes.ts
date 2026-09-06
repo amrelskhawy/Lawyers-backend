@@ -44,7 +44,7 @@ router.delete(
 router.post(
     "/memo-request",
     protect,
-    requireRole("ADMIN", "MODERATOR", "LAWYER"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     validateMemoReminder,
     logActivity("CREATE", "MemoReminder"),
     sendMemoReminder,
@@ -54,7 +54,7 @@ router.post(
 router.get(
     "/consultant",
     protect,
-    requireRole("ADMIN", "MODERATOR", "CONSULTANT"),
+    requireRole("ADMIN", "MODERATOR", "LAWYER", "CONSULTANT"),
     listConsultantReminders,
 );
 
