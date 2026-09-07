@@ -92,4 +92,30 @@
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/DataResponse'
+ *
+ * /public/service-categories:
+ *   get:
+ *     summary: List the 8 fixed service categories
+ *     description: Returns the fixed category list (name, description, icon, color) with a live count of published services in each.
+ *     tags: []
+ *     responses:
+ *       200:
+ *         description: Categories retrieved successfully
+ *
+ * /public/service-categories/{slug}:
+ *   get:
+ *     summary: Get one category page
+ *     description: Returns one category's metadata plus every published service assigned to it.
+ *     tags: []
+ *     parameters:
+ *       - in: path
+ *         name: slug
+ *         required: true
+ *         schema:
+ *           type: string
+ *     responses:
+ *       200:
+ *         description: Category retrieved successfully
+ *       404:
+ *         description: Unknown category slug
  */

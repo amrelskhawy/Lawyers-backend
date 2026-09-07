@@ -1,6 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { z } from 'zod';
 import { AppResponse } from '../../core/utils/AppResponse.js';
+import { SERVICE_CATEGORY_IDS } from '../../core/constants/service-categories.js';
 
 const ServiceBaseObject = z.object({
     name: z.string().min(3).max(50).optional(),
@@ -13,6 +14,9 @@ const ServiceBaseObject = z.object({
     isActive: z.boolean().optional(),
     isFree: z.boolean().optional(),
     isInstallmentPlans: z.boolean().optional(),
+    // Nullable so a service can be explicitly unassigned from its category,
+    // not just left out of the payload.
+    categoryId: z.enum(SERVICE_CATEGORY_IDS).nullable().optional(),
 });
 
 const priceRefinement = (data: any, ctx: z.RefinementCtx) => {

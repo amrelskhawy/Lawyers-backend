@@ -226,6 +226,24 @@ model Token {
   expiresAt DateTime
 }
 
+/// The fixed practice-area categories a service can be filed under. Fixed
+/// by business decision — there is no admin UI to add, rename or delete one,
+/// only to assign/reassign a service to one of these. The Arabic display
+/// names, icons, colors and copy live in `core/constants/service-categories.ts`,
+/// keyed by these same members, so this enum stays the single source of truth
+/// for which category ids are valid.
+enum ServiceCategory {
+  COMMERCIAL_AFFAIRS
+  CRIMINAL_CYBERCRIME
+  LABOR_DISPUTES
+  FAMILY_PERSONAL_STATUS
+  REAL_ESTATE
+  BANKING_INSURANCE
+  MEDICAL_MALPRACTICE
+  ZAKAT_TAX
+  EXECUTION_CASES
+}
+
 model Service {
   id                 String   @id @default(uuid())
   name_ar            String   @default("")
@@ -236,6 +254,10 @@ model Service {
   isActive           Boolean  @default(true)
   isFree             Boolean  @default(false)
   isInstallmentPlans Boolean  @default(false)
+
+  /// Nullable so existing services stay unassigned until an admin picks a
+  /// category for them — creating the column never guesses a category.
+  categoryId ServiceCategory?
 
   createdById String?
   createdBy   User?   @relation("ServiceCreator", fields: [createdById], references: [id])
@@ -249,6 +271,7 @@ model Service {
 
   @@index([createdById])
   @@index([updatedById])
+  @@index([categoryId])
 }
 
 model ConsultingRecord {
